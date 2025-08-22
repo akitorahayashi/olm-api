@@ -1,0 +1,41 @@
+language: "ja"
+
+reviews:
+  high_level_summary: true
+  auto_review:
+    enabled: true
+
+chat:
+  auto_reply: true
+
+# レビュー対象から除外するファイルのパターンを指定
+path_filters:
+  # 仮想環境
+  - "!**/venv/**"
+  - "!**/.venv/**"
+
+  # Django / ORM マイグレーションファイル
+  - "!**/migrations/**"
+
+  # キャッシュ / ビルド関連ファイル
+  - "!**/__pycache__/**"
+  - "!**/.pytest_cache/**"
+  - "!**/.cache/**"
+
+  # 静的ファイル / メディアファイル
+  - "!**/static/**"
+  - "!**/media/**"
+  - "!**/*.png"
+  - "!**/*.jpg"
+  - "!**/*.svg"
+  - "!**/*.css"
+  - "!**/*.js"
+
+  # 環境変数 / シークレットファイル
+  - "!**/.env"
+
+  # フロントエンドのビルド出力ディレクトリ
+  - "!**/.next/**"
+  - "!**/dist/**"
+  - "!**/.nuxt/**"
+  - "!**/.webpack/**"
