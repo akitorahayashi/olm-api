@@ -1,0 +1,33 @@
+name: Format and Lint
+
+on:
+  workflow_call:
+
+jobs:
+  format-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
+
+      - name: Install and configure Poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.in-project true
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-root
+
+      - name: Run Ruff Linter
+        run: |
+          poetry run ruff check .
+
+      - name: Run Black Formatter Check
+        run: |
+          poetry run black --check .
