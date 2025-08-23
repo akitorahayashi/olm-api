@@ -7,23 +7,15 @@ jobs:
   run-tests:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
+      - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version-file: .python-version
+      - name: Create .env file
+        run: make setup
 
-      - name: Install and configure Poetry
-        run: |
-          pipx install poetry
-          poetry config virtualenvs.in-project true
-          
-      - name: Install dependencies
-        run: |
-          poetry install --no-root
+      - name: Run tests
+        run: make test
 
-      - name: Run Tests
-        run: |
-          poetry run pytest
+      - name: Cleanup containers
+        if: always()
+        run: make down

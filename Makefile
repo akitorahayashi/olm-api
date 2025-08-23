@@ -1,43 +1,88 @@
-# Makefile for abstracting Docker Compose commands for a better DX.
+# ==============================================================================
+# Makefile for Project Automation
+#
+# Provides a unified interface for common development tasks, abstracting away
+# the underlying Docker Compose commands for a better Developer Experience (DX).
+#
+# Inspired by the self-documenting Makefile pattern.
+# See: https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
+# ==============================================================================
 
-# Use .PHONY to ensure these targets run even if files with the same name exist.
-.PHONY: build up down logs migrate test help
+# Ensure that the targets are always run
+.PHONY: help setup up down logs shell format format-check lint lint-fix test migrate
 
-# Define SUDO variable, which will be empty if the user is already root.
+# Default target executed when 'make' is run without arguments
+.DEFAULT_GOAL := help
+
+# Define the project name based on the directory name for dynamic container naming
+PROJECT_NAME := $(shell basename $(CURDIR))
+
+# Use sudo if the user is not root, to handle Docker permissions
 SUDO := $(shell if [ $$(id -u) -ne 0 ]; then echo "sudo"; fi)
 
-# Default target runs when 'make' is called without arguments.
-default: up
+# ==============================================================================
+# HELP
+# ==============================================================================
 
-build:
-	@echo "Building Docker images..."
-	$(SUDO) docker compose build
+help: ## ✨ Show this help message
+	@echo "Usage: make [target]"
+	@echo ""
+	@echo "Available targets:"
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-up:
-	@echo "Starting services in detached mode..."
-	$(SUDO) docker compose up -d
+# ==============================================================================
+# PROJECT SETUP & ENVIRONMENT
+# ==============================================================================
 
-down:
-	@echo "Stopping and removing containers, networks, and volumes..."
-	$(SUDO) docker compose down
+setup: ## 🚀 Initialize the project by creating a .env file
+	@if [ ! -f .env ]; then \
+		echo "Creating .env file from .env.example..."; \
+		cp .env.example .env; \
+	else \
+		echo ".env file already exists. Skipping creation."; \
+	fi
 
-logs:
-	@echo "Following logs for the 'api' service..."
-	$(SUDO) docker compose logs -f api
+up: ## 🐳 Start all development containers in detached mode
+	@echo "Starting up services..."
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) up -d
 
-migrate:
+down: ## 🛑 Stop and remove all development containers
+	@echo "Shutting down services..."
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) down --remove-orphans
+
+logs: ## 📜 View the logs for the API service
+	@echo "Following logs for the api service..."
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) logs -f api
+
+shell: ## 💻 Open a shell inside the running API container
+	@echo "Opening shell in api container..."
+	@$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api /bin/sh || \
+		(echo "Failed to open shell. Is the container running? Try 'make up'" && exit 1)
+
+migrate: ## 🗄️ Run database migrations against the development database
 	@echo "Running database migrations..."
-	$(SUDO) docker compose exec api alembic upgrade head
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
 
-test:
-	@echo "Running tests inside the 'api' container..."
-	$(SUDO) docker compose exec api pytest tests/
+# ==============================================================================
+# CODE QUALITY & TESTING
+# ==============================================================================
 
-help:
-	@echo "Available commands:"
-	@echo "  build    - Build the docker images for the services"
-	@echo "  up       - Start the services in the background"
-	@echo "  down     - Stop and remove the services"
-	@echo "  logs     - Follow the logs of the api service"
-	@echo "  migrate  - Run database migrations"
-	@echo "  test     - Run the test suite"
+format: ## 🎨 Format the code using Black
+	@echo "Formatting code with Black..."
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black src/ tests/"
+
+format-check: ## 🎨 Check if the code is formatted with Black
+	@echo "Checking code format with Black..."
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black --check src/ tests/"
+
+lint: ##  Lint Check the code for issues with Ruff
+	@echo "Linting code with Ruff..."
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && ruff check src/ tests/"
+
+lint-fix: ## 🩹 Check the code with Ruff and apply fixes automatically
+	@echo "Linting and fixing code with Ruff..."
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && ruff check src/ tests/ --fix"
+
+test: ## 🧪 Run the test suite in an isolated environment
+	@echo "Running test suite..."
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) run --rm --build test
