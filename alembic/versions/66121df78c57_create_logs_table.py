@@ -31,9 +31,9 @@ def upgrade() -> None:
             server_default=sa.text("(CURRENT_TIMESTAMP)"),
             nullable=True,
         ),
-        sa.Column("client_host", sa.String(), nullable=True),
-        sa.Column("request_method", sa.String(), nullable=True),
-        sa.Column("request_path", sa.String(), nullable=True),
+        sa.Column("client_host", sa.String(length=255), nullable=True),
+        sa.Column("request_method", sa.String(length=10), nullable=True),
+        sa.Column("request_path", sa.Text(), nullable=True),
         sa.Column("response_status_code", sa.Integer(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )

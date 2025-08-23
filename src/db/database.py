@@ -17,7 +17,7 @@ def _initialize_factory():
     global _engine, _SessionLocal
     if _engine is None:
         settings = get_settings()
-        _engine = create_engine(settings.DATABASE_URL)
+        _engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
         _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
 

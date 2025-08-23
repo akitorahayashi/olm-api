@@ -17,4 +17,4 @@ class Settings(BaseSettings):
 
     OLLAMA_BASE_URL: str
     OLLAMA_MODEL: str
-    DATABASE_URL: str = "postgresql://user:password@localhost/pvt-llm-api"
+    DATABASE_URL: str
