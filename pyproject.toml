@@ -54,3 +54,8 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = ["E501"] # E501 (line too long) is ignored
+
+[tool.alembic]
+script_location = "alembic"
+prepend_sys_path = "."
+path_separator = "os"

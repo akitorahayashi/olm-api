@@ -1,4 +1,3 @@
-from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
 
@@ -13,8 +12,9 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+# We no longer use alembic.ini, so this is commented out.
+# if config.config_file_name is not None:
+#     fileConfig(config.config_file_name)
 
 # Use the application's settings to configure the database URL.
 # This ensures consistency between the app and migrations.
