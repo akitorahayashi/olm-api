@@ -51,9 +51,6 @@ RUN --mount=type=cache,target=/root/.cache \
 # Copy dependency definition files
 COPY pyproject.toml poetry.lock ./
 
-# Copy the cache from the main builder to speed up installation
-COPY --from=builder /tmp/poetry_cache /tmp/poetry_cache
-
 # Install only production dependencies
 RUN --mount=type=cache,target=/tmp/poetry_cache \
     poetry install --no-root --only main
