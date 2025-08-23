@@ -9,7 +9,9 @@ class Log(Base):
     __tablename__ = "logs"
 
     id = Column(Integer, primary_key=True, index=True)
-    timestamp = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+    timestamp = Column(
+        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc)
+    )
     client_host = Column(String, index=True)
     request_method = Column(String)
     request_path = Column(String)

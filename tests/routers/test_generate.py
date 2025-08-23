@@ -11,10 +11,13 @@ from src.models.log import Log
 # --- Mock Setup ---
 mock_ollama_client = MagicMock()
 
+
 def override_get_ollama_client():
     return mock_ollama_client
 
+
 # --- Fixtures ---
+
 
 @pytest.fixture
 def override_ollama_client_dep():
@@ -24,6 +27,7 @@ def override_ollama_client_dep():
     finally:
         app.dependency_overrides.pop(get_ollama_client, None)
 
+
 @pytest.fixture(autouse=True)
 def mock_db_session(monkeypatch):
     mock_session = MagicMock()
@@ -32,6 +36,7 @@ def mock_db_session(monkeypatch):
     )
     return mock_session
 
+
 @pytest.fixture
 def client(mock_db_session, override_ollama_client_dep):
     mock_ollama_client.reset_mock(return_value=True, side_effect=None)
@@ -39,7 +44,9 @@ def client(mock_db_session, override_ollama_client_dep):
     with TestClient(app) as test_client:
         yield test_client
 
+
 # --- Test Cases ---
+
 
 def test_generate_success_logs_metadata(client, mock_db_session):
     """Test that a successful request logs basic metadata."""
@@ -59,6 +66,7 @@ def test_generate_success_logs_metadata(client, mock_db_session):
     assert log_entry.prompt == "[Not Logged]"
     assert log_entry.generated_response == "[Not Logged]"
 
+
 def test_generate_stream_success_logs_metadata(client, mock_db_session):
     """Test that a successful streaming request logs basic metadata."""
     mock_stream_data = [{"message": {"content": "Stream"}}]
@@ -74,6 +82,7 @@ def test_generate_stream_success_logs_metadata(client, mock_db_session):
     assert isinstance(log_entry, Log)
     assert log_entry.response_status_code == 200
     assert log_entry.error_details is None
+
 
 def test_generate_api_error_logs_details(client, mock_db_session):
     """Test that an API error logs detailed exception info."""
