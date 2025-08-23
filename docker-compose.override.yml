@@ -10,7 +10,6 @@ services:
       - ./src:/app/src
       # Also mount alembic files for development
       - ./alembic:/app/alembic
-      - ./alembic.ini:/app/alembic.ini
       # Mount tests so they can be run inside the container if needed
       - ./tests:/app/tests
     ports:
@@ -57,7 +56,6 @@ services:
     volumes:
       - ./src:/app/src
       - ./alembic:/app/alembic
-      - ./alembic.ini:/app/alembic.ini
       - ./tests:/app/tests
     command: >
       sh -c "

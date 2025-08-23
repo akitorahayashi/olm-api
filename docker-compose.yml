@@ -8,6 +8,14 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    # ==========================================================================
+    # HEALTHCHECK
+    #
+    # Ensures that the database is fully initialized and ready to accept
+    # connections before other services (like the API) are started.
+    #
+    # `pg_isready` is a lightweight utility that checks the connection status.
+    # ==========================================================================
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -21,13 +29,26 @@ services:
       dockerfile: Dockerfile
       target: runner
     container_name: pvt-llm-api
+    # ==========================================================================
+    # DEPENDS_ON
+    #
+    # This configuration ensures that the `api` service will only start after
+    # the `db` service has passed its healthcheck, preventing connection
+    # errors on startup.
+    # ==========================================================================
     depends_on:
       db:
         condition: service_healthy
     env_file:
       - .env
+    # ==========================================================================
+    # HEALTHCHECK
+    #
+    # Periodically checks the `/health` endpoint of the API to ensure it is
+    # running and responsive. This helps in monitoring the service's status.
+    # ==========================================================================
     healthcheck:
-      test: ["CMD-SHELL", "python -c \"import sys, os, urllib.request; sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{os.environ.get(\\\"HEALTHCHECK_PATH\\\") or \\\"/health\\\"}').getcode() == 200 else sys.exit(1)\""]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s
       timeout: 10s
       start_period: 5s
