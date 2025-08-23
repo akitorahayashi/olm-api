@@ -2,128 +2,176 @@
 
 ## Overview
 
-This project provides a robust, production-ready API server for interacting with local Large Language Models (LLMs) like those available through Ollama. It is built with FastAPI and designed for high performance, easy development, and scalable deployment using Docker.
+This project provides a robust, production-ready API server designed to serve local Large Language Models (LLMs) via Ollama. Built with FastAPI, it offers a clean, high-performance, and scalable solution for integrating local AI capabilities into your applications.
 
-The architecture emphasizes a clean separation of concerns, a containerized environment for consistency across development and production, and a comprehensive set of tools to ensure code quality and a smooth developer experience (DX).
+The architecture emphasizes a clean separation of concerns, a fully containerized environment using Docker for consistency across development and production, and a comprehensive set of development tools to ensure code quality and a smooth developer experience (DX).
 
 ## Tech Stack
 
-- **Backend**: FastAPI
+The project leverages a modern Python technology stack:
+
+- **Backend Framework**: FastAPI
 - **Database**: PostgreSQL
 - **Containerization**: Docker, Docker Compose
 - **Dependency Management**: Poetry
 - **Database Migrations**: Alembic
-- **CI/CD**: GitHub Actions
-- **Code Quality**: Black (Formatter), Ruff (Linter)
+- **Code Quality**: Ruff (Linter), Black (Formatter)
 - **Testing**: Pytest
+- **LLM Integration**: Ollama
 
-## Local Development Environment Setup
-
-Follow these steps to get the development environment up and running on your local machine.
+## Setup and Execution
 
 ### Prerequisites
 
 - Docker and Docker Compose
 - `make` command
 
-### 1. Initial Project Setup
+### 1. Create `.env` file
 
-First, you need to create a `.env` file for local configuration. The `make setup` command will copy the example file for you. This only needs to be done once.
+The project requires an `.env` file for configuration. The `make setup` command simplifies this process by copying the `.env.example` template. This only needs to be done once.
 
 ```sh
 make setup
 ```
 
-This creates a `.env` file with default settings. You can review and edit this file if needed. For example, you can change the `WEB_PORT` if the default `8000` is already in use on your machine.
+This command creates a `.env` file in the project root. You can edit this file to match your local setup.
 
 ### 2. Start the Services
 
-Once the `.env` file is ready, start all the necessary services (API server, database) using Docker Compose:
+With the `.env` file configured, start all services (API server and database) using Docker Compose:
 
 ```sh
 make up
 ```
 
-This command will build the Docker images and run the containers in the background. The API server will be available at `http://127.0.0.1:8000` (or the port you configured in `.env`). The source code is mounted as a volume, so changes you make to the code will trigger an automatic reload of the server.
+This command builds the necessary Docker images and starts the containers. Docker Compose is configured to wait until the database container is healthy before starting the API container. The API's entrypoint script then automatically applies any pending database migrations on startup.
 
-### 3. Run Database Migrations
+The API will be accessible at `http://127.0.0.1:8000` by default. The source code is mounted as a volume, enabling hot-reloading on code changes.
 
-After the services are running, apply the database migrations to set up the required tables in your local PostgreSQL database:
+### 3. Run Database Migrations (If Needed)
+
+The application's entrypoint script automatically runs database migrations on startup when you use `make up`, so you typically do not need to run this command manually. However, if you need to apply new migrations to an already running server without restarting it, you can use this command:
 
 ```sh
 make migrate
 ```
 
-Your local development environment is now ready!
+## Environment Variables
 
-## Makefile Commands
+The application is configured via environment variables defined in the `.env` file. The most important ones are:
 
-This project uses a `Makefile` to provide a simple and consistent interface for common commands.
+- **`DATABASE_URL`**: The full connection string for the PostgreSQL database. This is used by the `api` container to connect to the `db` container.
+- **`OLLAMA_BASE_URL`**: The base URL for the Ollama server. When running this project in Docker and Ollama on the host machine, you may need to set this to `http://host.docker.internal:11434`.
+- **`OLLAMA_MODEL`**: The specific Ollama model to be used for generating responses (e.g., `qwen3:8b`). This is configured on the server-side and is not part of the API request.
 
-| Command         | Description                                                                                              |
-| --------------- | -------------------------------------------------------------------------------------------------------- |
-| `make help`     | ✨ Displays this help message with all available commands.                                                |
-| `make setup`    | 🚀 Initializes the project by creating a `.env` file from the example.                                   |
-| `make up`       | 🐳 Starts all development containers in detached mode.                                                    |
-| `make down`     | 🛑 Stops and removes all development containers and networks.                                            |
-| `make logs`     | 📜 Tails the logs of the API service in real-time.                                                        |
-| `make shell`    | 💻 Opens an interactive shell (`/bin/sh`) inside the running API container.                                |
-| `make migrate`  | 🗄️ Runs database migrations against the development database.                                             |
-| `make format`   | 🎨 Formats the entire codebase using Black.                                                              |
-| `make lint`     |  lint Checks the code for any style issues or errors using Ruff.                                          |
-| `make test`     | 🧪 Runs the entire test suite in an isolated, containerized environment with its own database.             |
+## API Specification
 
+### Endpoint: `POST /api/v1/generate`
 
-## Testing
+This is the sole endpoint for generating text from the LLM.
 
-To run the test suite, use the following command:
+### Request Body
 
-```sh
-make test
+The request body must be a JSON object with the following fields:
+
+| Parameter | Type    | Default | Description                               |
+|-----------|---------|---------|-------------------------------------------|
+| `prompt`  | string  |         | **Required.** The input text for the LLM. |
+| `stream`  | boolean | `false` | If `true`, the response will be streamed. |
+
+**Note**: The model used for the generation is determined by the `OLLAMA_MODEL` environment variable on the server, not by a parameter in the request body.
+
+### Response Body
+
+#### Standard Response (`stream: false`)
+
+If `stream` is `false` (or omitted), the API returns a single JSON object after the full response has been generated.
+
+**Example Response:**
+```json
+{
+  "response": "This is the complete response from the language model."
+}
 ```
 
-This command spins up dedicated `test` and `db_test` containers. The test database runs in-memory (using `tmpfs`) to ensure tests are fast and completely isolated from your local development database.
+#### Streaming Response (`stream: true`)
 
-## Code Quality
+If `stream` is `true`, the API returns a stream of Server-Sent Events (SSE). Each event contains a chunk of the response data. This is useful for real-time applications where you want to display the response as it's being generated.
 
-To maintain a high standard of code quality, this project uses **Ruff** for linting and **Black** for formatting.
+The response will have the `Content-Type: text/event-stream` header. Each message is formatted as `data: ...\n\n`.
 
-- **To check for linting issues:**
-  ```sh
-  make lint
-  ```
-- **To automatically format the code:**
-  ```sh
-  make format
-  ```
+**Example Stream:**
+```
+data: {"response": "This "}
 
-The CI pipeline will fail if there are any linting or formatting errors, so it's recommended to run these commands before committing changes.
+data: {"response": "is a "}
+
+data: {"response": "streamed "}
+
+data: {"response": "response."}
+
+data: {}
+```
+
+## Usage Examples
+
+### Standard Request (curl)
+
+```sh
+curl -X POST "http://127.0.0.1:8000/api/v1/generate" \
+-H "Content-Type: application/json" \
+-d '{"prompt": "Why is the sky blue?"}'
+```
+
+### Streaming Request (curl)
+
+The `-N` (or `--no-buffer`) flag is important for viewing the stream as it arrives.
+
+```sh
+curl -X POST "http://127.0.0.1:8000/api/v1/generate" \
+-H "Content-Type: application/json" \
+-d '{"prompt": "Write a short story about a robot.", "stream": true}' -N
+```
+
+## Development Commands
+
+This project uses a `Makefile` to provide a simple interface for common development tasks.
+
+| Command          | Description                                                    |
+|------------------|----------------------------------------------------------------|
+| `make help`      | ✨ Shows a help message with all available commands.           |
+| `make setup`     | 🚀 Initializes the project by creating a `.env` file.          |
+| `make up`        | 🐳 Starts all development containers in detached mode.         |
+| `make down`      | 🛑 Stops and removes all development containers.               |
+| `make logs`      | 📜 Tails the logs of the API service in real-time.             |
+| `make shell`     | 💻 Opens an interactive shell (`/bin/sh`) inside the API container.|
+| `make migrate`   | 🗄️ Runs database migrations against the development database. |
+| `make format`    | 🎨 Formats the entire codebase using Black.                    |
+| `make format-check`| 🎨 Checks if the code is formatted with Black.                 |
+| `make lint`      | 🔎 Lints the code for issues using Ruff.                       |
+| `make lint-fix`  | 🩹 Lints the code with Ruff and applies fixes automatically.   |
+| `make test`      | 🧪 Runs the test suite in an isolated, containerized environment.|
 
 ## Deployment
 
-This project is configured for continuous integration and deployment using GitHub Actions.
+This project is configured for continuous integration, which automatically builds and pushes a Docker image to the GitHub Container Registry (GHCR). The actual deployment to a server is a manual process.
 
-### CI Pipeline (`ci.yml`)
+### Automated Build Process
 
-On every `push` or `pull_request` to the `main` branch, the CI pipeline automatically runs the following checks:
-1.  **Linting**: Ensures the code adheres to the style guide.
-2.  **Testing**: Runs the full `pytest` suite in a clean, containerized environment.
+-   **CI Pipeline**: On every push to the `main` branch, the pipeline runs linters and tests.
+-   **Build & Push**: On a successful push to `main`, a production-ready Docker image is built and pushed to GHCR.
 
-### Build and Push (`build-and-push.yml`)
+### Manual Deployment Steps
 
-When code is pushed to the `main` branch, a separate workflow automatically:
-1.  Builds a production-optimized Docker image.
-2.  Tags the image with the commit SHA and `latest`.
-3.  Pushes the image to the GitHub Container Registry (GHCR).
+To deploy the application, you need to pull the latest image from the container registry and run it on your local server.
 
-### Manual Deployment (`deploy.yml`)
+1.  **Prepare your server**: Ensure Docker and Docker Compose are installed on your machine.
+2.  **Create `.env` file**: Create a production `.env` file on your server with the necessary configurations.
+3.  **Pull the image**: Pull the latest Docker image from the registry where it was pushed by the GitHub Actions workflow.
+4.  **Start services**: Use `docker-compose.yml` to start the application.
 
-Deployment to a server (e.g., staging or production) is a manual process that can be triggered from the GitHub Actions UI. This workflow uses SSH to connect to the target server and runs a script to pull the latest image from GHCR and restart the services.
-
-**Prerequisites for Deployment:**
-- The remote server must have **Docker** and **Docker Compose** installed.
-- The following secrets must be configured in the GitHub repository's "Actions secrets and variables" settings:
-  - `SSH_HOST`: The IP address or hostname of the remote server.
-  - `SSH_USER`: The username for SSH login.
-  - `SSH_PRIVATE_KEY`: The private SSH key for authentication.
-  - `ENV_FILE_PRODUCTION`: The base64-encoded content of the production `.env` file.
+```sh
+# (On your server)
+docker compose pull
+docker compose up -d
+```
