@@ -7,7 +7,6 @@ from fastapi.testclient import TestClient
 from src.dependencies.common import get_ollama_client
 from src.main import app
 
-
 # --- Mock Setup ---
 # Mock the ollama client to avoid actual API calls
 mock_ollama_client = MagicMock()
@@ -26,19 +25,12 @@ app.dependency_overrides[get_ollama_client] = override_get_ollama_client
 
 
 @pytest.fixture(autouse=True)
-def mock_settings_env_vars(monkeypatch):
-    """Set environment variables for settings for all tests."""
-    monkeypatch.setenv("OLLAMA_BASE_URL", "http://test-ollama:11434")
-    monkeypatch.setenv("OLLAMA_MODEL", "test-model")
-
-
-@pytest.fixture(autouse=True)
 def mock_db_session(monkeypatch):
     """Mock the database session for all tests to prevent actual DB calls."""
     mock_session = MagicMock()
-    mock_session_local = MagicMock(return_value=mock_session)
-    # Target the SessionLocal object in the module where it's used by the middleware
-    monkeypatch.setattr("src.dependencies.logging.SessionLocal", mock_session_local)
+    # The middleware now calls get_db_session, so we patch that function
+    mock_get_session = MagicMock(return_value=mock_session)
+    monkeypatch.setattr("src.dependencies.logging.get_db_session", mock_get_session)
     return mock_session
 
 
@@ -75,11 +67,11 @@ def test_generate_success(client):
 def test_generate_stream_success(client):
     """Test the /api/v1/generate endpoint for a successful streaming response."""
 
-    def mock_stream_generator():
-        yield {"message": {"content": "Stream "}}
-        yield {"message": {"content": "response"}}
-
-    mock_ollama_client.chat.return_value = mock_stream_generator()
+    mock_stream_data = [
+        {"message": {"content": "Stream "}},
+        {"message": {"content": "response"}},
+    ]
+    mock_ollama_client.chat.return_value = iter(mock_stream_data)
 
     response = client.post(
         "/api/v1/generate", json={"prompt": "Stream this", "stream": True}

@@ -1,19 +1,31 @@
 import ollama
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from src.config.settings import Settings
 from src.schemas.generate import GenerateResponse
 
 
-async def stream_generator(response_stream):
+async def stream_generator(response_iter):
     """
-    Asynchronous generator to process and send streaming responses from Ollama.
+    Iterate a blocking generator in a threadpool and yield content chunks.
     """
-    for chunk in response_stream:
-        # Check if the content key exists and is not empty
-        if chunk.get("message", {}).get("content"):
-            yield chunk["message"]["content"]
+    while True:
+        try:
+            # Run the blocking `next()` call in a thread pool
+            chunk = await run_in_threadpool(next, response_iter)
+        except RuntimeError as e:
+            # run_in_threadpool can wrap StopIteration in a RuntimeError
+            if "StopIteration" in str(e):
+                break
+            raise  # Re-raise other runtime errors
+        except StopIteration:
+            # Catch StopIteration as a fallback
+            break
+        content = chunk.get("message", {}).get("content")
+        if content:
+            yield content
 
 
 async def generate_ollama_response(
@@ -24,9 +36,12 @@ async def generate_ollama_response(
 ):
     """
     Generates a response from the Ollama model, handling both streaming and non-streaming cases.
+    It runs the blocking I/O calls in a threadpool to avoid blocking the event loop.
     """
     try:
-        chat_response = ollama_client.chat(
+        # Run the blocking `ollama_client.chat` call in a thread pool
+        chat_response = await run_in_threadpool(
+            ollama_client.chat,
             model=settings.OLLAMA_MODEL,
             messages=[{"role": "user", "content": prompt}],
             stream=stream,
@@ -34,11 +49,10 @@ async def generate_ollama_response(
 
         if stream:
             return StreamingResponse(
-                stream_generator(chat_response),
+                stream_generator(iter(chat_response)),
                 media_type="text/event-stream",
             )
         else:
-            # Ensure the response structure is as expected before accessing content
             if "message" in chat_response and "content" in chat_response["message"]:
                 response_content = chat_response["message"]["content"]
                 return GenerateResponse(response=response_content)
@@ -54,7 +68,6 @@ async def generate_ollama_response(
             detail=f"Ollama API error: {error_detail}",
         )
     except Exception as e:
-        # Catching any other unexpected errors
         raise HTTPException(
             status_code=500, detail=f"An unexpected error occurred: {str(e)}"
         )

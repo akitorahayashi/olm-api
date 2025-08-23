@@ -17,3 +17,4 @@ class Settings(BaseSettings):
 
     OLLAMA_BASE_URL: str
     OLLAMA_MODEL: str
+    DATABASE_URL: str = "sqlite:///./pvt-llm-api.db"
