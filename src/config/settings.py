@@ -15,5 +15,5 @@ class Settings(BaseSettings):
     # CI/CD環境など、.env ファイルが存在しない場合は、システムの環境変数が直接使用されます。
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
-    OLLAMA_BASE_URL: str = "http://localhost:11434"
-    OLLAMA_MODEL: str = "llama2"
+    OLLAMA_BASE_URL: str
+    OLLAMA_MODEL: str

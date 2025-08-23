@@ -5,7 +5,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 
-from src.settings import Settings
+from src.config.settings import Settings
 
 app = FastAPI(
     title="PVT-LLM-API",
