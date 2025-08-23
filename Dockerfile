@@ -10,8 +10,8 @@ ARG POETRY_VERSION=1.8.2
 
 # Set environment variables for Poetry
 ENV POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_IN_PROJECT=true \
-    POETRY_CACHE_DIR=/tmp/poetry_cache
+  POETRY_VIRTUALENVS_IN_PROJECT=true \
+  POETRY_CACHE_DIR=/tmp/poetry_cache
 
 WORKDIR /app
 
@@ -36,8 +36,8 @@ ARG POETRY_VERSION=1.8.2
 
 # Set environment variables for Poetry
 ENV POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_IN_PROJECT=true \
-    POETRY_CACHE_DIR=/tmp/poetry_cache
+  POETRY_VIRTUALENVS_IN_PROJECT=true \
+  POETRY_CACHE_DIR=/tmp/poetry_cache
 
 WORKDIR /app
 
@@ -59,7 +59,7 @@ RUN poetry install --no-root --only main
 # - Creates the final, lightweight production image.
 # - Copies the lean venv and only necessary application files.
 # ==============================================================================
-FROM python:3.12-slim
+FROM python:3.12-slim AS runner
 
 # Create a non-root user and group for security
 RUN groupadd -r appgroup && useradd -r -g appgroup -d /home/appuser -m appuser
@@ -96,7 +96,7 @@ ENV HEALTHCHECK_PATH=/health
 
 # Healthcheck using only Python's standard library to avoid extra dependencies
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD python -c "import sys, os, urllib.request; sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{os.environ.get(\"HEALTHCHECK_PATH\")}').getcode() == 200 else sys.exit(1)"
+  CMD python -c "import sys, os, urllib.request; sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{os.environ.get(\\"HEALTHCHECK_PATH\\")}').getcode() == 200 else sys.exit(1)"
 
 # Set the entrypoint script to be executed when the container starts
 ENTRYPOINT ["/app/entrypoint.sh"]
