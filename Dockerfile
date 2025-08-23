@@ -20,8 +20,8 @@ RUN pip install "poetry==${POETRY_VERSION}"
 # Copy dependency definition files
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies, excluding development ones and not installing the project itself
-RUN poetry install --no-root --no-dev
+# Install dependencies, including development ones, for a unified environment
+RUN poetry install --no-root
 
 
 # ==============================================================================
@@ -38,14 +38,18 @@ RUN groupadd -r appgroup && useradd -r -g appgroup -d /home/appuser -m appuser
 # Set the working directory
 WORKDIR /app
 
+# Grant ownership of the working directory to the non-root user
+RUN chown appuser:appgroup /app
+
 # Copy the virtual environment from the builder stage
 COPY --from=builder /app/.venv ./.venv
 
-# Set the PATH to include the venv's bin directory
+# Set the PATH to include the venv's bin directory for simpler command execution
 ENV PATH="/app/.venv/bin:${PATH}"
 
-# Copy application code and necessary files
+# Copy application code and necessary files, setting ownership to the non-root user
 COPY --chown=appuser:appgroup src/ ./src
+COPY --chown=appuser:appgroup tests/ ./tests
 COPY --chown=appuser:appgroup alembic/ ./alembic
 COPY --chown=appuser:appgroup alembic.ini .
 COPY --chown=appuser:appgroup entrypoint.sh .
@@ -59,9 +63,9 @@ USER appuser
 # Expose the port the app runs on
 EXPOSE 8000
 
-# Healthcheck to ensure the application is responsive
+# Healthcheck using only Python's standard library to avoid extra dependencies
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD [ "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8000/health" ]
+  CMD python -c "import sys, urllib.request; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health').getcode() == 200 else sys.exit(1)"
 
 # Set the entrypoint script to be executed when the container starts
 ENTRYPOINT ["/app/entrypoint.sh"]

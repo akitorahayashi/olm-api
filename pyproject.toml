@@ -1,19 +1,20 @@
-[project]
+[tool.poetry]
 name = "pvt-llm-api"
 version = "0.1.0"
 description = "A local LLM wrapped as an API for reusable access."
+authors = ["Your Name <you@example.com>"]
 readme = "README.md"
-requires-python = ">=3.12,<4.0"
-dependencies = [
-    "fastapi (>=0.116.1,<0.117.0)",
-    "uvicorn (>=0.35.0,<0.36.0)",
-    "ollama (>=0.5.3,<0.6.0)",
-    "pydantic-settings (>=2.4.0,<3.0.0)",
-    "sqlalchemy (>=2.0.29,<3.0.0)",
-    "alembic (>=1.13.1,<2.0.0)",
-    "psycopg[binary] (>=3.1,<4.0)"
-]
 packages = [{ include = "*", from = "src" }]
+
+[tool.poetry.dependencies]
+python = ">=3.12,<4.0"
+fastapi = ">=0.116.1,<0.117.0"
+uvicorn = ">=0.35.0,<0.36.0"
+ollama = ">=0.5.3,<0.6.0"
+pydantic-settings = ">=2.4.0,<3.0.0"
+sqlalchemy = ">=2.0.29,<3.0.0"
+alembic = ">=1.13.1,<2.0.0"
+psycopg = { version = ">=3.1,<4.0", extras = ["binary"] }
 
 [tool.poetry.group.dev.dependencies]
 ipython = "^9.4.0"
@@ -22,7 +23,7 @@ black = "^25.1.0"
 pytest = "^8.4.1"
 
 [build-system]
-requires = ["poetry-core>=2.0.0,<3.0.0"]
+requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
@@ -53,4 +54,3 @@ exclude = [
 [tool.ruff.lint]
 select = ["E", "F", "I"]
 ignore = ["E501"] # E501 (line too long) is ignored
-
