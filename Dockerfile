@@ -61,11 +61,6 @@ RUN poetry install --no-root --only main
 # ==============================================================================
 FROM python:3.12-slim
 
-# Set the Poetry version and other environment variables
-ARG POETRY_VERSION=1.8.2
-ENV POETRY_NO_INTERACTION=1 \
-    POETRY_VIRTUALENVS_IN_PROJECT=true
-
 # Create a non-root user and group for security
 RUN groupadd -r appgroup && useradd -r -g appgroup -d /home/appuser -m appuser
 
@@ -96,9 +91,12 @@ USER appuser
 # Expose the port the app runs on (will be mapped by Docker Compose)
 EXPOSE 8000
 
+# Default healthcheck path
+ENV HEALTHCHECK_PATH=/health
+
 # Healthcheck using only Python's standard library to avoid extra dependencies
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD python -c "import sys, urllib.request; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health').getcode() == 200 else sys.exit(1)"
+  CMD python -c "import sys, os, urllib.request; sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{os.environ.get(\"HEALTHCHECK_PATH\")}').getcode() == 200 else sys.exit(1)"
 
 # Set the entrypoint script to be executed when the container starts
 ENTRYPOINT ["/app/entrypoint.sh"]

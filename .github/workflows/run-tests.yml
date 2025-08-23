@@ -15,3 +15,7 @@ jobs:
 
       - name: Run tests
         run: make test
+
+      - name: Cleanup containers
+        if: always()
+        run: make down

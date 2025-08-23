@@ -21,3 +21,7 @@ jobs:
 
       - name: Run Black Formatter Check
         run: make format-check
+
+      - name: Cleanup containers
+        if: always()
+        run: make down

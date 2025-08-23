@@ -119,3 +119,11 @@ When code is pushed to the `main` branch, a separate workflow automatically:
 ### Manual Deployment (`deploy.yml`)
 
 Deployment to a server (e.g., staging or production) is a manual process that can be triggered from the GitHub Actions UI. This workflow uses SSH to connect to the target server and runs a script to pull the latest image from GHCR and restart the services.
+
+**Prerequisites for Deployment:**
+- The remote server must have **Docker** and **Docker Compose** installed.
+- The following secrets must be configured in the GitHub repository's "Actions secrets and variables" settings:
+  - `SSH_HOST`: The IP address or hostname of the remote server.
+  - `SSH_USER`: The username for SSH login.
+  - `SSH_PRIVATE_KEY`: The private SSH key for authentication.
+  - `ENV_FILE_PRODUCTION`: The base64-encoded content of the production `.env` file.

@@ -56,7 +56,8 @@ logs: ## 📜 View the logs for the API service
 
 shell: ## 💻 Open a shell inside the running API container
 	@echo "Opening shell in api container..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api /bin/sh
+	@$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api /bin/sh || \
+		(echo "Failed to open shell. Is the container running? Try 'make up'" && exit 1)
 
 migrate: ## 🗄️ Run database migrations against the development database
 	@echo "Running database migrations..."
@@ -74,7 +75,7 @@ format-check: ## 🎨 Check if the code is formatted with Black
 	@echo "Checking code format with Black..."
 	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black --check src/ tests/"
 
-lint: ##  lint Check the code for issues with Ruff
+lint: ##  Lint Check the code for issues with Ruff
 	@echo "Linting code with Ruff..."
 	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && ruff check src/ tests/"
 
