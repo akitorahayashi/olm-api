@@ -1,6 +1,7 @@
 # ==============================================================================
 # Stage 1: Builder
-# - Installs dependencies into a virtual environment.
+# - Installs ALL dependencies (including development) to create a cached layer
+#   that can be leveraged by CI/CD for linting, testing, etc.
 # ==============================================================================
 FROM python:3.12-slim as builder
 
@@ -20,19 +21,52 @@ RUN pip install "poetry==${POETRY_VERSION}"
 # Copy dependency definition files
 COPY pyproject.toml poetry.lock ./
 
-# Install dependencies, including development ones, for a unified environment
+# Install all dependencies, including development ones
 RUN poetry install --no-root
 
 
 # ==============================================================================
-# Stage 2: Runner
-# - Creates a non-root user.
-# - Copies dependencies and source code.
-# - Sets up the entrypoint and healthcheck.
+# Stage 2: Prod-Builder
+# - Creates a lean virtual environment with only production dependencies.
+# ==============================================================================
+FROM python:3.12-slim as prod-builder
+
+# Argument for pinning the Poetry version
+ARG POETRY_VERSION=1.8.2
+
+# Set environment variables for Poetry
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=true \
+    POETRY_CACHE_DIR=/tmp/poetry_cache
+
+WORKDIR /app
+
+# Install Poetry
+RUN pip install "poetry==${POETRY_VERSION}"
+
+# Copy dependency definition files
+COPY pyproject.toml poetry.lock ./
+
+# Copy the cache from the main builder to speed up installation
+COPY --from=builder /tmp/poetry_cache /tmp/poetry_cache
+
+# Install only production dependencies
+RUN poetry install --no-root --only main
+
+
+# ==============================================================================
+# Stage 3: Runner
+# - Creates the final, lightweight production image.
+# - Copies the lean venv and only necessary application files.
 # ==============================================================================
 FROM python:3.12-slim
 
-# Create a non-root user and group
+# Set the Poetry version and other environment variables
+ARG POETRY_VERSION=1.8.2
+ENV POETRY_NO_INTERACTION=1 \
+    POETRY_VIRTUALENVS_IN_PROJECT=true
+
+# Create a non-root user and group for security
 RUN groupadd -r appgroup && useradd -r -g appgroup -d /home/appuser -m appuser
 
 # Set the working directory
@@ -41,15 +75,14 @@ WORKDIR /app
 # Grant ownership of the working directory to the non-root user
 RUN chown appuser:appgroup /app
 
-# Copy the virtual environment from the builder stage
-COPY --from=builder /app/.venv ./.venv
+# Copy the lean virtual environment from the prod-builder stage
+COPY --from=prod-builder /app/.venv ./.venv
 
 # Set the PATH to include the venv's bin directory for simpler command execution
 ENV PATH="/app/.venv/bin:${PATH}"
 
-# Copy application code and necessary files, setting ownership to the non-root user
+# Copy only the necessary application code and configuration, excluding tests
 COPY --chown=appuser:appgroup src/ ./src
-COPY --chown=appuser:appgroup tests/ ./tests
 COPY --chown=appuser:appgroup alembic/ ./alembic
 COPY --chown=appuser:appgroup alembic.ini .
 COPY --chown=appuser:appgroup entrypoint.sh .
@@ -60,7 +93,7 @@ RUN chmod +x entrypoint.sh
 # Switch to the non-root user
 USER appuser
 
-# Expose the port the app runs on
+# Expose the port the app runs on (will be mapped by Docker Compose)
 EXPOSE 8000
 
 # Healthcheck using only Python's standard library to avoid extra dependencies

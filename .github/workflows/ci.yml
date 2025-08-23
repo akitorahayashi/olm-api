@@ -1,0 +1,42 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file
+        run: cp .env.example .env
+
+      - name: Run Linting
+        run: make lint
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create .env file for build context
+        run: cp .env.example .env
+
+      - name: Create .env.test file for test service
+        run: |
+          cp .env.example .env.test
+          echo "DATABASE_URL=postgresql+psycopg://user:password@db_test:5432/pvt-llm-api-test" >> .env.test
+          echo "POSTGRES_DB_TEST=pvt-llm-api-test" >> .env.test
+
+      - name: Run Test Suite
+        run: make test

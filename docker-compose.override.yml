@@ -1,0 +1,67 @@
+services:
+  db:
+    ports:
+      - "5432:5432"
+
+  api:
+    build:
+      target: builder
+    volumes:
+      - ./src:/app/src
+      # Also mount alembic files for development
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+      # Mount tests so they can be run inside the container if needed
+      - ./tests:/app/tests
+    ports:
+      - "${WEB_BIND_HOST:-127.0.0.1}:${WEB_PORT:-8000}:8000"
+    # The command enables hot-reloading with watchmedo
+    command: >
+      sh -c "
+        . /app/.venv/bin/activate &&
+        watchmedo auto-restart --directory ./src --pattern '*.py' --recursive --
+        uvicorn src.main:app --host 0.0.0.0 --port 8000
+      "
+
+  db_test:
+    image: postgres:16-alpine
+    container_name: pvt-llm-db-test
+    env_file:
+      - .env.test
+    environment:
+      # Map the test database name to the variable the postgres image expects
+      - POSTGRES_DB=${POSTGRES_DB_TEST}
+    # Use tmpfs to keep test database in memory for speed and easy cleanup
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB_TEST}"]
+      interval: 5s
+      timeout: 2s
+      retries: 5
+    restart: unless-stopped
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: builder
+    container_name: pvt-llm-test
+    depends_on:
+      db_test:
+        condition: service_healthy
+    env_file:
+      - .env.test
+    volumes:
+      - ./src:/app/src
+      - ./alembic:/app/alembic
+      - ./alembic.ini:/app/alembic.ini
+      - ./tests:/app/tests
+    command: >
+      sh -c "
+        . /app/.venv/bin/activate &&
+        echo 'Running migrations for test database...' &&
+        alembic upgrade head &&
+        echo 'Running pytest...' &&
+        pytest
+      "
