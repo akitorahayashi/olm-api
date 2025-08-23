@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1.7-labs
 # ==============================================================================
 # Stage 1: Builder
 # - Installs ALL dependencies (including development) to create a cached layer
@@ -16,13 +17,15 @@ ENV POETRY_NO_INTERACTION=1 \
 WORKDIR /app
 
 # Install Poetry
-RUN pip install "poetry==${POETRY_VERSION}"
+RUN --mount=type=cache,target=/root/.cache \
+    pip install "poetry==${POETRY_VERSION}"
 
 # Copy dependency definition files
 COPY pyproject.toml poetry.lock ./
 
 # Install all dependencies, including development ones
-RUN poetry install --no-root
+RUN --mount=type=cache,target=/tmp/poetry_cache \
+    poetry install --no-root
 
 
 # ==============================================================================
@@ -36,13 +39,14 @@ ARG POETRY_VERSION=1.8.2
 
 # Set environment variables for Poetry
 ENV POETRY_NO_INTERACTION=1 \
-  POETRY_VIRTUALENVS_IN_PROJECT=true \
+  POETry_VIRTUALENVS_IN_PROJECT=true \
   POETRY_CACHE_DIR=/tmp/poetry_cache
 
 WORKDIR /app
 
 # Install Poetry
-RUN pip install "poetry==${POETRY_VERSION}"
+RUN --mount=type=cache,target=/root/.cache \
+    pip install "poetry==${POETRY_VERSION}"
 
 # Copy dependency definition files
 COPY pyproject.toml poetry.lock ./
@@ -51,7 +55,8 @@ COPY pyproject.toml poetry.lock ./
 COPY --from=builder /tmp/poetry_cache /tmp/poetry_cache
 
 # Install only production dependencies
-RUN poetry install --no-root --only main
+RUN --mount=type=cache,target=/tmp/poetry_cache \
+    poetry install --no-root --only main
 
 
 # ==============================================================================

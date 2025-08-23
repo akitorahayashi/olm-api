@@ -44,17 +44,17 @@ With the `.env` file configured, start all services (API server and database) us
 make up
 ```
 
-This command builds the necessary Docker images and starts the containers. The API will be accessible at `http://127.0.0.1:8000` by default. The source code is mounted as a volume, enabling hot-reloading on code changes.
+This command builds the necessary Docker images and starts the containers. Docker Compose is configured to wait until the database container is healthy before starting the API container. The API's entrypoint script then automatically applies any pending database migrations on startup.
 
-### 3. Run Database Migrations
+The API will be accessible at `http://127.0.0.1:8000` by default. The source code is mounted as a volume, enabling hot-reloading on code changes.
 
-After the containers are running, apply the database migrations to set up the required tables:
+### 3. Run Database Migrations (If Needed)
+
+The application's entrypoint script automatically runs database migrations on startup when you use `make up`, so you typically do not need to run this command manually. However, if you need to apply new migrations to an already running server without restarting it, you can use this command:
 
 ```sh
 make migrate
 ```
-
-Your local development environment is now fully configured and ready to use.
 
 ## Environment Variables
 
