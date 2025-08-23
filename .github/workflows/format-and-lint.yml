@@ -1,0 +1,17 @@
+name: Format and Lint
+
+on:
+  workflow_call:
+
+jobs:
+  format-and-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run Ruff Linter
+        run: make lint
+
+      - name: Run Black Formatter Check
+        run: make format-check

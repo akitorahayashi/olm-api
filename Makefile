@@ -9,7 +9,7 @@
 # ==============================================================================
 
 # Ensure that the targets are always run
-.PHONY: help setup up down logs shell format lint lint-fix test migrate
+.PHONY: help setup up down logs shell format format-check lint lint-fix test migrate
 
 # Default target executed when 'make' is run without arguments
 .DEFAULT_GOAL := help
@@ -69,6 +69,10 @@ migrate: ## 🗄️ Run database migrations against the development database
 format: ## 🎨 Format the code using Black
 	@echo "Formatting code with Black..."
 	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black src/ tests/"
+
+format-check: ## 🎨 Check if the code is formatted with Black
+	@echo "Checking code format with Black..."
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black --check src/ tests/"
 
 lint: ##  lint Check the code for issues with Ruff
 	@echo "Linting code with Ruff..."

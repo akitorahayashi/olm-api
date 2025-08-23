@@ -1,0 +1,15 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  format-and-lint:
+    uses: ./.github/workflows/format-and-lint.yml
+
+  run-tests:
+    uses: ./.github/workflows/run-tests.yml
