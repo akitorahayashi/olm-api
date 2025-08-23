@@ -2,7 +2,7 @@ import logging
 import traceback
 from typing import Optional
 
-from fastapi import Request, Response
+from fastapi import HTTPException, Request, Response
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
@@ -28,6 +28,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             response = await call_next(request)
             self._safe_log(db, request, response.status_code, None)
             return response
+        except HTTPException as exc:
+            # Preserve original status (e.g., 400/404)
+            self._safe_log(db, request, exc.status_code, traceback.format_exc())
+            raise
         except Exception:
             error_details = traceback.format_exc()
             self._safe_log(db, request, 500, error_details)

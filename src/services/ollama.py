@@ -68,7 +68,7 @@ async def generate_ollama_response(
         error_detail = e.args[0] if e.args else str(e)
         logging.error(f"Ollama API request failed: {error_detail}")
         # Re-raise the original exception so the middleware can capture the full traceback
-        raise e
+        raise
     except Exception:
         # Catch any other unexpected errors without leaking details
         logging.exception("Unexpected error in generate_ollama_response")
