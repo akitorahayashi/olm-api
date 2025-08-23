@@ -67,10 +67,8 @@ async def generate_ollama_response(
         # Catch specific, known exceptions from the client libraries
         error_detail = e.args[0] if e.args else str(e)
         logging.error(f"Ollama API request failed: {error_detail}")
-        raise HTTPException(
-            status_code=500,
-            detail="Ollama API error: Could not connect to the service.",
-        )
+        # Re-raise the original exception so the middleware can capture the full traceback
+        raise
     except Exception:
         # Catch any other unexpected errors without leaking details
         logging.exception("Unexpected error in generate_ollama_response")
