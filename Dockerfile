@@ -79,7 +79,7 @@ ENV PATH="/app/.venv/bin:${PATH}"
 # Copy only the necessary application code and configuration, excluding tests
 COPY --chown=appuser:appgroup src/ ./src
 COPY --chown=appuser:appgroup alembic/ ./alembic
-COPY --chown=appuser:appgroup alembic.ini .
+COPY --chown=appuser:appgroup pyproject.toml .
 COPY --chown=appuser:appgroup entrypoint.sh .
 
 # Grant execute permissions to the entrypoint script
