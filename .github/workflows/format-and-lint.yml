@@ -10,6 +10,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Create .env file
+        run: make setup
+
+      - name: Start containers
+        run: make up
+
       - name: Run Ruff Linter
         run: make lint
 
