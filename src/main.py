@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 
 from src.dependencies.logging import LoggingMiddleware
-from src.routers import generate
+from src.pvt_llm_api.v1.routers import generate
 
 app = FastAPI(
     title="PVT-LLM-API",

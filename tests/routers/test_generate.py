@@ -4,7 +4,7 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 
-from src.dependencies.common import get_ollama_client
+from src.services.ollama import get_ollama_client
 from src.main import app
 
 # --- Mock Setup ---

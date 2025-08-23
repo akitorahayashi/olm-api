@@ -1,10 +1,9 @@
 import ollama
 from fastapi import APIRouter, Depends
 
-from src.config.settings import Settings
-from src.dependencies.common import get_ollama_client, get_settings
+from src.config.settings import Settings, get_settings
 from src.schemas.generate import GenerateRequest
-from src.services.ollama import generate_ollama_response
+from src.services.ollama import generate_ollama_response, get_ollama_client
 
 router = APIRouter(
     prefix="/api/v1",

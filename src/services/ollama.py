@@ -2,11 +2,11 @@ import logging
 
 import httpx
 import ollama
-from fastapi import HTTPException
+from fastapi import Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
-from src.config.settings import Settings
+from src.config.settings import Settings, get_settings
 from src.schemas.generate import GenerateResponse
 
 
@@ -77,3 +77,12 @@ async def generate_ollama_response(
         raise HTTPException(
             status_code=500, detail="An unexpected internal error occurred."
         )
+
+
+def get_ollama_client(settings: Settings = Depends(get_settings)) -> ollama.Client:
+    """
+    Dependency function to create an instance of the Ollama client.
+    """
+    # Using 'yield' makes this a generator-based dependency,
+    # which is good practice for resources that might need cleanup.
+    yield ollama.Client(host=settings.OLLAMA_BASE_URL)

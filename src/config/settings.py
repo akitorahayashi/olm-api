@@ -18,3 +18,15 @@ class Settings(BaseSettings):
     OLLAMA_BASE_URL: str
     OLLAMA_MODEL: str
     DATABASE_URL: str = "sqlite:///./pvt-llm-api.db"
+
+
+from functools import lru_cache
+
+
+@lru_cache
+def get_settings() -> Settings:
+    """
+    Dependency function to create the settings object.
+    Caches the settings object for performance.
+    """
+    return Settings()
