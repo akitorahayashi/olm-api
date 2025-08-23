@@ -14,3 +14,11 @@ app.add_middleware(LoggingMiddleware)
 
 # Include the router from the generate module
 app.include_router(generate.router)
+
+
+@app.get("/health", tags=["Health Check"])
+async def health_check():
+    """
+    Simple health check endpoint to confirm the API is running.
+    """
+    return {"status": "ok"}

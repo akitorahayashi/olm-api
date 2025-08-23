@@ -1,4 +1,3 @@
-import os
 from logging.config import fileConfig
 
 from sqlalchemy import engine_from_config, pool
@@ -6,6 +5,7 @@ from sqlalchemy import engine_from_config, pool
 import src.models.log  # noqa: F401
 from alembic import context
 from src.db.database import Base
+from src.dependencies.common import get_settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -16,10 +16,10 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-# Get DB URL from environment, with a fallback for local dev.
-# This decouples alembic from the main app's Settings class.
-db_url = os.getenv("DATABASE_URL", "sqlite:///./pvt-llm-api.db")
-config.set_main_option("sqlalchemy.url", db_url)
+# Use the application's settings to configure the database URL.
+# This ensures consistency between the app and migrations.
+settings = get_settings()
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
 
 
 # add your model's MetaData object here
