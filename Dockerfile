@@ -25,6 +25,7 @@ COPY pyproject.toml poetry.lock ./
 
 # Install all dependencies, including development ones
 RUN --mount=type=cache,target=/tmp/poetry_cache \
+    poetry config virtualenvs.in-project true && \
     poetry install --no-root
 
 
@@ -39,7 +40,7 @@ ARG POETRY_VERSION=1.8.2
 
 # Set environment variables for Poetry
 ENV POETRY_NO_INTERACTION=1 \
-  POETry_VIRTUALENVS_IN_PROJECT=true \
+  POETRY_VIRTUALENVS_IN_PROJECT=true \
   POETRY_CACHE_DIR=/tmp/poetry_cache
 
 WORKDIR /app
@@ -51,11 +52,9 @@ RUN --mount=type=cache,target=/root/.cache \
 # Copy dependency definition files
 COPY pyproject.toml poetry.lock ./
 
-# Copy the cache from the main builder to speed up installation
-COPY --from=builder /tmp/poetry_cache /tmp/poetry_cache
-
 # Install only production dependencies
 RUN --mount=type=cache,target=/tmp/poetry_cache \
+    poetry config virtualenvs.in-project true && \
     poetry install --no-root --only main
 
 
