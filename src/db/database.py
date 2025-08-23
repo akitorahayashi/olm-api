@@ -5,10 +5,12 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 
 from src.config.settings import Settings
 
+
 # We use lru_cache to ensure the Settings object is created only once.
 @lru_cache()
 def get_settings():
     return Settings()
+
 
 # We will lazy-load the engine and session factory to prevent
 # pydantic from trying to validate settings at import time, which
@@ -27,15 +29,13 @@ def get_db_session():
         settings = get_settings()
         _engine = create_engine(
             settings.DATABASE_URL,
-            connect_args={
-                "check_same_thread": False
-            }
-            if settings.DATABASE_URL.startswith("sqlite")
-            else {},
+            connect_args=(
+                {"check_same_thread": False}
+                if settings.DATABASE_URL.startswith("sqlite")
+                else {}
+            ),
         )
-        _SessionLocal = sessionmaker(
-            autocommit=False, autoflush=False, bind=_engine
-        )
+        _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
     return _SessionLocal()
 
