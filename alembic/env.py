@@ -1,6 +1,6 @@
 import logging
 import os
-from logging.config import fileConfig
+from pydantic import ValidationError
 
 from sqlalchemy import create_engine, pool
 
@@ -13,16 +13,31 @@ from src.config.settings import Settings
 # access to the values within the .ini file in use.
 config = context.config
 
-# Set up logging.
-# We no longer use alembic.ini, so we configure it here.
-logging.basicConfig(
-    level=os.getenv("ALEMBIC_LOG_LEVEL", "INFO"),
-    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-)
+# Set up logging if it's not already configured
+if not logging.getLogger().handlers:
+    logging.basicConfig(level="INFO")
+
+# Set alembic logger level specifically
+logging.getLogger("alembic").setLevel(os.getenv("ALEMBIC_LOG_LEVEL", "INFO"))
+
+
+def _get_settings() -> Settings:
+    """Load settings and validate DATABASE_URL."""
+    try:
+        settings = Settings()
+        if not settings.DATABASE_URL:
+            raise ValueError(
+                "DATABASE_URL が未設定です。Alembic を実行する前に環境変数/.env を準備してください。"
+            )
+        return settings
+    except (ValidationError, ValueError) as e:
+        # Re-raise with a more user-friendly message
+        raise ValueError(str(e)) from e
+
 
 # Use the application's settings to configure the database URL.
-# This ensures consistency between the app and migrations.
-settings = Settings()
+settings = _get_settings()
+
 
 # add your model's MetaData object here
 # for 'autogenerate' support
@@ -37,6 +52,8 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        compare_type=True,
+        compare_server_default=True,
     )
 
     with context.begin_transaction():
@@ -48,7 +65,18 @@ def run_migrations_online() -> None:
     connectable = create_engine(settings.DATABASE_URL, poolclass=pool.NullPool)
 
     with connectable.connect() as connection:
-        context.configure(connection=connection, target_metadata=target_metadata)
+        # Add batch mode support for SQLite
+        is_sqlite = connection.dialect.name == "sqlite"
+        configure_opts = {
+            "connection": connection,
+            "target_metadata": target_metadata,
+            "compare_type": True,
+            "compare_server_default": True,
+        }
+        if is_sqlite:
+            configure_opts["render_as_batch"] = True
+
+        context.configure(**configure_opts)
 
         with context.begin_transaction():
             context.run_migrations()
