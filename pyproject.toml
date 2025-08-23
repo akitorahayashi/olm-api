@@ -46,6 +46,7 @@ exclude = '''
 [tool.ruff]
 target-version = "py312"
 exclude = [
+    ".venv",
     "__pycache__",
     "migrations",
     "alembic",

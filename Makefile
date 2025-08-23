@@ -9,7 +9,7 @@
 # ==============================================================================
 
 # Ensure that the targets are always run
-.PHONY: help setup up down logs shell format lint test migrate
+.PHONY: help setup up down logs shell format lint lint-fix test migrate
 
 # Default target executed when 'make' is run without arguments
 .DEFAULT_GOAL := help
@@ -60,7 +60,7 @@ shell: ## 💻 Open a shell inside the running API container
 
 migrate: ## 🗄️ Run database migrations against the development database
 	@echo "Running database migrations..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api alembic upgrade head
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
 
 # ==============================================================================
 # CODE QUALITY & TESTING
@@ -68,11 +68,15 @@ migrate: ## 🗄️ Run database migrations against the development database
 
 format: ## 🎨 Format the code using Black
 	@echo "Formatting code with Black..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api black src/ tests/
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black src/ tests/"
 
 lint: ##  lint Check the code for issues with Ruff
 	@echo "Linting code with Ruff..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api ruff check src/ tests/
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && ruff check src/ tests/"
+
+lint-fix: ## 🩹 Check the code with Ruff and apply fixes automatically
+	@echo "Linting and fixing code with Ruff..."
+	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && ruff check src/ tests/ --fix"
 
 test: ## 🧪 Run the test suite in an isolated environment
 	@echo "Running test suite..."
