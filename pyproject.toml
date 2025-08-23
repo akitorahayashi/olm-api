@@ -47,6 +47,7 @@ target-version = "py312"
 exclude = [
     "__pycache__",
     "migrations",
+    "alembic",
     "db.sqlite3",
     "*.pyc"
 ]
