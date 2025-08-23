@@ -1,28 +1,18 @@
-from functools import lru_cache
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-from src.config.settings import Settings
+from src.dependencies.common import get_settings
 
+# --- Lazy Initialization for Database Engine and Session Factory ---
 
-# We use lru_cache to ensure the Settings object is created only once.
-@lru_cache()
-def get_settings():
-    return Settings()
-
-
-# We will lazy-load the engine and session factory to prevent
-# pydantic from trying to validate settings at import time, which
-# happens before pytest fixtures can set environment variables.
 _engine = None
 _SessionLocal = None
 
 
-def get_db_session():
+def _initialize_factory():
     """
-    Returns a new database session.
-    Initializes the engine and SessionLocal factory on the first call.
+    Lazy initializer for the database engine and session factory.
+    This prevents settings from being loaded at import time.
     """
     global _engine, _SessionLocal
     if _engine is None:
@@ -37,8 +27,27 @@ def get_db_session():
         )
         _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 
+
+def create_db_session():
+    """
+    Creates a new SQLAlchemy session.
+    For direct use in places like middleware or background tasks.
+    """
+    _initialize_factory()
     return _SessionLocal()
 
 
-# Base class for our models to inherit from.
+def get_db():
+    """
+    FastAPI dependency that provides a database session and ensures it's closed.
+    """
+    session = create_db_session()
+    try:
+        yield session
+    finally:
+        session.close()
+
+
+# --- Declarative Base for Models ---
+
 Base = declarative_base()

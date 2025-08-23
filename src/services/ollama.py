@@ -1,3 +1,6 @@
+import logging
+
+import httpx
 import ollama
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
@@ -9,23 +12,23 @@ from src.schemas.generate import GenerateResponse
 
 async def stream_generator(response_iter):
     """
-    Iterate a blocking generator in a threadpool and yield content chunks.
+    Iterate a blocking generator in a threadpool and yield content chunks
+    formatted for Server-Sent Events (SSE).
     """
     while True:
         try:
-            # Run the blocking `next()` call in a thread pool
             chunk = await run_in_threadpool(next, response_iter)
         except RuntimeError as e:
-            # run_in_threadpool can wrap StopIteration in a RuntimeError
             if "StopIteration" in str(e):
                 break
-            raise  # Re-raise other runtime errors
+            raise
         except StopIteration:
-            # Catch StopIteration as a fallback
             break
+
         content = chunk.get("message", {}).get("content")
         if content:
-            yield content
+            # Format as SSE: "data: <content>\n\n"
+            yield f"data: {content}\n\n"
 
 
 async def generate_ollama_response(
@@ -36,10 +39,8 @@ async def generate_ollama_response(
 ):
     """
     Generates a response from the Ollama model, handling both streaming and non-streaming cases.
-    It runs the blocking I/O calls in a threadpool to avoid blocking the event loop.
     """
     try:
-        # Run the blocking `ollama_client.chat` call in a thread pool
         chat_response = await run_in_threadpool(
             ollama_client.chat,
             model=settings.OLLAMA_MODEL,
@@ -48,9 +49,10 @@ async def generate_ollama_response(
         )
 
         if stream:
+            # Return a streaming response with the correct SSE media type
             return StreamingResponse(
                 stream_generator(iter(chat_response)),
-                media_type="text/event-stream",
+                media_type="text/event-stream; charset=utf-8",
             )
         else:
             if "message" in chat_response and "content" in chat_response["message"]:
@@ -61,13 +63,17 @@ async def generate_ollama_response(
                     status_code=500, detail="Invalid response structure from Ollama."
                 )
 
-    except ollama.ResponseError as e:
+    except (httpx.RequestError, httpx.HTTPStatusError, ollama.RequestError) as e:
+        # Catch specific, known exceptions from the client libraries
         error_detail = e.args[0] if e.args else str(e)
+        logging.error(f"Ollama API request failed: {error_detail}")
         raise HTTPException(
             status_code=500,
-            detail=f"Ollama API error: {error_detail}",
+            detail="Ollama API error: Could not connect to the service.",
         )
-    except Exception as e:
+    except Exception:
+        # Catch any other unexpected errors without leaking details
+        logging.exception("Unexpected error in generate_ollama_response")
         raise HTTPException(
-            status_code=500, detail=f"An unexpected error occurred: {str(e)}"
+            status_code=500, detail="An unexpected internal error occurred."
         )

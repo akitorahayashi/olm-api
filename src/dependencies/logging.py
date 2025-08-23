@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
 
-from src.db.database import get_db_session
+from src.db.database import create_db_session
 from src.models.log import Log
 
 
@@ -21,7 +21,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         if "/generate" not in request.url.path:
             return await call_next(request)
 
-        db = get_db_session()
+        db = create_db_session()
         try:
             # First, try to get the response from the endpoint
             try:
