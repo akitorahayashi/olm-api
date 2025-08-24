@@ -12,8 +12,6 @@ services:
       - ./alembic:/app/alembic
       # Mount tests so they can be run inside the container if needed
       - ./tests:/app/tests
-    ports:
-      - "${WEB_BIND_HOST:-127.0.0.1}:${WEB_PORT:-8000}:8000"
     # The command enables hot-reloading with watchmedo
     command: >
       sh -c "
@@ -48,7 +46,7 @@ services:
       db_test:
         condition: service_healthy
       test-ollama:
-        condition: service_started
+        condition: service_healthy
     env_file:
       - .env
     environment:
@@ -70,10 +68,16 @@ services:
       "
 
   test-ollama:
-    image: alpine:latest
+    image: alpine:3.20
     command: >
       sh -c "
-        apk add --no-cache busybox-extras &&
-        watch -n 3600 echo 'Mock Ollama service is running...'
+        apk add --no-cache netcat-openbsd &&
+        echo -e 'HTTP/1.1 200 OK\\n\\n{}' | nc -lk -p 11434
       "
+    healthcheck:
+      test: [ "CMD", "nc", "-z", "localhost", "11434" ]
+      interval: 1s
+      timeout: 1s
+      retries: 10
+      start_period: 1s
     restart: unless-stopped

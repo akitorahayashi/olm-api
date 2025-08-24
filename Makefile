@@ -52,7 +52,7 @@ down: ## Stop and remove all development containers
 
 up-prod: ## Start all containers using only docker-compose.yml (ignoring override)
 	@echo "Starting up production-like services (ignoring override)..."
-	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROJECT_NAME)-prod up -d --build --pull always
+	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROJECT_NAME)-prod up -d --build --pull always --remove-orphans
 
 down-prod: ## Stop and remove all containers started by up-prod
 	@echo "Shutting down production-like services..."

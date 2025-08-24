@@ -19,6 +19,8 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runner
+    ports:
+      - "${API_PORT}:8000"
     depends_on:
       db:
         condition: service_healthy
