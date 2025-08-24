@@ -3,7 +3,7 @@ import subprocess
 from unittest.mock import MagicMock
 
 import pytest
-from fastapi.testclient import TestClient
+from httpx import ASGITransport, AsyncClient
 from pytest_docker_tools import container, fetch
 
 from src.dependencies.common import get_ollama_client
@@ -98,9 +98,14 @@ def mock_ollama_client():
 
 
 @pytest.fixture(scope="module")
-def client():
+async def client():
     """
-    Create a TestClient instance for the entire test module.
+    Create an httpx.AsyncClient instance for the entire test module.
+    This uses the ASGITransport to route requests directly to the app, without
+    needing a running server.
+    The `lifespan="on"` argument ensures that the app's startup and shutdown
+    events are triggered during the test session.
     """
-    with TestClient(app) as c:
+    transport = ASGITransport(app=app, lifespan="on")
+    async with AsyncClient(transport=transport, base_url="http://test") as c:
         yield c

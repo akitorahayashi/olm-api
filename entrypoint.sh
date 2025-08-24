@@ -29,11 +29,11 @@ fi
 
 # --- Start Uvicorn server (or run another command) ---
 # Allow overriding host, port, and worker count via environment variables.
-API_HOST=${API_HOST:-0.0.0.0}
+API_LISTEN_IP=${API_LISTEN_IP:-0.0.0.0}
 API_PORT=${API_PORT:-8000}
 UVICORN_WORKERS=${UVICORN_WORKERS:-1}
 
-echo "Starting server on ${API_HOST}:${API_PORT} with ${UVICORN_WORKERS} worker(s)..."
+echo "Starting server on ${API_LISTEN_IP}:${API_PORT} with ${UVICORN_WORKERS} worker(s)..."
 
 # If arguments are passed to the script, execute them instead of the default server.
 # This allows running commands like `make shell`.

@@ -66,10 +66,12 @@ make migrate
 This project follows the **DRY (Don't Repeat Yourself)** principle by defining a single, unified set of variable names in `.env.example`. The `Makefile` handles the complexity of environment switching by creating a symbolic link named `.env` that points to the correct configuration file (`.env.dev` or `.env.prod`).
 
 Key variables include:
-- **`DOCKER_HOST_BIND_IP`**: The IP address on the host machine to which the API server port will bind. Use `127.0.0.1` for local access only (recommended for development) and `0.0.0.0` to allow external access (for production).
+- **`HOST_BIND_IP`**: The IP address on the host machine to which the API server port will bind. Use `127.0.0.1` for local access only (recommended for development) and `0.0.0.0` to allow external access (for production).
 - **`API_PORT`**: The external port to expose for the API server.
+- **`API_LISTEN_IP`**: The IP address the Uvicorn server listens on inside the container. This usually remains `0.0.0.0`.
 - **`DATABASE_URL`**: The full connection string for the PostgreSQL database.
-- **`OLLAMA_MODEL`**: The name of the Ollama model to be baked into the Docker image during the build process.
+- **`BUILT_IN_OLLAMA_MODEL`**: The name of the Ollama model to be baked into the Docker image during the build process.
+- **`DEFAULT_GENERATION_MODEL`**: The model that will be active by default on server startup. Must match `BUILT_IN_OLLAMA_MODEL`.
 
 ## API Specification
 
@@ -86,7 +88,7 @@ The request body must be a JSON object with the following fields:
 | `prompt`  | string  |         | **Required.** The input text for the LLM. |
 | `stream`  | boolean | `false` | If `true`, the response will be streamed. |
 
-**Note**: The model used for the generation is determined by the `OLLAMA_MODEL` environment variable on the server, not by a parameter in the request body.
+**Note**: The model used for generation is the one currently active on the server. The default model is set via the `DEFAULT_GENERATION_MODEL` environment variable, and it can be changed dynamically using the `POST /api/v1/models/switch/{model_name}` endpoint.
 
 ### Response Body
 
