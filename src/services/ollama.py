@@ -1,12 +1,11 @@
 import logging
 
 import httpx
-import ollama
 from fastapi import HTTPException
 from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
-from src.config.settings import Settings
+import ollama
 from src.schemas.generate import GenerateResponse
 
 
@@ -33,9 +32,9 @@ async def stream_generator(response_iter):
 
 async def generate_ollama_response(
     prompt: str,
+    model_name: str,
     stream: bool,
     ollama_client: ollama.Client,
-    settings: Settings,
 ):
     """
     Generates a response from the Ollama model, handling both streaming and non-streaming cases.
@@ -43,7 +42,7 @@ async def generate_ollama_response(
     try:
         chat_response = await run_in_threadpool(
             ollama_client.chat,
-            model=settings.OLLAMA_MODEL,
+            model=model_name,
             messages=[{"role": "user", "content": prompt}],
             stream=stream,
         )
@@ -75,3 +74,49 @@ async def generate_ollama_response(
         raise HTTPException(
             status_code=500, detail="An unexpected internal error occurred."
         )
+
+
+async def pull_model(model_name: str, ollama_client: ollama.Client):
+    """Pulls a model from the Ollama registry."""
+    try:
+        # This is a blocking call, so run it in a threadpool
+        return await run_in_threadpool(ollama_client.pull, model=model_name)
+    except ollama.RequestError as e:
+        raise HTTPException(
+            status_code=404, detail=f"Model '{model_name}' not found in registry."
+        ) from e
+    except (httpx.RequestError, httpx.HTTPStatusError) as e:
+        error_detail = e.args[0] if e.args else str(e)
+        logging.error(f"Ollama API request failed during pull: {error_detail}")
+        raise HTTPException(
+            status_code=500, detail="Failed to communicate with Ollama."
+        ) from e
+
+
+async def list_models(ollama_client: ollama.Client):
+    """Lists all models available locally in Ollama."""
+    try:
+        return await run_in_threadpool(ollama_client.list)
+    except (httpx.RequestError, httpx.HTTPStatusError, ollama.RequestError) as e:
+        error_detail = e.args[0] if e.args else str(e)
+        logging.error(f"Ollama API request failed during list: {error_detail}")
+        raise HTTPException(
+            status_code=500, detail="Failed to communicate with Ollama."
+        ) from e
+
+
+async def delete_model(model_name: str, ollama_client: ollama.Client):
+    """Deletes a model from Ollama."""
+    try:
+        await run_in_threadpool(ollama_client.delete, model=model_name)
+    except ollama.RequestError as e:
+        # Ollama's client raises a RequestError for 404 Not Found
+        raise HTTPException(
+            status_code=404, detail=f"Model '{model_name}' not found."
+        ) from e
+    except (httpx.RequestError, httpx.HTTPStatusError) as e:
+        error_detail = e.args[0] if e.args else str(e)
+        logging.error(f"Ollama API request failed during delete: {error_detail}")
+        raise HTTPException(
+            status_code=500, detail="Failed to communicate with Ollama."
+        ) from e

@@ -18,7 +18,7 @@ services:
     build:
       context: ./ollama
       args:
-        - OLLAMA_MODEL=${OLLAMA_MODEL}
+        - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
     deploy:
       resources:
         reservations:

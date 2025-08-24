@@ -10,5 +10,6 @@ class Settings(BaseSettings):
     自動的に読み込むため、ファイルパスを明示的に指定する必要はありません。
     """
 
-    OLLAMA_MODEL: str
+    BUILT_IN_OLLAMA_MODEL: str
+    DEFAULT_GENERATION_MODEL: str
     DATABASE_URL: str

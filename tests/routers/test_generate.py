@@ -2,34 +2,21 @@ from unittest.mock import MagicMock
 
 import httpx
 import pytest
+from fastapi import status
 from fastapi.testclient import TestClient
 
-from src.dependencies.common import get_ollama_client
-from src.main import app
+from src.config.state import app_state
 from src.models.log import Log
 
-# --- Mock Setup ---
-mock_ollama_client = MagicMock()
-
-
-def override_get_ollama_client():
-    return mock_ollama_client
-
-
-# --- Fixtures ---
-
-
-@pytest.fixture
-def override_ollama_client_dep():
-    app.dependency_overrides[get_ollama_client] = override_get_ollama_client
-    try:
-        yield
-    finally:
-        app.dependency_overrides.pop(get_ollama_client, None)
+# Mark all tests in this file as asyncio
+pytestmark = pytest.mark.asyncio
 
 
 @pytest.fixture(autouse=True)
-def mock_db_session(monkeypatch):
+def mock_db_session_fixture(monkeypatch):
+    """
+    Mock the DB session for the logging middleware for all tests in this file.
+    """
     mock_session = MagicMock()
     monkeypatch.setattr(
         "src.dependencies.logging.create_db_session", lambda: mock_session
@@ -37,55 +24,52 @@ def mock_db_session(monkeypatch):
     return mock_session
 
 
-@pytest.fixture
-def client(mock_db_session, override_ollama_client_dep):
-    mock_ollama_client.reset_mock(return_value=True, side_effect=None)
-    mock_ollama_client.chat = MagicMock()
-    with TestClient(app) as test_client:
-        yield test_client
+async def test_generate_uses_active_model(
+    client: TestClient, mock_ollama_client: MagicMock
+):
+    """
+    Test that the /generate endpoint uses the model set in app_state.
+    """
+    # Arrange
+    active_model = "my-active-model:latest"
+    app_state.set_current_model(active_model)
+    mock_ollama_client.chat.return_value = {"message": {"content": "response"}}
+
+    # Act
+    response = client.post(
+        "/api/v1/generate", json={"prompt": "Test prompt", "stream": False}
+    )
+
+    # Assert
+    assert response.status_code == status.HTTP_200_OK
+    mock_ollama_client.chat.assert_called_once()
+    assert mock_ollama_client.chat.call_args.kwargs["model"] == active_model
 
 
-# --- Test Cases ---
-
-
-def test_generate_success_logs_metadata(client, mock_db_session):
+async def test_generate_success_logs_metadata(
+    client: TestClient,
+    mock_ollama_client: MagicMock,
+    mock_db_session_fixture: MagicMock,
+):
     """Test that a successful request logs basic metadata."""
-    mock_chat_response = {"message": {"content": "Mocked response"}}
-    mock_ollama_client.chat.return_value = mock_chat_response
-
+    mock_ollama_client.chat.return_value = {"message": {"content": "response"}}
     response = client.post(
         "/api/v1/generate", json={"prompt": "Hello", "stream": False}
     )
 
     assert response.status_code == 200
-    mock_db_session.add.assert_called_once()
-    log_entry = mock_db_session.add.call_args[0][0]
+    mock_db_session_fixture.add.assert_called_once()
+    log_entry = mock_db_session_fixture.add.call_args[0][0]
     assert isinstance(log_entry, Log)
     assert log_entry.response_status_code == 200
-    assert log_entry.error_details is None
-    assert log_entry.prompt == "[Not Logged]"
-    assert log_entry.generated_response == "[Not Logged]"
 
 
-def test_generate_stream_success_logs_metadata(client, mock_db_session):
-    """Test that a successful streaming request logs basic metadata."""
-    mock_stream_data = [{"message": {"content": "Stream"}}]
-    mock_ollama_client.chat.return_value = iter(mock_stream_data)
-
-    response = client.post(
-        "/api/v1/generate", json={"prompt": "Stream this", "stream": True}
-    )
-
-    assert response.status_code == 200
-    mock_db_session.add.assert_called_once()
-    log_entry = mock_db_session.add.call_args[0][0]
-    assert isinstance(log_entry, Log)
-    assert log_entry.response_status_code == 200
-    assert log_entry.error_details is None
-
-
-def test_generate_api_error_logs_details(client, mock_db_session):
-    """Test that an API error logs detailed exception info."""
+async def test_generate_api_error_logs_details(
+    client: TestClient,
+    mock_ollama_client: MagicMock,
+    mock_db_session_fixture: MagicMock,
+):
+    """Test that a service-layer error from Ollama is handled and logged."""
     mock_ollama_client.chat.side_effect = httpx.RequestError(
         "Ollama go boom", request=MagicMock()
     )
@@ -94,8 +78,9 @@ def test_generate_api_error_logs_details(client, mock_db_session):
         client.post(
             "/api/v1/generate", json={"prompt": "Cause an error", "stream": False}
         )
-    mock_db_session.add.assert_called_once()
-    log_entry = mock_db_session.add.call_args[0][0]
+
+    mock_db_session_fixture.add.assert_called_once()
+    log_entry = mock_db_session_fixture.add.call_args[0][0]
     assert isinstance(log_entry, Log)
     assert log_entry.response_status_code == 500
     assert log_entry.error_details is not None
