@@ -10,18 +10,24 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Create .env file
-        run: make setup
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: .python-version
 
-      - name: Start containers
-        run: make up
+      - name: Install and configure Poetry
+        run: |
+          pipx install poetry
+          poetry config virtualenvs.in-project true
+
+      - name: Install dependencies
+        run: |
+          poetry install --no-root
 
       - name: Run Ruff Linter
-        run: make lint
+        run: |
+          poetry run ruff check .
 
       - name: Run Black Formatter Check
-        run: make format-check
-
-      - name: Cleanup containers
-        if: always()
-        run: make down
+        run: |
+          poetry run black --check .
