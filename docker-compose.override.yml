@@ -47,14 +47,14 @@ services:
     depends_on:
       db_test:
         condition: service_healthy
-      test-ollama:
-        condition: service_healthy
+      ollama:
+        condition: service_started
     environment:
       - APP_ENV=test
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER_TEST}:${POSTGRES_PASSWORD_TEST}@db_test:5432/${POSTGRES_DB_TEST}
       - POSTGRES_DB_TEST=${POSTGRES_DB_TEST}
-      - OLLAMA_BASE_URL=http://test-ollama:11434
-      - OLLAMA_MODEL=test-model
+      - OLLAMA_BASE_URL=http://ollama:11434
+      - OLLAMA_MODEL=${OLLAMA_MODEL}
     volumes:
       - ./src:/app/src
       - ./alembic:/app/alembic
@@ -67,18 +67,3 @@ services:
         echo 'Running pytest...' &&
         pytest
       "
-
-  test-ollama:
-    image: alpine:3.20
-    command: >
-      sh -c "
-        apk add --no-cache netcat-openbsd &&
-        echo -e 'HTTP/1.1 200 OK\\n\\n{}' | nc -lk -p 11434
-      "
-    healthcheck:
-      test: [ "CMD", "nc", "-z", "localhost", "11434" ]
-      interval: 1s
-      timeout: 1s
-      retries: 10
-      start_period: 1s
-    restart: unless-stopped
