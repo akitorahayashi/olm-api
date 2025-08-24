@@ -26,31 +26,35 @@ The project leverages a modern Python technology stack:
 - Docker and Docker Compose
 - `make` command
 
-### 1. Create `.env` file
+### 1. Initialize Environment Files
 
-The project requires an `.env` file for configuration. The `make setup` command simplifies this process by copying the `.env.example` template. This only needs to be done once.
+The project uses separate environment files for development (`.env.dev`) and production (`.env.prod`). The `make setup` command initializes these from templates. This only needs to be done once.
 
 ```sh
 make setup
 ```
 
-This command creates a `.env` file in the project root. You can edit this file to match your local setup.
+This command creates two files:
+- `.env.dev`: For local development. You can edit this file to match your local setup.
+- `.env.prod`: For production deployments. This file is ignored by Git and should be managed securely.
+
+For local development, you only need to focus on `.env.dev`.
 
 ### 2. Start the Services
 
-With the `.env` file configured, start all services (API server and database) using Docker Compose:
+Start all services (API server and database) for development using a simple `make` command:
 
 ```sh
 make up
 ```
 
-This command builds the necessary Docker images and starts the containers. Docker Compose is configured to wait until the database container is healthy before starting the API container. The API's entrypoint script then automatically applies any pending database migrations on startup.
+This command builds the necessary Docker images and starts the containers. **The Makefile automatically selects the correct `.env.dev` configuration by creating a symbolic link (`.env`) that Docker Compose uses by default.** This provides a seamless developer experience, as you don't need to manually specify environment files.
 
 The API will be accessible at `http://127.0.0.1:8000` by default. The source code is mounted as a volume, enabling hot-reloading on code changes.
 
 ### 3. Run Database Migrations (If Needed)
 
-The application's entrypoint script automatically runs database migrations on startup when you use `make up`, so you typically do not need to run this command manually. However, if you need to apply new migrations to an already running server without restarting it, you can use this command:
+The application's entrypoint script automatically runs database migrations on startup, so you typically do not need to run this command manually. However, if you need to apply new migrations to an already running server without restarting it, you can use this command:
 
 ```sh
 make migrate
@@ -58,7 +62,9 @@ make migrate
 
 ## Environment Variables
 
-The application is configured via environment variables defined in the `.env` file. The most important ones are:
+The application is configured via environment variables. Docker Compose automatically loads these from a `.env` file in the project root. The Makefile handles the creation of a symbolic link from `.env` to the correct environment file (`.env.dev` or `.env.prod`) based on the command you run.
+
+The most important variables are:
 
 - **`DATABASE_URL`**: The full connection string for the PostgreSQL database. This is used by the `api` container to connect to the `db` container.
 - **`OLLAMA_BASE_URL`**: The base URL for the Ollama server. When running this project in Docker and Ollama on the host machine, you may need to set this to `http://host.docker.internal:11434`.
@@ -140,7 +146,7 @@ This project uses a `Makefile` to provide a simple interface for common developm
 | Command          | Description                                                    |
 |------------------|----------------------------------------------------------------|
 | `make help`      | ✨ Shows a help message with all available commands.           |
-| `make setup`     | 🚀 Initializes the project by creating a `.env` file.          |
+| `make setup`     | 🚀 Initializes `.env.dev` and `.env.prod` from templates.      |
 | `make up`        | 🐳 Starts all development containers in detached mode.         |
 | `make down`      | 🛑 Stops and removes all development containers.               |
 | `make logs`      | 📜 Tails the logs of the API service in real-time.             |
@@ -163,15 +169,16 @@ This project is configured for continuous integration, which automatically build
 
 ### Manual Deployment Steps
 
-To deploy the application, you need to pull the latest image from the container registry and run it on your local server.
+To deploy the application, you need to pull the latest image from the container registry and run it on your production server.
 
-1.  **Prepare your server**: Ensure Docker and Docker Compose are installed on your machine.
-2.  **Create `.env` file**: Create a production `.env` file on your server with the necessary configurations.
-3.  **Pull the image**: Pull the latest Docker image from the registry where it was pushed by the GitHub Actions workflow.
-4.  **Start services**: Use `docker-compose.yml` to start the application.
+1.  **Prepare your server**: Ensure Docker and Docker Compose are installed.
+2.  **Create `.env.prod` file**: Create a `.env.prod` file on your server with the necessary production configurations (e.g., database credentials, secrets). Do **not** name it `.env`.
+3.  **Pull the image**: Pull the latest Docker image from GHCR.
+4.  **Start services**: Use the `make up-prod` command. This command will automatically select the `.env.prod` file.
 
 ```sh
 # (On your server)
-docker compose pull
-docker compose up -d
+make up-prod
 ```
+
+This approach ensures that your deployment process is consistent with the development workflow, using the same Makefile for automation.
