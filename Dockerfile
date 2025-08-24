@@ -18,15 +18,17 @@ WORKDIR /app
 
 # Install Poetry
 RUN --mount=type=cache,target=/root/.cache \
-    pip install "poetry==${POETRY_VERSION}"
+  pip install pipx && \
+  pipx ensurepath && \
+  pipx install "poetry==${POETRY_VERSION}"
 
 # Copy dependency definition files
 COPY pyproject.toml poetry.lock ./
 
 # Install all dependencies, including development ones
 RUN --mount=type=cache,target=/tmp/poetry_cache \
-    poetry config virtualenvs.in-project true && \
-    poetry install --no-root
+  poetry config virtualenvs.in-project true && \
+  poetry install --no-root
 
 
 # ==============================================================================
@@ -47,15 +49,17 @@ WORKDIR /app
 
 # Install Poetry
 RUN --mount=type=cache,target=/root/.cache \
-    pip install "poetry==${POETRY_VERSION}"
+  pip install pipx && \
+  pipx ensurepath && \
+  pipx install "poetry==${POETRY_VERSION}"
 
 # Copy dependency definition files
 COPY pyproject.toml poetry.lock ./
 
 # Install only production dependencies
 RUN --mount=type=cache,target=/tmp/poetry_cache \
-    poetry config virtualenvs.in-project true && \
-    poetry install --no-root --only main
+  poetry config virtualenvs.in-project true && \
+  poetry install --no-root --only main
 
 
 # ==============================================================================

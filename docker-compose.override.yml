@@ -33,7 +33,7 @@ services:
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U user -d pvt-llm-api-test"]
+      test: [ "CMD-SHELL", "pg_isready -U user -d pvt-llm-api-test" ]
       interval: 5s
       timeout: 2s
       retries: 5
