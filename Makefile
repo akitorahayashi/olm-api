@@ -20,6 +20,11 @@ PROJECT_NAME := $(shell basename $(CURDIR))
 # Use sudo if the user is not root, to handle Docker permissions
 SUDO := $(shell if [ $$(id -u) -ne 0 ]; then echo "sudo"; fi)
 
+# Define project names for different environments
+DEV_PROJECT_NAME := $(PROJECT_NAME)-dev
+PROD_PROJECT_NAME := $(PROJECT_NAME)-prod
+TEST_PROJECT_NAME := $(PROJECT_NAME)-test
+
 # ==============================================================================
 # HELP
 # ==============================================================================
@@ -34,42 +39,55 @@ help: ## Show this help message
 # PROJECT SETUP & ENVIRONMENT
 # ==============================================================================
 
-setup: ## Initialize the project by creating a .env file
-	@if [ ! -f .env ]; then \
-		echo "Creating .env file from .env.example..."; \
-		cp .env.example .env; \
+setup: ## Initialize the project by creating .env.dev and .env.prod files
+	@if [ ! -f .env.dev ]; then \
+		echo "Creating .env.dev from .env.example..."; \
+		cp .env.example .env.dev; \
 	else \
-		echo ".env file already exists. Skipping creation."; \
+		echo ".env.dev already exists. Skipping creation."; \
+	fi
+	@if [ ! -f .env.prod ]; then \
+		echo "Creating .env.prod from .env.example..."; \
+		cp .env.example .env.prod; \
+	else \
+		echo ".env.prod already exists. Skipping creation."; \
 	fi
 
 up: ## Start all development containers in detached mode
-	@echo "Starting up services..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) up -d
+	@echo "Starting up development services..."
+	@ln -sf .env.dev .env
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) up -d
 
 down: ## Stop and remove all development containers
-	@echo "Shutting down services..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) down --remove-orphans
+	@echo "Shutting down development services..."
+	@ln -sf .env.dev .env
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) down --remove-orphans
 
-up-prod: ## Start all containers using only docker-compose.yml (ignoring override)
-    @echo "Starting up production-like services (ignoring override)..."
-    $(SUDO) docker compose -f docker-compose.yml --project-name $(PROJECT_NAME)-prod up -d
+up-prod: ## Start all production-like containers
+	@echo "Starting up production-like services..."
+	@ln -sf .env.prod .env
+	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) up -d --build --pull always --remove-orphans
 
-down-prod: ## Stop and remove all containers started by up-prod
-    @echo "Shutting down production-like services..."
-    $(SUDO) docker compose -f docker-compose.yml --project-name $(PROJECT_NAME)-prod down --remove-orphans
+down-prod: ## Stop and remove all production-like containers
+	@echo "Shutting down production-like services..."
+	@ln -sf .env.prod .env
+	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) down --remove-orphans
 
-logs: ## View the logs for the API service
-	@echo "Following logs for the api service..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) logs -f api
+logs: ## View the logs for the development API service
+	@echo "Following logs for the dev api service..."
+	@ln -sf .env.dev .env
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) logs -f api
 
-shell: ## Open a shell inside the running API container
-	@echo "Opening shell in api container..."
-	@$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api /bin/sh || \
+shell: ## Open a shell inside the running development API container
+	@echo "Opening shell in dev api container..."
+	@ln -sf .env.dev .env
+	@$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api /bin/sh || \
 		(echo "Failed to open shell. Is the container running? Try 'make up'" && exit 1)
 
 migrate: ## Run database migrations against the development database
-	@echo "Running database migrations..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
+	@echo "Running database migrations for dev environment..."
+	@ln -sf .env.dev .env
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
 
 # ==============================================================================
 # CODE QUALITY & TESTING
@@ -77,20 +95,25 @@ migrate: ## Run database migrations against the development database
 
 format: ## Format the code using Black
 	@echo "Formatting code with Black..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black src/ tests/"
+	@ln -sf .env.dev .env
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black src/ tests/"
 
 format-check: ## Check if the code is formatted with Black
 	@echo "Checking code format with Black..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black --check src/ tests/"
+	@ln -sf .env.dev .env
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black --check src/ tests/"
 
 lint: ## Lint Check the code for issues with Ruff
 	@echo "Linting code with Ruff..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && ruff check src/ tests/"
+	@ln -sf .env.dev .env
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && ruff check src/ tests/"
 
 lint-fix: ## Check the code with Ruff and apply fixes automatically
 	@echo "Linting and fixing code with Ruff..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && ruff check src/ tests/ --fix"
+	@ln -sf .env.dev .env
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && ruff check src/ tests/ --fix"
 
 test: ## Run the test suite in an isolated environment
 	@echo "Running test suite..."
-	$(SUDO) docker compose --project-name $(PROJECT_NAME) run --rm --build test
+	@ln -sf .env.dev .env
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) run --rm --build test

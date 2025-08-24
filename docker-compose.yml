@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: pvt-llm-db
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -20,12 +19,11 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runner
-    container_name: pvt-llm-api
+    ports:
+      - "${API_PORT}:8000"
     depends_on:
       db:
         condition: service_healthy
-    env_file:
-      - .env
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
