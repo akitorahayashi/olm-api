@@ -14,8 +14,8 @@
 # Default target executed when 'make' is run without arguments
 .DEFAULT_GOAL := help
 
-# Define the project name based on the directory name for dynamic container naming
-PROJECT_NAME := $(shell basename $(CURDIR))
+# Define the project name for dynamic container naming
+PROJECT_NAME := pvt-llm-api
 
 # Use sudo if the user is not root, to handle Docker permissions
 SUDO := $(shell if [ $$(id -u) -ne 0 ]; then echo "sudo"; fi)
@@ -51,12 +51,12 @@ down: ## Stop and remove all development containers
 	$(SUDO) docker compose --project-name $(PROJECT_NAME) down --remove-orphans
 
 up-prod: ## Start all containers using only docker-compose.yml (ignoring override)
-    @echo "Starting up production-like services (ignoring override)..."
-    $(SUDO) docker compose -f docker-compose.yml --project-name $(PROJECT_NAME)-prod up -d
+	@echo "Starting up production-like services (ignoring override)..."
+	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROJECT_NAME)-prod up -d
 
 down-prod: ## Stop and remove all containers started by up-prod
-    @echo "Shutting down production-like services..."
-    $(SUDO) docker compose -f docker-compose.yml --project-name $(PROJECT_NAME)-prod down --remove-orphans
+	@echo "Shutting down production-like services..."
+	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROJECT_NAME)-prod down --remove-orphans
 
 logs: ## View the logs for the API service
 	@echo "Following logs for the api service..."

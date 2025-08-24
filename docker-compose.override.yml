@@ -24,16 +24,15 @@ services:
 
   db_test:
     image: postgres:16-alpine
-    container_name: pvt-llm-db-test
     environment:
-      - POSTGRES_USER=user
-      - POSTGRES_PASSWORD=password
-      - POSTGRES_DB=pvt-llm-api-test
+      - POSTGRES_USER=${POSTGRES_USER_TEST}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_TEST}
+      - POSTGRES_DB=${POSTGRES_DB_TEST}
     # Use tmpfs to keep test database in memory for speed and easy cleanup
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U user -d pvt-llm-api-test" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER_TEST} -d ${POSTGRES_DB_TEST}" ]
       interval: 5s
       timeout: 2s
       retries: 5
@@ -44,13 +43,14 @@ services:
       context: .
       dockerfile: Dockerfile
       target: builder
-    container_name: pvt-llm-test
     depends_on:
       db_test:
         condition: service_healthy
+    env_file:
+      - .env
     environment:
-      - DATABASE_URL=postgresql+psycopg://user:password@db_test:5432/pvt-llm-api-test
-      - POSTGRES_DB_TEST=pvt-llm-api-test
+      - DATABASE_URL=${DATABASE_URL_TEST}
+      - POSTGRES_DB_TEST=${POSTGRES_DB_TEST}
       - OLLAMA_BASE_URL=http://test-ollama:11434
       - OLLAMA_MODEL=test-model
     volumes:

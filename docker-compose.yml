@@ -1,7 +1,6 @@
 services:
   db:
     image: postgres:16-alpine
-    container_name: pvt-llm-db
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
@@ -20,7 +19,6 @@ services:
       context: .
       dockerfile: Dockerfile
       target: runner
-    container_name: pvt-llm-api
     depends_on:
       db:
         condition: service_healthy
