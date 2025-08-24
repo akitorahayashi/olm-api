@@ -6,6 +6,12 @@ services:
   api:
     build:
       target: builder
+    ports:
+      - "${DEV_API_PORT}:8000"
+    environment:
+      - APP_ENV=dev
+    env_file:
+      - .env.dev
     volumes:
       - ./src:/app/src
       # Also mount alembic files for development
@@ -48,8 +54,9 @@ services:
       test-ollama:
         condition: service_healthy
     env_file:
-      - .env
+      - .env.dev
     environment:
+      - APP_ENV=test
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER_TEST}:${POSTGRES_PASSWORD_TEST}@db_test:5432/${POSTGRES_DB_TEST}
       - POSTGRES_DB_TEST=${POSTGRES_DB_TEST}
       - OLLAMA_BASE_URL=http://test-ollama:11434
