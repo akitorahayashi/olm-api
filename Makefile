@@ -14,8 +14,8 @@
 # Default target executed when 'make' is run without arguments
 .DEFAULT_GOAL := help
 
-# Define the project name for dynamic container naming
-PROJECT_NAME := pvt-llm-api
+# Define the project name based on the directory name for dynamic container naming
+PROJECT_NAME := $(shell basename $(CURDIR))
 
 # Use sudo if the user is not root, to handle Docker permissions
 SUDO := $(shell if [ $$(id -u) -ne 0 ]; then echo "sudo"; fi)
