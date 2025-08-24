@@ -17,6 +17,10 @@ ENV POETRY_NO_INTERACTION=1 \
 
 WORKDIR /app
 
+# Install system dependencies required for the application
+# - curl: used for healthchecks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
 # Install Poetry
 RUN --mount=type=cache,target=/root/.cache \
   pip install pipx && \
@@ -24,12 +28,13 @@ RUN --mount=type=cache,target=/root/.cache \
   pipx install "poetry==${POETRY_VERSION}"
 
 # Copy dependency definition files
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml poetry.lock ./ 
 
 # Install all dependencies, including development ones
 RUN --mount=type=cache,target=/tmp/poetry_cache \
   poetry config virtualenvs.in-project true && \
   poetry install --no-root
+
 
 
 # ==============================================================================
@@ -64,12 +69,17 @@ RUN --mount=type=cache,target=/tmp/poetry_cache \
   poetry install --no-root --only main
 
 
+
 # ==============================================================================
 # Stage 3: Runner
 # - Creates the final, lightweight production image.
 # - Copies the lean venv and only necessary application files.
 # ==============================================================================
 FROM python:3.12-slim AS runner
+
+# Install system dependencies required for the application
+# - curl: used for healthchecks
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user and group for security
 RUN groupadd -r appgroup && useradd -r -g appgroup -d /home/appuser -m appuser
@@ -106,7 +116,7 @@ ENV HEALTHCHECK_PATH=/health
 
 # Healthcheck using only Python's standard library to avoid extra dependencies
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD python -c "import sys, os, urllib.request; sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{os.environ.get(\\"HEALTHCHECK_PATH\\")}').getcode() == 200 else sys.exit(1)"
+  CMD python -c "import sys, os, urllib.request; sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{os.environ.get(\"HEALTHCHECK_PATH\")}').getcode() == 200 else sys.exit(1)"
 
 # Set the entrypoint script to be executed when the container starts
 ENTRYPOINT ["/app/entrypoint.sh"]
