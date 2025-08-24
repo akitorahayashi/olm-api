@@ -41,14 +41,14 @@ help: ## Show this help message
 
 setup: ## Initialize the project by creating .env.dev and .env.prod files
 	@if [ ! -f .env.dev ]; then \
-		echo "Creating .env.dev from .env.dev.example..."; \
-		cp .env.dev.example .env.dev; \
+		echo "Creating .env.dev from .env.example..."; \
+		cp .env.example .env.dev; \
 	else \
 		echo ".env.dev already exists. Skipping creation."; \
 	fi
 	@if [ ! -f .env.prod ]; then \
-		echo "Creating .env.prod from .env.prod.example..."; \
-		cp .env.prod.example .env.prod; \
+		echo "Creating .env.prod from .env.example..."; \
+		cp .env.example .env.prod; \
 	else \
 		echo ".env.prod already exists. Skipping creation."; \
 	fi
@@ -66,12 +66,12 @@ down: ## Stop and remove all development containers
 up-prod: ## Start all production-like containers
 	@echo "Starting up production-like services..."
 	@ln -sf .env.prod .env
-	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.prod.yml --project-name $(PROD_PROJECT_NAME) up -d --build --pull always --remove-orphans
+	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) up -d --build --pull always --remove-orphans
 
 down-prod: ## Stop and remove all production-like containers
 	@echo "Shutting down production-like services..."
 	@ln -sf .env.prod .env
-	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.prod.yml --project-name $(PROD_PROJECT_NAME) down --remove-orphans
+	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) down --remove-orphans
 
 logs: ## View the logs for the development API service
 	@echo "Following logs for the dev api service..."

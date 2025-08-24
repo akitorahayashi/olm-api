@@ -1,8 +1,0 @@
-services:
-  api:
-    ports:
-      - "${PROD_API_PORT}:8000"
-    environment:
-      - APP_ENV=prod
-    env_file:
-      - .env.prod
