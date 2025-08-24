@@ -19,7 +19,7 @@ services:
       sh -c "
         . /app/.venv/bin/activate &&
         watchmedo auto-restart --directory ./src --pattern '*.py' --recursive --
-        uvicorn src.main:app --host 0.0.0.0 --port 8000
+        uvicorn src.main:app --host "${API_LISTEN_IP:-0.0.0.0}" --port "${API_PORT:-8000}"
       "
 
   db_test:
@@ -53,7 +53,6 @@ services:
       - APP_ENV=test
       - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER_TEST}:${POSTGRES_PASSWORD_TEST}@db_test:5432/${POSTGRES_DB_TEST}
       - POSTGRES_DB_TEST=${POSTGRES_DB_TEST}
-      - OLLAMA_BASE_URL=http://ollama:11434
       - OLLAMA_MODEL=${OLLAMA_MODEL}
     volumes:
       - ./src:/app/src

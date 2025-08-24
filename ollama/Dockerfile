@@ -1,15 +1,21 @@
-# Base image for Ollama
+# Use the official Ollama image as the base
 FROM ollama/ollama
 
-# Argument for the model name, which will be passed during the build process
+# Argument to specify the model to be pulled during the build
 ARG OLLAMA_MODEL
 
-# Set the host to allow access from other containers
+# Set the host to 0.0.0.0 to allow connections from other containers
 ENV OLLAMA_HOST=0.0.0.0
 
-# Download the specified model into the image during the build
-# This ensures the model is part of the immutable image
-RUN ollama pull ${OLLAMA_MODEL}
+# Install curl, which is used for healthcheck polling to ensure the server is ready.
+# We switch to the root user to install packages.
+USER root
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Pull the specified model into the image.
+# This makes the model part of the immutable image.
+# We start the server in the background, wait for it to become responsive, and then pull the model.
+RUN /bin/sh -c 'ollama serve > /dev/null 2>&1 & while ! curl -s -f http://127.0.0.1:11434 > /dev/null; do echo "Waiting for ollama server to start..."; sleep 1; done; ollama pull ${OLLAMA_MODEL}'
 
 # The default command to run when the container starts
 CMD ["ollama", "serve"]

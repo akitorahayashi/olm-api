@@ -41,7 +41,7 @@ if [ "$#" -gt 0 ]; then
     exec "$@"
 else
     exec uvicorn src.main:app \
-        --host "${API_HOST}" \
+        --host "${API_LISTEN_IP}" \
         --port "${API_PORT}" \
         --workers "${UVICORN_WORKERS}"
 fi

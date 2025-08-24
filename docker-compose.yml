@@ -24,7 +24,7 @@ services:
         reservations:
           devices:
             - driver: nvidia
-              count: 1
+              count: all
               capabilities: [ gpu ]
     volumes:
       - ollama_data:/root/.ollama
@@ -36,7 +36,7 @@ services:
       dockerfile: Dockerfile
       target: runner
     ports:
-      - "${API_PORT}:8000"
+      - "${HOST_BIND_IP}:${API_PORT}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -45,7 +45,7 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
+      test: [ "CMD", "python", "-c", "import sys, os, urllib.request; sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{os.environ.get(\"HEALTHCHECK_PATH\")}') else sys.exit(1)" ]
       interval: 30s
       timeout: 10s
       start_period: 5s
