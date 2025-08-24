@@ -51,6 +51,7 @@ ipython_config.py
 # 環境変数ファイル
 .env
 .env.*
+!*.env.dev
 !*.env.example
 !*.env.template
 

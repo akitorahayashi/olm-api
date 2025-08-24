@@ -24,6 +24,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    env_file:
+      - .env
     healthcheck:
       test: [ "CMD", "curl", "-f", "http://localhost:8000/health" ]
       interval: 30s
