@@ -12,7 +12,8 @@ ARG POETRY_VERSION=1.8.2
 # Set environment variables for Poetry
 ENV POETRY_NO_INTERACTION=1 \
   POETRY_VIRTUALENVS_IN_PROJECT=true \
-  POETRY_CACHE_DIR=/tmp/poetry_cache
+  POETRY_CACHE_DIR=/tmp/poetry_cache \
+  PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /app
 
@@ -43,7 +44,8 @@ ARG POETRY_VERSION=1.8.2
 # Set environment variables for Poetry
 ENV POETRY_NO_INTERACTION=1 \
   POETRY_VIRTUALENVS_IN_PROJECT=true \
-  POETRY_CACHE_DIR=/tmp/poetry_cache
+  POETRY_CACHE_DIR=/tmp/poetry_cache \
+  PATH="/root/.local/bin:${PATH}"
 
 WORKDIR /app
 
