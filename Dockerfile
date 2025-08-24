@@ -7,7 +7,7 @@
 FROM python:3.12-slim as builder
 
 # Argument for pinning the Poetry version
-ARG POETRY_VERSION=1.8.2
+ARG POETRY_VERSION=2.1.4
 
 # Set environment variables for Poetry
 ENV POETRY_NO_INTERACTION=1 \
@@ -39,7 +39,7 @@ RUN --mount=type=cache,target=/tmp/poetry_cache \
 FROM python:3.12-slim as prod-builder
 
 # Argument for pinning the Poetry version
-ARG POETRY_VERSION=1.8.2
+ARG POETRY_VERSION=2.1.4
 
 # Set environment variables for Poetry
 ENV POETRY_NO_INTERACTION=1 \
