@@ -10,12 +10,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Create .env file
-        run: make setup
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version-file: '.python-version'
 
-      - name: Run tests
-        run: make test
+      - name: Install Poetry
+        run: |
+          pipx install poetry
 
-      - name: Cleanup containers
-        if: always()
-        run: make down
+      - name: Install dependencies
+        run: |
+          poetry install
+
+      - name: Run tests with pytest
+        run: |
+          poetry run pytest

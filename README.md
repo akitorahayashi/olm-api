@@ -142,24 +142,45 @@ curl -X POST "http://127.0.0.1:8000/api/v1/generate" \
 -d '{"prompt": "Write a short story about a robot.", "stream": true}' -N
 ```
 
-## Development Commands
+## Development Workflow
 
-This project uses a `Makefile` to provide a simple interface for common development tasks.
+### Recommended: Local Development with Poetry
 
-| Command          | Description                                                              |
-|------------------|--------------------------------------------------------------------------|
-| `make help`      | ✨ Shows a help message with all available commands.                     |
-| `make setup`     | 🚀 Initializes `.env.dev` and `.env.prod` from the single `.env.example`. |
-| `make up`        | 🐳 Starts all development containers in detached mode.                   |
-| `make down`      | 🛑 Stops and removes all development containers.               |
-| `make logs`      | 📜 Tails the logs of the API service in real-time.             |
-| `make shell`     | 💻 Opens an interactive shell (`/bin/sh`) inside the API container.||
-| `make migrate`   | 🗄️ Runs database migrations against the development database. |
-| `make format`    | 🎨 Formats the entire codebase using Black.                    |
-| `make format-check`| 🎨 Checks if the code is formatted with Black.                 |
-| `make lint`      | 🔎 Lints the code for issues using Ruff.                       |
-| `make lint-fix`  | 🩹 Lints the code with Ruff and applies fixes automatically.   |
-| `make test`      | 🧪 Runs the test suite in an isolated, containerized environment.||
+For the fastest development cycle, we recommend running tools like linters, formatters, and tests directly on your local machine.
+
+**1. Install Dependencies:**
+First, ensure you have [Poetry](https://python-poetry.org/docs/#installation) installed. Then, from the project root, install all dependencies into a local virtual environment managed by Poetry:
+```sh
+poetry install
+```
+
+**2. Running Commands:**
+Once the dependencies are installed, you can run tools directly using `poetry run`:
+
+| Command                 | Description                                                  |
+|-------------------------|--------------------------------------------------------------|
+| `poetry run pytest`     | 🧪 Runs the test suite using `pytest-docker` to manage the DB. |
+| `poetry run ruff .`     | 🔎 Lints the code for issues using Ruff.                     |
+| `poetry run ruff . --fix` | 🩹 Lints the code with Ruff and applies fixes automatically. |
+| `poetry run black .`    | 🎨 Formats the entire codebase using Black.                  |
+
+### Alternative: Docker-Based Commands with `make`
+
+If you prefer not to install Python/Poetry locally, you can use `make` to run commands inside Docker containers. This can be slower but requires only Docker and `make` to be installed.
+
+| Command             | Description                                                              |
+|---------------------|--------------------------------------------------------------------------|
+| `make help`         | ✨ Shows a help message with all available commands.                     |
+| `make setup`        | 🚀 Initializes `.env.dev` and `.env.prod` from the single `.env.example`. |
+| `make up`           | 🐳 Starts all development containers in detached mode.                   |
+| `make down`         | 🛑 Stops and removes all development containers.                         |
+| `make logs`         | 📜 Tails the logs of the API service in real-time.                       |
+| `make shell`        | 💻 Opens an interactive shell (`/bin/sh`) inside the API container.      |
+| `make migrate`      | 🗄️ Runs database migrations against the development database.           |
+| `make format`       | 🎨 Formats the entire codebase using Black (via Docker).                 |
+| `make format-check` | 🎨 Checks if the code is formatted with Black (via Docker).            |
+| `make lint`         | 🔎 Lints the code for issues using Ruff (via Docker).                    |
+| `make lint-fix`     | 🩹 Lints and fixes code with Ruff (via Docker).                          |
 
 ## Deployment
 

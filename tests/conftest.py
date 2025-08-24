@@ -1,22 +1,71 @@
 import os
+import subprocess
 from unittest.mock import MagicMock
 
 import pytest
 from fastapi.testclient import TestClient
+from pytest_docker_tools import container, fetch
 
 from src.dependencies.common import get_ollama_client
 from src.main import app
 
+# Define a new image for the test database
+postgresql_image = fetch(repository="postgres:16-alpine")
+
+# Define a container fixture for the test database
+db_container = container(
+    image="{postgresql_image.id}",
+    ports={"5432/tcp": None},
+    environment={
+        "POSTGRES_USER": "testuser",
+        "POSTGRES_PASSWORD": "testpassword",
+        "POSTGRES_DB": "testdb",
+    },
+    scope="session",
+)
+
+
+@pytest.fixture(scope="session")
+def db_url(db_container):
+    """
+    Returns the database URL for the test database container.
+    Waits until the database is responsive.
+    """
+    port = db_container.ports["5432/tcp"][0]
+    # The 'db_container.name' is not the correct hostname for the connection.
+    # We should use 'localhost' as pytest-docker-tools maps the port to the host.
+    url = f"postgresql+psycopg://testuser:testpassword@localhost:{port}/testdb"
+
+    # Wait for the database to be ready
+    db_container.exec_run(
+        "pg_isready -U testuser -d testdb",
+        # The command can fail while the database is starting up
+        check=False,
+    )
+    return url
+
 
 @pytest.fixture(scope="session", autouse=True)
-def set_test_environment():
+def setup_test_environment_and_db(db_url):
     """
-    Set environment variables required for the tests.
-    This runs once per test session.
+    Set up the test environment:
+    1. Set environment variables.
+    2. Run database migrations.
     """
     os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-built-in-model"
     os.environ["DEFAULT_GENERATION_MODEL"] = "test-default-model"
-    os.environ["DATABASE_URL"] = "sqlite:///./test.db"
+    os.environ["DATABASE_URL"] = db_url
+
+    # Run Alembic migrations
+    # We need to run this in a subprocess because Alembic's command-line tool
+    # is the most reliable way to ensure migrations are applied correctly.
+    # The env var DATABASE_URL will be picked up by alembic.ini's script.
+    subprocess.run(["alembic", "upgrade", "head"], check=True)
+
+    yield
+
+    # Teardown (if any) can go here
+    # The database container will be torn down automatically by pytest-docker-tools
 
 
 @pytest.fixture
