@@ -118,4 +118,5 @@ lint-check: ## Check the code for issues with Ruff
 
 test: ## Run the test suite
 	@echo "Running test suite..."
-	$(SUDO) /home/jules/.cache/pypoetry/virtualenvs/pvt-llm-api-9TtSrW0h-py3.12/bin/pytest
+	@VENV_PATH=$$(poetry env info -p); \
+	$(SUDO) $$VENV_PATH/bin/pytest
