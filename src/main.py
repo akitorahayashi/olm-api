@@ -5,17 +5,16 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 import ollama
+from src.config.app_state import app_state
 from src.config.settings import Settings
-from src.config.state import app_state
-from src.dependencies.common import get_settings
-from src.dependencies.logging import LoggingMiddleware
+from src.middlewares.db_logging_middleware import LoggingMiddleware
 from src.routers import generate, models
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
-    settings: Settings = get_settings()
+    settings = Settings()
     app_state.set_current_model(settings.DEFAULT_GENERATION_MODEL)
     yield
     # Shutdown logic (if any)

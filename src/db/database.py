@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
-from src.dependencies.common import get_settings
+from src.config.settings import Settings
 
 # --- Lazy Initialization for Database Engine and Session Factory ---
 
@@ -16,7 +16,7 @@ def _initialize_factory():
     """
     global _engine, _SessionLocal
     if _engine is None:
-        settings = get_settings()
+        settings = Settings()
         _engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
         _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
 

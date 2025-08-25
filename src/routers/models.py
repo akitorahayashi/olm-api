@@ -3,10 +3,8 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
-import ollama
-from src.config.state import app_state
-from src.dependencies.common import get_ollama_client
-from src.services.ollama import delete_model, list_models, pull_model
+from src.config.app_state import app_state
+from src.services.ollama import OllamaService
 
 router = APIRouter(
     prefix="/api/v1/models",
@@ -20,23 +18,23 @@ class PullRequest(BaseModel):
 
 @router.get("/", summary="List locally available models")
 async def get_models(
-    ollama_client: ollama.Client = Depends(get_ollama_client),
+    ollama_service: OllamaService = Depends(OllamaService),
 ) -> Any:
     """
     Get a list of models that are available locally through Ollama.
     """
-    return await list_models(ollama_client)
+    return await ollama_service.list_models()
 
 
 @router.post("/pull", summary="Pull a model from the Ollama registry")
 async def pull_new_model(
     request: PullRequest,
-    ollama_client: ollama.Client = Depends(get_ollama_client),
+    ollama_service: OllamaService = Depends(OllamaService),
 ) -> Any:
     """
     Pull a new model from the official Ollama registry.
     """
-    return await pull_model(request.name, ollama_client)
+    return await ollama_service.pull_model(request.name)
 
 
 @router.delete(
@@ -46,26 +44,26 @@ async def pull_new_model(
 )
 async def remove_model(
     model_name: str,
-    ollama_client: ollama.Client = Depends(get_ollama_client),
+    ollama_service: OllamaService = Depends(OllamaService),
 ):
     """
     Delete a model from the local Ollama storage.
     """
-    await delete_model(model_name, ollama_client)
+    await ollama_service.delete_model(model_name)
     return None
 
 
 @router.post("/switch/{model_name:path}", summary="Switch the active generation model")
 async def switch_active_model(
     model_name: str,
-    ollama_client: ollama.Client = Depends(get_ollama_client),
+    ollama_service: OllamaService = Depends(OllamaService),
 ):
     """
     Switch the model used for the `/api/v1/generate` endpoint.
     The model must be available locally.
     """
     # Verify the model exists locally
-    local_models = await list_models(ollama_client)
+    local_models = await ollama_service.list_models()
     if not any(m["name"] == model_name for m in local_models["models"]):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
