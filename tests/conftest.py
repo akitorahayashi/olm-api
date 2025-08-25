@@ -14,7 +14,7 @@ from testcontainers.postgres import PostgresContainer
 
 from alembic import command
 from alembic.config import Config
-from src.api.services.ollama import get_ollama_service
+from src.api.v1.services.ollama_service import get_ollama_service
 from src.db.database import create_db_session
 from src.db.models.log import Log
 from src.main import app
@@ -80,9 +80,7 @@ def db_url(db_container: PostgresContainer | SimpleNamespace) -> str:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def setup_test_environment_and_db(
-    db_url: str, request: pytest.FixtureRequest
-) -> None:
+def setup_test_environment_and_db(db_url: str, request: pytest.FixtureRequest) -> None:
     """
     Auto-used session-scoped fixture to set up the test environment and run migrations.
     This is safe for both single-process and parallel execution.

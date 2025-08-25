@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 import ollama
-from src.api.schemas.generate import GenerateResponse
+from src.api.v1.schemas import GenerateResponse
 
 
 class OllamaService:
