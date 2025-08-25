@@ -1,15 +1,16 @@
 import os
+from typing import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 from testcontainers.postgres import PostgresContainer
 
 from alembic import command
 from alembic.config import Config
-from src.api.services.ollama import OllamaService
+from src.api.services.ollama import get_ollama_service
 from src.db.database import create_db_session
 from src.db.models.log import Log
 from src.main import app
@@ -20,7 +21,6 @@ from src.middlewares import db_logging_middleware
 def db_container() -> PostgresContainer:
     """
     Fixture to create and manage a PostgreSQL container for the test session.
-    The container is started once per session and torn down at the end.
     """
     with PostgresContainer("postgres:16-alpine", driver="psycopg") as container:
         yield container
@@ -35,7 +35,7 @@ def db_url(db_container: PostgresContainer) -> str:
 
 
 @pytest.fixture(scope="session", autouse=True)
-def setup_test_environment_and_db(db_url: str):
+def setup_test_environment_and_db(db_url: str) -> None:
     """
     Auto-used session-scoped fixture to set up the test environment.
     """
@@ -48,11 +48,9 @@ def setup_test_environment_and_db(db_url: str):
     alembic_cfg.set_main_option("sqlalchemy.url", db_url)
     command.upgrade(alembic_cfg, "head")
 
-    yield
-
 
 @pytest.fixture
-def db_session(db_url: str, monkeypatch):
+def db_session(db_url: str, monkeypatch) -> Generator[Session, None, None]:
     """
     Provides a transactional scope for each test function.
     """
@@ -70,27 +68,29 @@ def db_session(db_url: str, monkeypatch):
         db.query(Log).delete()
         db.commit()
         db.close()
-        app.dependency_overrides.clear()
+        # Safely remove the override to avoid affecting other tests
+        app.dependency_overrides.pop(create_db_session, None)
 
 
 @pytest.fixture
-def mock_ollama_service():
+def mock_ollama_service() -> MagicMock:
     """
     Fixture to mock the OllamaService using FastAPI's dependency overrides.
     """
-    mock_service = MagicMock(spec=OllamaService)
+    mock_service = MagicMock()
     mock_service.generate_response = AsyncMock()
     mock_service.list_models = AsyncMock()
     mock_service.pull_model = AsyncMock()
     mock_service.delete_model = AsyncMock()
 
-    app.dependency_overrides[OllamaService] = lambda: mock_service
+    app.dependency_overrides[get_ollama_service] = lambda: mock_service
     yield mock_service
-    app.dependency_overrides.clear()
+    # Safely remove the override to avoid affecting other tests
+    app.dependency_overrides.pop(get_ollama_service, None)
 
 
 @pytest.fixture
-async def client():
+async def client() -> AsyncGenerator[AsyncClient, None]:
     """
     Create an httpx.AsyncClient instance for each test function.
     """

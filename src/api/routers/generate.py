@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from src.api.schemas.generate import GenerateRequest
-from src.api.services.ollama import OllamaService
+from src.api.services.ollama import OllamaService, get_ollama_service
 from src.config.app_state import app_state
 
 router = APIRouter(
@@ -13,7 +13,7 @@ router = APIRouter(
 @router.post("/generate")
 async def generate(
     request: GenerateRequest,
-    ollama_service: OllamaService = Depends(OllamaService),
+    ollama_service: OllamaService = Depends(get_ollama_service),
 ):
     """
     Endpoint to generate text based on a prompt using the currently active model.

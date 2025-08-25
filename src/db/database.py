@@ -1,3 +1,5 @@
+import threading
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
 
@@ -7,18 +9,23 @@ from src.config.settings import Settings
 
 _engine = None
 _SessionLocal = None
+_lock = threading.Lock()
 
 
 def _initialize_factory():
     """
     Lazy initializer for the database engine and session factory.
-    This prevents settings from being loaded at import time.
+    This prevents settings from being loaded at import time and is thread-safe.
     """
     global _engine, _SessionLocal
-    if _engine is None:
-        settings = Settings()
-        _engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
-        _SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=_engine)
+    # Use a lock to ensure that the engine and session factory are created only once.
+    with _lock:
+        if _engine is None:
+            settings = Settings()
+            _engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
+            _SessionLocal = sessionmaker(
+                autocommit=False, autoflush=False, bind=_engine
+            )
 
 
 def create_db_session():

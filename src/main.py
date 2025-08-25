@@ -50,9 +50,11 @@ async def http_request_exception_handler(request: Request, exc: httpx.RequestErr
     Handles connection errors to the Ollama service, returning a 502 Bad Gateway.
     This prevents leaking internal stack traces to the client.
     """
+    # The request object might be None in some cases, so we access its URL safely.
+    url = getattr(exc.request, "url", "unknown")
     return JSONResponse(
         status_code=502,
-        content={"detail": f"Error connecting to upstream service: {exc.request.url}"},
+        content={"detail": f"Error connecting to upstream service: {url}"},
     )
 
 
