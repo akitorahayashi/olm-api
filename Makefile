@@ -38,7 +38,7 @@ help: ## Show this help message
 # PROJECT SETUP & ENVIRONMENT
 # ==============================================================================
 
-setup: ## Initialize the project by creating .env.dev and .env.prod files
+setup: ## Initialize project: create .env files and pull required Docker images.
 	@if [ ! -f .env.dev ]; then \
 		echo "Creating .env.dev from .env.example..."; \
 		cp .env.example .env.dev; \
@@ -51,48 +51,50 @@ setup: ## Initialize the project by creating .env.dev and .env.prod files
 	else \
 		echo ".env.prod already exists. Skipping creation."; \
 	fi
+	@echo "Pulling PostgreSQL image for tests..."
+	$(SUDO) docker pull postgres:16-alpine
 
 up: ## Start all development containers in detached mode
 	@echo "Starting up development services..."
 	@ln -sf .env.dev .env
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) up -d
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) up -d
 
 down: ## Stop and remove all development containers
 	@echo "Shutting down development services..."
 	@ln -sf .env.dev .env
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) down --remove-orphans
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) down --remove-orphans
 
 rebuild: ## Rebuild the api service without cache and restart it
 	@echo "Rebuilding api service with --no-cache..."
 	@ln -sf .env.dev .env
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) build --no-cache api
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) up -d api
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) build --no-cache api
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) up -d api
 
 up-prod: ## Start all production-like containers
 	@echo "Starting up production-like services..."
 	@ln -sf .env.prod .env
-	docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) up -d --build --pull always --remove-orphans
+	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) up -d --build --pull always --remove-orphans
 
 down-prod: ## Stop and remove all production-like containers
 	@echo "Shutting down production-like services..."
 	@ln -sf .env.prod .env
-	docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) down --remove-orphans
+	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) down --remove-orphans
 
 logs: ## View the logs for the development API service
 	@echo "Following logs for the dev api service..."
 	@ln -sf .env.dev .env
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) logs -f api
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) logs -f api
 
 shell: ## Open a shell inside the running development API container
 	@echo "Opening shell in dev api container..."
 	@ln -sf .env.dev .env
-	@docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api /bin/sh || \
+	@$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api /bin/sh || \
 		(echo "Failed to open shell. Is the container running? Try 'make up'" && exit 1)
 
 migrate: ## Run database migrations against the development database
 	@echo "Running database migrations for dev environment..."
 	@ln -sf .env.dev .env
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
 
 # ==============================================================================
 # CODE QUALITY & TESTING
@@ -116,4 +118,4 @@ lint-check: ## Check the code for issues with Ruff
 
 test: ## Run the test suite
 	@echo "Running test suite..."
-	poetry run pytest
+	$(SUDO) /home/jules/.cache/pypoetry/virtualenvs/pvt-llm-api-9TtSrW0h-py3.12/bin/pytest
