@@ -20,7 +20,7 @@ async def test_get_models(client: AsyncClient, mock_ollama_service: MagicMock):
     mock_response = {
         "models": [
             {
-                "name": "test-model:latest",
+                "model": "test-model:latest",
                 "modified_at": now_iso,
                 "size": 12345,
             }
@@ -35,7 +35,7 @@ async def test_get_models(client: AsyncClient, mock_ollama_service: MagicMock):
     assert response.status_code == status.HTTP_200_OK
     # Pydantic will format the datetime string in the response, so we compare against that.
     response_data = response.json()
-    assert response_data["models"][0]["name"] == "test-model:latest"
+    assert response_data["models"][0]["model"] == "test-model:latest"
     assert response_data["models"][0]["size"] == 12345
     mock_ollama_service.list_models.assert_called_once()
 
@@ -94,7 +94,7 @@ async def test_switch_active_model_success(
     mock_ollama_service.list_models.return_value = {
         "models": [
             {
-                "name": model_name,
+                "model": model_name,
                 "modified_at": datetime.now(timezone.utc).isoformat(),
                 "size": 12345,
             }
@@ -122,7 +122,7 @@ async def test_switch_active_model_not_found(
     """Test switching to a model that does not exist locally."""
     model_name = "non-existent-model:latest"
     mock_ollama_service.list_models.return_value = {
-        "models": [{"name": "another-model:latest"}]
+        "models": [{"model": "another-model:latest"}]
     }
 
     response = await client.post(f"/api/v1/models/switch/{model_name}")

@@ -73,7 +73,7 @@ async def switch_active_model(
     # Safely access the 'models' key with a default empty list
     local_models = local_models_data.get("models", [])
 
-    if not any(m.get("name") == model_name for m in local_models):
+    if not any(m.get("model") == model_name for m in local_models):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail=f"Model '{model_name}' not found locally. Please pull it first.",
