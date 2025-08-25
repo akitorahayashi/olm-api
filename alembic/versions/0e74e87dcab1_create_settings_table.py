@@ -26,7 +26,6 @@ def upgrade() -> None:
     sa.Column('value', sa.String(), nullable=False),
     sa.PrimaryKeyConstraint('key')
     )
-    op.create_index(op.f('ix_settings_key'), 'settings', ['key'], unique=False)
     op.alter_column('logs', 'timestamp',
                existing_type=postgresql.TIMESTAMP(timezone=True),
                server_default=None,
@@ -41,6 +40,5 @@ def downgrade() -> None:
                existing_type=postgresql.TIMESTAMP(timezone=True),
                server_default=sa.text('now()'),
                existing_nullable=True)
-    op.drop_index(op.f('ix_settings_key'), table_name='settings')
     op.drop_table('settings')
     # ### end Alembic commands ###

@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 import httpx
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
+from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
 import ollama
@@ -31,6 +32,12 @@ async def lifespan(app: FastAPI):
             # If not, initialize it with the default from settings
             settings = Settings()
             setting_service.set_active_model(db, settings.DEFAULT_GENERATION_MODEL)
+    except (OperationalError, ProgrammingError) as e:
+        # If the database is not ready or migrations are not applied,
+        # this will raise a more informative error.
+        raise RuntimeError(
+            "Database is not ready. Please ensure it is running and migrations are applied."
+        ) from e
     finally:
         db.close()
 

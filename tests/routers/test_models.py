@@ -5,6 +5,7 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.orm import Session
 from starlette import status
+from starlette.responses import StreamingResponse
 
 from src.api.v1.services import setting_service
 
@@ -63,7 +64,13 @@ async def test_pull_model_streaming(
     """Test the POST /api/v1/models/pull endpoint with SSE streaming."""
     # Arrange
     model_name = "streaming-model:latest"
-    mock_ollama_service.pull_model.return_value = "mocked streaming response"
+
+    async def mock_stream_content():
+        yield "mocked streaming response"
+
+    mock_ollama_service.pull_model.return_value = StreamingResponse(
+        mock_stream_content(), media_type="text/event-stream"
+    )
 
     # Act
     response = await client.post(
@@ -72,6 +79,7 @@ async def test_pull_model_streaming(
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
+    assert response.headers["content-type"].startswith("text/event-stream")
     mock_ollama_service.pull_model.assert_called_once_with(model_name, True)
 
 
@@ -105,6 +113,8 @@ async def test_switch_active_model_success(
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"message": f"Switched active model to {model_name}"}
 
+    # Verify that the model check was performed
+    mock_ollama_service.list_models.assert_called_once()
     # Verify that the change was persisted in the database
     active_model_from_db = setting_service.get_active_model(db_session)
     assert active_model_from_db == model_name

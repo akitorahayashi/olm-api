@@ -94,7 +94,11 @@ def setup_test_environment_and_db(db_url: str, request: pytest.FixtureRequest) -
 
     # In parallel mode, ensure migrations are run only once.
     if is_xdist_worker(request):
-        root_tmp_dir = Path(os.environ["PYTEST_XDIST_TESTRUNUID"])
+        # Fallback to a standard temp directory if the xdist-specific one isn't available
+        xdist_tmp_str = os.environ.get("PYTEST_XDIST_TESTRUNUID", "test_run_temp")
+        root_tmp_dir = Path(request.config.rootpath) / ".pytest_run" / xdist_tmp_str
+        root_tmp_dir.mkdir(parents=True, exist_ok=True)
+
         migration_lock_file = root_tmp_dir / ".migration.lock"
         with FileLock(str(migration_lock_file)):
             alembic_cfg = Config()
