@@ -81,4 +81,5 @@ async def test_generate_api_error_logs_details(
     # The status code logged should be the one returned to the client
     assert log_entry.response_status_code == status.HTTP_502_BAD_GATEWAY
     assert log_entry.error_details is not None
-    assert "httpx.RequestError" in log_entry.error_details
+    # The logged details should be the JSON response body from the exception handler
+    assert "Error connecting to upstream service" in log_entry.error_details

@@ -17,8 +17,6 @@ async def lifespan(app: FastAPI):
     # Startup logic
     settings: Settings = get_settings()
     app_state.set_current_model(settings.DEFAULT_GENERATION_MODEL)
-    # Add the logging middleware here, so it's instantiated after mocks can be applied
-    app.add_middleware(LoggingMiddleware)
     yield
     # Shutdown logic (if any)
 
@@ -29,6 +27,13 @@ app = FastAPI(
     description="A private LLM API server using FastAPI and Ollama, with dynamic model management.",
     lifespan=lifespan,
 )
+
+# Add the logging middleware here. By adding it outside the lifespan, we ensure
+# that dependency overrides from the test environment are applied before the
+# middleware is instantiated. This is crucial for tests that mock dependencies
+# used by the middleware, such as the database session.
+app.add_middleware(LoggingMiddleware)
+
 
 # Include the routers
 app.include_router(generate.router)

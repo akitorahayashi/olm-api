@@ -23,19 +23,36 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         db = create_db_session()
+        error_details: Optional[str] = None
+        response = None
 
         try:
             response = await call_next(request)
-            self._safe_log(db, request, response.status_code, None)
+            if response.status_code >= 400:
+                # For streaming responses, we need to iterate to get the body.
+                # This consumes the original response's stream.
+                body_chunks = [chunk async for chunk in response.body_iterator]
+                response_body = b"".join(body_chunks)
+                error_details = response_body.decode("utf-8")
+
+                # Re-create the response with the consumed body to send to the client.
+                response = Response(
+                    content=response_body,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.media_type,
+                )
             return response
-        except HTTPException as exc:
-            # Preserve original status (e.g., 400/404)
-            self._safe_log(db, request, exc.status_code, traceback.format_exc())
-            raise
         except Exception:
+            # This block will catch unhandled exceptions that crash the application
+            # before a response is formed (e.g., middleware errors).
             error_details = traceback.format_exc()
-            self._safe_log(db, request, 500, error_details)
-            raise
+            raise  # Re-raise to allow FastAPI's default error handling to take over
+        finally:
+            # Ensure logging happens even if an unhandled exception occurs.
+            # If `response` is None, it means an exception was raised before a response was formed.
+            status_code = response.status_code if response else 500
+            self._safe_log(db, request, status_code, error_details)
 
     def _safe_log(
         self,

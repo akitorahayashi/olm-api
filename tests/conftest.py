@@ -5,82 +5,50 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from testcontainers.postgres import PostgresContainer
 
-from alembic import command
-from alembic.config import Config
-from src.db.database import create_db_session
+from src.db.database import Base, create_db_session
 from src.dependencies import logging as logging_dependency
 from src.dependencies.common import get_ollama_client
 from src.main import app
 
-# Create a new engine and session for testing
-TestingSessionLocal = None
-
-
-@pytest.fixture(scope="session")
-def db_container():
-    """
-    Starts and manages a PostgreSQL container for the test session.
-    """
-    with PostgresContainer(
-        "postgres:16-alpine",
-        username="testuser",
-        password="testpassword",
-        dbname="testdb",
-    ) as postgres:
-        yield postgres
-
-
-@pytest.fixture(scope="session")
-def db_url(db_container: PostgresContainer):
-    """
-    Returns the database URL from the running test container.
-    This replaces psycopg2 with psycopg for compatibility with the project's driver.
-    """
-    return db_container.get_connection_url().replace("psycopg2", "psycopg")
-
 
 @pytest.fixture(scope="session", autouse=True)
-def setup_test_environment_and_db(db_url: str):
+def setup_test_environment():
     """
-    Set up the test environment:
-    1. Set environment variables.
-    2. Run database migrations programmatically.
-    3. Configure the TestingSessionLocal.
+    Set up the test environment variables.
     """
-    global TestingSessionLocal
     os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-built-in-model"
     os.environ["DEFAULT_GENERATION_MODEL"] = "test-default-model"
-    os.environ["DATABASE_URL"] = db_url
-
-    # Create the test database engine
-    engine = create_engine(db_url)
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-    # Run Alembic migrations programmatically
-    alembic_cfg = Config()
-    alembic_cfg.set_main_option("script_location", "alembic")
-    alembic_cfg.set_main_option("sqlalchemy.url", db_url)
-    command.upgrade(alembic_cfg, "head")
-
+    # Set a dummy DATABASE_URL. It's required by the Settings model,
+    # but the actual test connection is patched to use in-memory SQLite.
+    os.environ["DATABASE_URL"] = "sqlite:///:memory:"
     yield
 
 
 @pytest.fixture
 def db_session(monkeypatch):
     """
-    Provides a transactional scope around a test.
-    It also patches the create_db_session function used by the logging middleware
-    to ensure it uses the same transaction as the test.
+    Provides a transactional scope around a test using an in-memory SQLite database.
+    It creates the database, tables, and a session for each test function,
+    and tears it all down afterward.
     """
+    # Use in-memory SQLite for tests
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},  # Needed for SQLite
+    )
+    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+    # Create tables
+    Base.metadata.create_all(bind=engine)
+
     db = TestingSessionLocal()
 
     # Patch the function in the module where it is imported and used.
+    # This ensures the logging middleware uses the test session.
     monkeypatch.setattr(logging_dependency, "create_db_session", lambda: db)
 
-    # This override is kept in case other parts of the app use Depends(get_db)
-    # although it's not strictly necessary for the failing tests.
+    # This override is for any other part of the app using Depends(create_db_session)
     app.dependency_overrides[create_db_session] = lambda: db
 
     try:
@@ -88,6 +56,8 @@ def db_session(monkeypatch):
     finally:
         db.rollback()
         db.close()
+        # Drop tables
+        Base.metadata.drop_all(bind=engine)
         app.dependency_overrides.clear()
 
 
