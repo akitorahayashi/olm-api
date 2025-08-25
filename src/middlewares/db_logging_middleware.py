@@ -8,7 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.types import ASGIApp
 
 from src.db.database import create_db_session
-from src.models.log import Log
+from src.db.models.log import Log
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):

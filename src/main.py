@@ -5,17 +5,16 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 import ollama
+from src.api.routers import generate, models
+from src.config.app_state import app_state
 from src.config.settings import Settings
-from src.config.state import app_state
-from src.dependencies.common import get_settings
-from src.dependencies.logging import LoggingMiddleware
-from src.routers import generate, models
+from src.middlewares.db_logging_middleware import LoggingMiddleware
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup logic
-    settings: Settings = get_settings()
+    settings = Settings()
     app_state.set_current_model(settings.DEFAULT_GENERATION_MODEL)
     yield
     # Shutdown logic (if any)
@@ -51,9 +50,11 @@ async def http_request_exception_handler(request: Request, exc: httpx.RequestErr
     Handles connection errors to the Ollama service, returning a 502 Bad Gateway.
     This prevents leaking internal stack traces to the client.
     """
+    # The request object might be None in some cases, so we access its URL safely.
+    url = getattr(exc.request, "url", "unknown")
     return JSONResponse(
         status_code=502,
-        content={"detail": f"Error connecting to upstream service: {exc.request.url}"},
+        content={"detail": f"Error connecting to upstream service: {url}"},
     )
 
 
