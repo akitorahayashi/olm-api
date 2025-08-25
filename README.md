@@ -27,19 +27,19 @@ The project leverages a modern Python technology stack:
 - `make` command
 - NVIDIA GPU with drivers installed (for production-like performance)
 
-### 1. Initialize Environment Files
+### 1. Initialize Your Environment
 
-The project uses a single template, `.env.example`, as the single source of truth for all required environment variables. The `make setup` command uses this template to create environment-specific files. This only needs to be done once.
+Getting started is as simple as running one command. This only needs to be done once.
 
 ```sh
 make setup
 ```
 
-This command creates two files:
-- `.env.dev`: For local development. You can edit this file to match your local setup.
-- `.env.prod`: For production deployments. This file is ignored by Git and should be managed securely.
+This command handles all the necessary first-time setup:
+1.  **Creates Environment Files**: It copies `.env.example` to `.env.dev` (for local development) and `.env.prod` (for production).
+2.  **Pulls Required Images**: It automatically pulls the `postgres:16-alpine` Docker image required for running the test suite, ensuring your environment is ready for testing from the start.
 
-For local development, you only need to focus on `.env.dev`.
+You only need to focus on `.env.dev` for your local development.
 
 ### 2. Start the Services
 

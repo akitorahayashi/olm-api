@@ -14,7 +14,7 @@ pytestmark = pytest.mark.asyncio
 
 
 async def test_generate_uses_active_model(
-    client: AsyncClient, mock_ollama_client: MagicMock
+    client: AsyncClient, mock_ollama_client: MagicMock, db_session: Session
 ):
     """
     Test that the /generate endpoint uses the model set in app_state.

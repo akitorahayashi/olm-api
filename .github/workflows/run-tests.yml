@@ -24,5 +24,8 @@ jobs:
         run: |
           poetry install
 
+      - name: Setup environment
+        run: make setup
+
       - name: Run tests with pytest
         run: make test
