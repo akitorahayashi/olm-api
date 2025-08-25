@@ -9,7 +9,7 @@
 # ==============================================================================
 
 # Ensure that the targets are always run
-.PHONY: help setup up down logs shell format format-check lint lint-fix test migrate
+.PHONY: help setup up down logs shell format format-check lint lint-check test migrate
 
 # Default target executed when 'make' is run without arguments
 .DEFAULT_GOAL := help
@@ -100,25 +100,20 @@ migrate: ## Run database migrations against the development database
 
 format: ## Format the code using Black
 	@echo "Formatting code with Black..."
-	@ln -sf .env.dev .env
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black src/ tests/"
+	poetry run black src/ tests/
 
 format-check: ## Check if the code is formatted with Black
 	@echo "Checking code format with Black..."
-	@ln -sf .env.dev .env
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && black --check src/ tests/"
+	poetry run black --check src/ tests/
 
-lint: ## Lint Check the code for issues with Ruff
-	@echo "Linting code with Ruff..."
-	@ln -sf .env.dev .env
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && ruff check src/ tests/"
-
-lint-fix: ## Check the code with Ruff and apply fixes automatically
+lint: ## Lint and fix the code with Ruff automatically
 	@echo "Linting and fixing code with Ruff..."
-	@ln -sf .env.dev .env
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && ruff check src/ tests/ --fix"
+	poetry run ruff check src/ tests/ --fix
 
-test: ## Run the test suite in an isolated environment
+lint-check: ## Check the code for issues with Ruff
+	@echo "Checking code with Ruff..."
+	poetry run ruff check src/ tests/
+
+test: ## Run the test suite
 	@echo "Running test suite..."
-	@ln -sf .env.dev .env
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) run --rm --build test
+	poetry run pytest

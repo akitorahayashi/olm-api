@@ -2,7 +2,7 @@ import logging
 import traceback
 from typing import Optional
 
-from fastapi import HTTPException, Request, Response
+from fastapi import Request, Response
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.types import ASGIApp
