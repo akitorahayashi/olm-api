@@ -2,9 +2,9 @@
 
 ## Overview
 
-This project provides a robust, production-ready API server designed to serve local Large Language Models (LLMs) via Ollama. Built with FastAPI, it offers a clean, high-performance, and scalable solution for integrating local AI capabilities into your applications.
+This project provides a robust, production-ready API server designed to serve local Large Language Models (LLMs). Built with FastAPI, it offers a clean, high-performance, and scalable solution for integrating local AI capabilities into your applications.
 
-The architecture emphasizes a clean separation of concerns, a fully containerized environment using Docker for consistency across development and production, and a comprehensive set of development tools to ensure code quality and a smooth developer experience (DX).
+The architecture emphasizes a clean separation of concerns and a fully containerized environment using Docker. **A key feature of this architecture is the self-contained Ollama service, where the AI model is baked directly into the Docker image.** This creates an immutable, portable, and GPU-accelerated service, ensuring consistency and high performance from development to production.
 
 ## Tech Stack
 
@@ -17,7 +17,7 @@ The project leverages a modern Python technology stack:
 - **Database Migrations**: Alembic
 - **Code Quality**: Ruff (Linter), Black (Formatter)
 - **Testing**: Pytest
-- **LLM Integration**: Ollama
+- **LLM Integration**: Ollama (with GPU support)
 
 ## Setup and Execution
 
@@ -25,6 +25,7 @@ The project leverages a modern Python technology stack:
 
 - Docker and Docker Compose
 - `make` command
+- NVIDIA GPU with drivers installed (for production-like performance)
 
 ### 1. Initialize Environment Files
 
@@ -42,15 +43,15 @@ For local development, you only need to focus on `.env.dev`.
 
 ### 2. Start the Services
 
-Start all services (API server and database) for development using a simple `make` command:
+Start all services (API server, database, and Ollama) for development using a simple `make` command:
 
 ```sh
 make up
 ```
 
-This command builds the necessary Docker images and starts the containers. **The Makefile automatically selects the correct `.env.dev` configuration by creating a symbolic link (`.env`) that Docker Compose uses by default.** This provides a seamless developer experience, as you don't need to manually specify environment files.
+This command builds the necessary Docker images, including the custom Ollama image with the model specified in your `.env` file baked in. **The Makefile automatically selects the correct `.env.dev` configuration by creating a symbolic link (`.env`) that Docker Compose uses by default.** This provides a seamless developer experience.
 
-The API will be accessible at `http://127.0.0.1:8000` by default. The source code is mounted as a volume, enabling hot-reloading on code changes.
+The API will be accessible at `http://127.0.0.1:8000` by default (configurable via `DOCKER_HOST_BIND_IP` and `API_PORT` in `.env.dev`). The source code is mounted as a volume, enabling hot-reloading on code changes.
 
 ### 3. Run Database Migrations (If Needed)
 
@@ -62,16 +63,15 @@ make migrate
 
 ## Environment Variables
 
-This project follows the **DRY (Don't Repeat Yourself)** principle by defining a single, unified set of variable names in `.env.example` (e.g., `API_PORT` instead of `DEV_API_PORT` and `PROD_API_PORT`).
-
-The value for each variable is then set in the environment-specific files (`.env.dev`, `.env.prod`). For example, you can set `API_PORT=8000` in `.env.dev` and `API_PORT=50000` in `.env.prod`.
-
-The `Makefile` handles the complexity of environment switching. When you run a command like `make up` or `make up-prod`, it automatically creates a symbolic link named `.env` that points to the correct configuration file (`.env.dev` or `.env.prod`). Docker Compose then reads this `.env` file by default. This makes the process seamless and robust.
+This project follows the **DRY (Don't Repeat Yourself)** principle by defining a single, unified set of variable names in `.env.example`. The `Makefile` handles the complexity of environment switching by creating a symbolic link named `.env` that points to the correct configuration file (`.env.dev` or `.env.prod`).
 
 Key variables include:
+- **`HOST_BIND_IP`**: The IP address on the host machine to which the API server port will bind. Use `127.0.0.1` for local access only (recommended for development) and `0.0.0.0` to allow external access (for production).
 - **`API_PORT`**: The external port to expose for the API server.
+- **`API_LISTEN_IP`**: The IP address the Uvicorn server listens on inside the container. This usually remains `0.0.0.0`.
 - **`DATABASE_URL`**: The full connection string for the PostgreSQL database.
-- **`OLLAMA_BASE_URL`**: The base URL for the Ollama server.
+- **`BUILT_IN_OLLAMA_MODEL`**: The name of the Ollama model to be baked into the Docker image during the build process.
+- **`DEFAULT_GENERATION_MODEL`**: The model that will be active by default on server startup. Must match `BUILT_IN_OLLAMA_MODEL`.
 
 ## API Specification
 
@@ -88,7 +88,7 @@ The request body must be a JSON object with the following fields:
 | `prompt`  | string  |         | **Required.** The input text for the LLM. |
 | `stream`  | boolean | `false` | If `true`, the response will be streamed. |
 
-**Note**: The model used for the generation is determined by the `OLLAMA_MODEL` environment variable on the server, not by a parameter in the request body.
+**Note**: The model used for generation is the one currently active on the server. The default model is set via the `DEFAULT_GENERATION_MODEL` environment variable, and it can be changed dynamically using the `POST /api/v1/models/switch/{model_name}` endpoint.
 
 ### Response Body
 
@@ -126,6 +126,8 @@ data: {}
 
 ### Standard Request (curl)
 
+The host and port depend on your `.env.dev` settings (`HOST_BIND_IP` and `API_PORT`).
+
 ```sh
 curl -X POST "http://127.0.0.1:8000/api/v1/generate" \
 -H "Content-Type: application/json" \
@@ -142,24 +144,45 @@ curl -X POST "http://127.0.0.1:8000/api/v1/generate" \
 -d '{"prompt": "Write a short story about a robot.", "stream": true}' -N
 ```
 
-## Development Commands
+## Development Workflow
 
-This project uses a `Makefile` to provide a simple interface for common development tasks.
+### Recommended: Local Development with Poetry
 
-| Command          | Description                                                              |
-|------------------|--------------------------------------------------------------------------|
-| `make help`      | ✨ Shows a help message with all available commands.                     |
-| `make setup`     | 🚀 Initializes `.env.dev` and `.env.prod` from the single `.env.example`. |
-| `make up`        | 🐳 Starts all development containers in detached mode.                   |
-| `make down`      | 🛑 Stops and removes all development containers.               |
-| `make logs`      | 📜 Tails the logs of the API service in real-time.             |
-| `make shell`     | 💻 Opens an interactive shell (`/bin/sh`) inside the API container.|
-| `make migrate`   | 🗄️ Runs database migrations against the development database. |
-| `make format`    | 🎨 Formats the entire codebase using Black.                    |
-| `make format-check`| 🎨 Checks if the code is formatted with Black.                 |
-| `make lint`      | 🔎 Lints the code for issues using Ruff.                       |
-| `make lint-fix`  | 🩹 Lints the code with Ruff and applies fixes automatically.   |
-| `make test`      | 🧪 Runs the test suite in an isolated, containerized environment.|
+For the fastest development cycle, we recommend running tools like linters, formatters, and tests directly on your local machine.
+
+**1. Install Dependencies:**
+First, ensure you have [Poetry](https://python-poetry.org/docs/#installation) installed. Then, from the project root, install all dependencies into a local virtual environment managed by Poetry:
+```sh
+poetry install
+```
+
+**2. Running Commands:**
+Once the dependencies are installed, you can run tools directly using `poetry run`:
+
+| Command                 | Description                                                  |
+|-------------------------|--------------------------------------------------------------|
+| `poetry run pytest`     | 🧪 Runs the test suite using `pytest-docker` to manage the DB. |
+| `poetry run ruff .`     | 🔎 Lints the code for issues using Ruff.                     |
+| `poetry run ruff . --fix` | 🩹 Lints the code with Ruff and applies fixes automatically. |
+| `poetry run black .`    | 🎨 Formats the entire codebase using Black.                  |
+
+### Alternative: Docker-Based Commands with `make`
+
+If you prefer not to install Python/Poetry locally, you can use `make` to run commands inside Docker containers. This can be slower but requires only Docker and `make` to be installed.
+
+| Command             | Description                                                              |
+|---------------------|--------------------------------------------------------------------------|
+| `make help`         | ✨ Shows a help message with all available commands.                     |
+| `make setup`        | 🚀 Initializes `.env.dev` and `.env.prod` from the single `.env.example`. |
+| `make up`           | 🐳 Starts all development containers in detached mode.                   |
+| `make down`         | 🛑 Stops and removes all development containers.                         |
+| `make logs`         | 📜 Tails the logs of the API service in real-time.                       |
+| `make shell`        | 💻 Opens an interactive shell (`/bin/sh`) inside the API container.      |
+| `make migrate`      | 🗄️ Runs database migrations against the development database.           |
+| `make format`       | 🎨 Formats the entire codebase using Black (via Docker).                 |
+| `make format-check` | 🎨 Checks if the code is formatted with Black (via Docker).            |
+| `make lint`         | 🔎 Lints the code for issues using Ruff (via Docker).                    |
+| `make lint-fix`     | 🩹 Lints and fixes code with Ruff (via Docker).                          |
 
 ## Deployment
 
@@ -168,14 +191,14 @@ This project is configured for continuous integration, which automatically build
 ### Automated Build Process
 
 -   **CI Pipeline**: On every push to the `main` branch, the pipeline runs linters and tests.
--   **Build & Push**: On a successful push to `main`, a production-ready Docker image is built and pushed to GHCR.
+-   **Build & Push**: On a successful push to `main`, a production-ready Docker image is built and pushed to GHCR. This image contains the application server and the self-contained Ollama service with the specified model.
 
 ### Manual Deployment Steps
 
 The deployment process is now simpler and more consistent with the development workflow.
 
-1.  **Prepare your server**: Ensure Docker, Docker Compose, and `make` are installed.
-2.  **Create `.env.prod` file**: Manually create a `.env.prod` file on your server. You can use `.env.example` as a reference for the required variables. Populate it with your production-level configurations (e.g., database credentials, a non-default `API_PORT` if desired).
+1.  **Prepare your server**: Ensure Docker, Docker Compose, `make`, and NVIDIA container toolkit/drivers are installed.
+2.  **Create `.env.prod` file**: Manually create a `.env.prod` file on your server. Use `.env.example` as a reference. Populate it with your production-level configurations (e.g., database credentials, `HOST_BIND_IP=0.0.0.0`, a non-default `API_PORT` if desired).
 3.  **Pull the image**: Pull the latest Docker image from GHCR.
 4.  **Start services**: Use the `make up-prod` command. This command uses `docker-compose.yml` without any overrides and automatically selects your `.env.prod` file for configuration.
 

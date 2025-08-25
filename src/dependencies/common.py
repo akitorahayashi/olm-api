@@ -1,8 +1,6 @@
 from functools import lru_cache
 
 import ollama
-from fastapi import Depends
-
 from src.config.settings import Settings
 
 
@@ -15,10 +13,10 @@ def get_settings() -> Settings:
     return Settings()
 
 
-def get_ollama_client(settings: Settings = Depends(get_settings)) -> ollama.Client:
+def get_ollama_client() -> ollama.Client:
     """
     Dependency function to create an instance of the Ollama client.
     """
     # Using 'yield' makes this a generator-based dependency,
     # which is good practice for resources that might need cleanup.
-    yield ollama.Client(host=settings.OLLAMA_BASE_URL)
+    yield ollama.Client(host="http://ollama:11434")
