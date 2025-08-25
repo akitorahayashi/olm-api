@@ -10,6 +10,7 @@ from testcontainers.postgres import PostgresContainer
 from alembic import command
 from alembic.config import Config
 from src.db.database import create_db_session
+from src.dependencies import logging as logging_dependency
 from src.dependencies.common import get_ollama_client
 from src.main import app
 
@@ -67,12 +68,22 @@ def setup_test_environment_and_db(db_url: str):
 
 
 @pytest.fixture
-def db_session():
+def db_session(monkeypatch):
     """
     Provides a transactional scope around a test.
+    It also patches the create_db_session function used by the logging middleware
+    to ensure it uses the same transaction as the test.
     """
+    app.dependency_overrides.clear()  # Clear any previous overrides
     db = TestingSessionLocal()
+
+    # Patch the function in the module where it is imported and used.
+    monkeypatch.setattr(logging_dependency, "create_db_session", lambda: db)
+
+    # This override is kept in case other parts of the app use Depends(get_db)
+    # although it's not strictly necessary for the failing tests.
     app.dependency_overrides[create_db_session] = lambda: db
+
     try:
         yield db
     finally:
