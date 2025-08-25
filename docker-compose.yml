@@ -19,6 +19,10 @@ services:
       context: ./ollama
       args:
         - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
+    entrypoint: ollama
+    command: serve
+    environment:
+      - OLLAMA_HOST=0.0.0.0
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped

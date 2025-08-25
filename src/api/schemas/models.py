@@ -5,8 +5,8 @@ from pydantic import BaseModel, Field
 
 
 class ModelDetails(BaseModel):
-    name: str
-    modified_at: datetime = Field(alias="modified_at")
+    name: str = Field(alias="model")
+    modified_at: datetime
     size: int
 
 

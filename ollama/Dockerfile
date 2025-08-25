@@ -15,8 +15,9 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Pull the specified model into the image.
 # This makes the model part of the immutable image.
 # We start the server in the background, wait for it to become responsive, and then pull the model.
-RUN /bin/sh -c '/bin/ollama serve > /dev/null 2>&1 & while ! curl -s -f http://127.0.0.1:11434 > /dev/null; do echo "Waiting for ollama server to start..."; sleep 1; done; /bin/ollama pull ${BUILT_IN_OLLAMA_MODEL}'
-
-# The default command to run when the container starts.
-# The base image has an ENTRYPOINT of ["ollama"], so we only need to provide the argument "serve".
-CMD ["serve"]
+RUN ollama serve > /dev/null 2>&1 & \
+    while ! curl -s -f http://127.0.0.1:11434 > /dev/null; do \
+    echo "Waiting for ollama server to start..."; \
+    sleep 1; \
+    done; \
+    ollama pull ${BUILT_IN_OLLAMA_MODEL}
