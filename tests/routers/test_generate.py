@@ -3,6 +3,7 @@ from unittest.mock import MagicMock
 import httpx
 import pytest
 from httpx import AsyncClient
+from sqlalchemy.orm import Session
 from starlette import status
 
 from src.config.state import app_state
@@ -10,23 +11,6 @@ from src.models.log import Log
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio
-
-
-@pytest.fixture(autouse=True)
-def mock_db_session_fixture(monkeypatch):
-    """
-    Mock the DB session for the logging middleware for all tests in this file.
-    """
-    mock_session = MagicMock()
-    # Mock the context manager
-    mock_context_manager = MagicMock()
-    mock_context_manager.__enter__.return_value = mock_session
-    mock_context_manager.__exit__.return_value = None
-    monkeypatch.setattr(
-        "src.dependencies.logging.create_db_session",
-        lambda: mock_context_manager,
-    )
-    return mock_session
 
 
 async def test_generate_uses_active_model(
@@ -54,7 +38,7 @@ async def test_generate_uses_active_model(
 async def test_generate_success_logs_metadata(
     client: AsyncClient,
     mock_ollama_client: MagicMock,
-    mock_db_session_fixture: MagicMock,
+    db_session: Session,
 ):
     """Test that a successful request logs basic metadata."""
     mock_ollama_client.chat.return_value = {"message": {"content": "response"}}
@@ -63,16 +47,15 @@ async def test_generate_success_logs_metadata(
     )
 
     assert response.status_code == 200
-    mock_db_session_fixture.add.assert_called_once()
-    log_entry = mock_db_session_fixture.add.call_args[0][0]
-    assert isinstance(log_entry, Log)
+    log_entry = db_session.query(Log).one_or_none()
+    assert log_entry is not None
     assert log_entry.response_status_code == 200
 
 
 async def test_generate_api_error_logs_details(
     client: AsyncClient,
     mock_ollama_client: MagicMock,
-    mock_db_session_fixture: MagicMock,
+    db_session: Session,
 ):
     """
     Test that a service-layer error from Ollama is handled by the global
@@ -93,9 +76,8 @@ async def test_generate_api_error_logs_details(
     assert "Error connecting to upstream service" in response.json()["detail"]
 
     # Assert: Check that the logging middleware still recorded the request
-    mock_db_session_fixture.add.assert_called_once()
-    log_entry = mock_db_session_fixture.add.call_args[0][0]
-    assert isinstance(log_entry, Log)
+    log_entry = db_session.query(Log).one_or_none()
+    assert log_entry is not None
     # The status code logged should be the one returned to the client
     assert log_entry.response_status_code == status.HTTP_502_BAD_GATEWAY
     assert log_entry.error_details is not None

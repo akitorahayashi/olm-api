@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 
 import httpx
-import ollama
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
+import ollama
 from src.config.settings import Settings
 from src.config.state import app_state
 from src.dependencies.common import get_settings
@@ -17,6 +17,8 @@ async def lifespan(app: FastAPI):
     # Startup logic
     settings: Settings = get_settings()
     app_state.set_current_model(settings.DEFAULT_GENERATION_MODEL)
+    # Add the logging middleware here, so it's instantiated after mocks can be applied
+    app.add_middleware(LoggingMiddleware)
     yield
     # Shutdown logic (if any)
 
@@ -27,9 +29,6 @@ app = FastAPI(
     description="A private LLM API server using FastAPI and Ollama, with dynamic model management.",
     lifespan=lifespan,
 )
-
-# Add the logging middleware
-app.add_middleware(LoggingMiddleware)
 
 # Include the routers
 app.include_router(generate.router)
@@ -54,7 +53,9 @@ async def http_request_exception_handler(request: Request, exc: httpx.RequestErr
 
 
 @app.exception_handler(ollama.ResponseError)
-async def ollama_response_exception_handler(request: Request, exc: ollama.ResponseError):
+async def ollama_response_exception_handler(
+    request: Request, exc: ollama.ResponseError
+):
     """
     Handles errors reported by the Ollama service itself, returning a 503 Service Unavailable.
     This could indicate the model is not available, the service is overloaded, etc.

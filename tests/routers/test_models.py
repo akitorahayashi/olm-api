@@ -13,7 +13,7 @@ async def test_get_models(client: AsyncClient, mock_ollama_client: MagicMock):
     mock_response = {"models": [{"name": "test-model:latest"}]}
     mock_ollama_client.list.return_value = mock_response
 
-    response = await client.get("/api/v1/models")
+    response = await client.get("/api/v1/models/")
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == mock_response
     mock_ollama_client.list.assert_called_once()
