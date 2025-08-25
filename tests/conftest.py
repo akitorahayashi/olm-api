@@ -74,7 +74,6 @@ def db_session(monkeypatch):
     It also patches the create_db_session function used by the logging middleware
     to ensure it uses the same transaction as the test.
     """
-    app.dependency_overrides.clear()  # Clear any previous overrides
     db = TestingSessionLocal()
 
     # Patch the function in the module where it is imported and used.
