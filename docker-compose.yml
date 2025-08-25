@@ -19,13 +19,6 @@ services:
       context: ./ollama
       args:
         - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [ gpu ]
     volumes:
       - ollama_data:/root/.ollama
     restart: unless-stopped

@@ -1,4 +1,3 @@
-import json
 from datetime import datetime, timezone
 from unittest.mock import MagicMock
 
@@ -41,7 +40,9 @@ async def test_get_models(client: AsyncClient, mock_ollama_service: MagicMock):
     mock_ollama_service.list_models.assert_called_once()
 
 
-async def test_pull_model_no_stream(client: AsyncClient, mock_ollama_service: MagicMock):
+async def test_pull_model_no_stream(
+    client: AsyncClient, mock_ollama_service: MagicMock
+):
     """Test the POST /api/v1/models/pull endpoint without streaming."""
     # Arrange
     model_name = "new-model:latest"
@@ -59,7 +60,9 @@ async def test_pull_model_no_stream(client: AsyncClient, mock_ollama_service: Ma
     mock_ollama_service.pull_model.assert_called_once_with(model_name, False)
 
 
-async def test_pull_model_streaming(client: AsyncClient, mock_ollama_service: MagicMock):
+async def test_pull_model_streaming(
+    client: AsyncClient, mock_ollama_service: MagicMock
+):
     """Test the POST /api/v1/models/pull endpoint with SSE streaming."""
     # Arrange
     model_name = "streaming-model:latest"
@@ -106,9 +109,7 @@ async def test_switch_active_model_success(
     mock_ollama_service.generate_response.return_value = GenerateResponse(
         response="response from switched model"
     )
-    await client.post(
-        "/api/v1/generate", json={"prompt": "test", "stream": False}
-    )
+    await client.post("/api/v1/generate", json={"prompt": "test", "stream": False})
 
     mock_ollama_service.generate_response.assert_called_once_with(
         prompt="test", model_name=model_name, stream=False
