@@ -15,9 +15,10 @@ jobs:
         with:
           python-version-file: '.python-version'
 
-      - name: Install Poetry
+      - name: Install and configure Poetry
         run: |
           pipx install poetry
+          poetry config virtualenvs.in-project true
 
       - name: Install dependencies
         run: |
