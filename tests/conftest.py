@@ -13,6 +13,7 @@ from src.db.database import create_db_session
 from src.dependencies import logging as logging_dependency
 from src.dependencies.common import get_ollama_client
 from src.main import app
+from src.models.log import Log
 
 
 @pytest.fixture(scope="session")
@@ -67,6 +68,8 @@ def db_session(db_url: str, monkeypatch):
     Provides a transactional scope for each test function.
     It creates a new session for each test, patches the dependency,
     and rolls back the transaction after the test is complete.
+    Crucially, it also cleans up any data committed by the application
+    (e.g., by the logging middleware) to ensure test isolation.
     """
     engine = create_engine(db_url)
     TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -79,7 +82,11 @@ def db_session(db_url: str, monkeypatch):
     try:
         yield db
     finally:
-        db.rollback()  # Rollback any changes made during the test
+        # Rollback any uncommitted changes from the test itself
+        db.rollback()
+        # Clean up any committed data to ensure isolation between tests
+        db.query(Log).delete()
+        db.commit()
         db.close()
         app.dependency_overrides.clear()  # Clear overrides after the test
 
