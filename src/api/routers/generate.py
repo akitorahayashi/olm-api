@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends
 
+from src.api.schemas.generate import GenerateRequest
+from src.api.services.ollama import OllamaService
 from src.config.app_state import app_state
-from src.schemas.generate import GenerateRequest
-from src.services.ollama import OllamaService
 
 router = APIRouter(
     prefix="/api/v1",

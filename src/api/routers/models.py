@@ -3,8 +3,8 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 
+from src.api.services.ollama import OllamaService
 from src.config.app_state import app_state
-from src.services.ollama import OllamaService
 
 router = APIRouter(
     prefix="/api/v1/models",

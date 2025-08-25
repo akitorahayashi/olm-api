@@ -9,11 +9,11 @@ from testcontainers.postgres import PostgresContainer
 
 from alembic import command
 from alembic.config import Config
+from src.api.services.ollama import OllamaService
 from src.db.database import create_db_session
+from src.db.models.log import Log
 from src.main import app
 from src.middlewares import db_logging_middleware
-from src.models.log import Log
-from src.services.ollama import OllamaService
 
 
 @pytest.fixture(scope="session")

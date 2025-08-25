@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from starlette import status
 
 from src.config.app_state import app_state
-from src.models.log import Log
+from src.db.models.log import Log
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio

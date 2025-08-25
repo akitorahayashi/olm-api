@@ -5,10 +5,10 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 import ollama
+from src.api.routers import generate, models
 from src.config.app_state import app_state
 from src.config.settings import Settings
 from src.middlewares.db_logging_middleware import LoggingMiddleware
-from src.routers import generate, models
 
 
 @asynccontextmanager
