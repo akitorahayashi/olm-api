@@ -117,7 +117,7 @@ async def test_generate_streaming_logs_full_response(
     setting_service.set_active_model(db_session, "test-model")
     # The service returns a StreamingResponse for stream=True
     mock_ollama_service.generate_response.return_value = StreamingResponse(
-        stream_generator(), media_type="application/x-ndjson"
+        stream_generator(), media_type="text/event-stream; charset=utf-8"
     )
 
     # Act

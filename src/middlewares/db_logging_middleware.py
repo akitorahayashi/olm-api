@@ -38,12 +38,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(new_request)
 
-            # We must capture the media type BEFORE consuming the stream, as
-            # consuming it can invalidate the response object's state.
-            media_type = response.media_type
-            is_streaming = "event-stream" in (media_type or "") or "x-ndjson" in (
-                media_type or ""
-            )
+            # We must capture the content type BEFORE consuming the stream.
+            content_type = response.headers.get("content-type", "")
+            is_streaming = "event-stream" in content_type
 
             response_body_bytes = b""
             async for chunk in response.body_iterator:
@@ -61,7 +58,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 content=response_body_bytes,
                 status_code=response.status_code,
                 headers=dict(response.headers),
-                media_type=media_type, # Use the captured media type
+                media_type=response.media_type,
             )
 
             if response.status_code >= 400:
