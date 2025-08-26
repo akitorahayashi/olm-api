@@ -61,7 +61,7 @@ def pytest_configure(config: pytest.Config):
     container = PostgresContainer(
         "postgres:16-alpine",
         driver="psycopg",
-        user=os.environ.get("POSTGRES_USER"),
+        username=os.environ.get("POSTGRES_USER"),
         password=os.environ.get("POSTGRES_PASSWORD"),
         dbname=os.environ.get("POSTGRES_DB"),
     )
