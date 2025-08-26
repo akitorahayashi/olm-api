@@ -3,6 +3,7 @@ from typing import AsyncGenerator, Generator, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
+from dotenv import load_dotenv
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -47,13 +48,23 @@ def pytest_configure(config: pytest.Config):
     if not _is_xdist_master(config):
         return
 
+    # Load environment variables from .env file.
+    # In the 'make test' flow, this .env is a symlink to .env.test.
+    load_dotenv()
+
     # Set environment variables needed by Alembic and the application during tests.
     # This must be done before any application code that imports Settings is loaded.
     os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-built-in-model"
     os.environ["DEFAULT_GENERATION_MODEL"] = "test-default-model"
 
-    # Start the container
-    container = PostgresContainer("postgres:16-alpine", driver="psycopg")
+    # Start the container using credentials from the environment
+    container = PostgresContainer(
+        "postgres:16-alpine",
+        driver="psycopg",
+        username=os.environ.get("POSTGRES_USER"),
+        password=os.environ.get("POSTGRES_PASSWORD"),
+        dbname=os.environ.get("POSTGRES_DB"),
+    )
     container.start()
 
     # Store container instance and connection URL
