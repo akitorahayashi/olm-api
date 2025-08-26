@@ -4,8 +4,13 @@ on:
   workflow_call:
 
 jobs:
-  run-tests:
+  test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        test_target: [unit-test, db-test]
+      fail-fast: false
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -15,13 +20,17 @@ jobs:
         with:
           python-version-file: '.python-version'
 
-      - name: Install and configure Poetry
-        run: |
-          pipx install poetry
-          poetry config virtualenvs.in-project true
+      - name: Install Poetry
+        run: pipx install poetry
 
-      - name: Setup environment
+      - name: Configure Poetry
+        run: |
+          poetry config virtualenvs.in-project true
+          poetry config virtualenvs.create true
+          echo "$HOME/.local/bin" >> $GITHUB_PATH
+
+      - name: Install dependencies
         run: make setup
 
-      - name: Run tests with pytest
-        run: make test
+      - name: Run tests
+        run: make ${{ matrix.test_target }}

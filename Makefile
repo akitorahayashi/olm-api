@@ -17,9 +17,6 @@
 # Define the project name based on the directory name for dynamic container naming
 PROJECT_NAME := $(shell basename $(CURDIR))
 
-# Use sudo if the user is not root, to handle Docker permissions
-SUDO := $(shell if [ $$(id -u) -ne 0 ]; then echo "sudo"; fi)
-
 # Define project names for different environments
 DEV_PROJECT_NAME := $(PROJECT_NAME)-dev
 PROD_PROJECT_NAME := $(PROJECT_NAME)-prod
@@ -40,65 +37,70 @@ help: ## Show this help message
 
 setup: ## Initialize project: install dependencies, create .env files and pull required Docker images.
 	@echo "Installing python dependencies with Poetry..."
-	@poetry install --no-root
-	@for env in dev prod test; do \
+	@poetry install --no-root --sync
+	@echo "Creating environment files..."
+	@if [ ! -f .env.example ]; then echo ".env.example not found!"; exit 1; fi
+	@POSTGRES_DB_NAME=$$(grep POSTGRES_DB_NAME .env.example | cut -d '=' -f2); \
+	for env in dev prod test; do \
 		if [ ! -f .env.$${env} ]; then \
-			echo "Creating .env.$${env} from .env.example..."; \
+			echo "Creating .env.$${env}..." ; \
 			cp .env.example .env.$${env}; \
+			echo "\n# --- Dynamic settings ---" >> .env.$${env}; \
+			echo "POSTGRES_DB=$${POSTGRES_DB_NAME}-$${env}" >> .env.$${env}; \
 		else \
 			echo ".env.$${env} already exists. Skipping creation."; \
 		fi; \
 	done
 	@echo "Pulling PostgreSQL image for tests..."
-	$(SUDO) docker pull postgres:16-alpine
+	docker pull postgres:16-alpine
 
 up: ## Start all development containers in detached mode
 	@echo "Starting up development services..."
 	@ln -sf .env.dev .env
-	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) up -d
+	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) up -d
 
 down: ## Stop and remove all development containers
 	@echo "Shutting down development services..."
 	@ln -sf .env.dev .env
-	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) down --remove-orphans
+	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) down --remove-orphans
 
 clean: ## Stop and remove all dev containers, networks, and volumes (use with CONFIRM=1)
 	@if [ "$(CONFIRM)" != "1" ]; then echo "This is a destructive operation. Please run 'make clean CONFIRM=1' to confirm."; exit 1; fi
 	@echo "Cleaning up all development Docker resources (including volumes)..."
 	@ln -sf .env.dev .env
-	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) down --volumes --remove-orphans
+	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) down --volumes --remove-orphans
 
 rebuild: ## Rebuild the api service without cache and restart it
 	@echo "Rebuilding api service with --no-cache..."
 	@ln -sf .env.dev .env
-	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) build --no-cache api
-	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) up -d api
+	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) build --no-cache api
+	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) up -d api
 
 up-prod: ## Start all production-like containers
 	@echo "Starting up production-like services..."
 	@ln -sf .env.prod .env
-	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) up -d --build --pull always --remove-orphans
+	docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) up -d --build --pull always --remove-orphans
 
 down-prod: ## Stop and remove all production-like containers
 	@echo "Shutting down production-like services..."
 	@ln -sf .env.prod .env
-	$(SUDO) docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) down --remove-orphans
+	docker compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) down --remove-orphans
 
 logs: ## View the logs for the development API service
 	@echo "Following logs for the dev api service..."
 	@ln -sf .env.dev .env
-	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) logs -f api
+	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) logs -f api
 
 shell: ## Open a shell inside the running development API container
 	@echo "Opening shell in dev api container..."
 	@ln -sf .env.dev .env
-	@$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api /bin/sh || \
+	@docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api /bin/sh || \
 		(echo "Failed to open shell. Is the container running? Try 'make up'" && exit 1)
 
 migrate: ## Run database migrations against the development database
 	@echo "Running database migrations for dev environment..."
 	@ln -sf .env.dev .env
-	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
+	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
 
 # ==============================================================================
 # CODE QUALITY & TESTING
@@ -120,9 +122,17 @@ lint-check: ## Check the code for issues with Ruff
 	@echo "Checking code with Ruff..."
 	poetry run ruff check src/ tests/
 
-test: ## Run the test suite
-	@echo "Running test suite..."
-	@echo "Linking .env.test to .env for test session..."
+unit-test: ## Run the fast, database-independent unit tests locally
+	@echo "Running unit tests..."
+	@poetry run pytest tests/unit
+
+db-test: ## Run the slower, database-dependent tests locally
+	@echo "Running database tests..."
+	@poetry run pytest --db tests/db
+
+test: unit-test db-test e2e-test ## Run the full test suite (unit, db, and e2e)
+
+e2e-test: ## Run end-to-end tests against a live application stack
+	@echo "Running end-to-end tests..."
 	@ln -sf .env.test .env
-	@VENV_PATH=$$(poetry env info -p); \
-	$(SUDO) -E $$VENV_PATH/bin/python -m pytest -p no:xdist
+	@poetry run pytest tests/e2e
