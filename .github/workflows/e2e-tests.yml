@@ -1,10 +1,10 @@
-name: Run Tests
+name: E2E Tests
 
 on:
   workflow_call:
 
 jobs:
-  run-tests:
+  e2e-tests:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -20,7 +20,7 @@ jobs:
           pipx install poetry
           poetry config virtualenvs.in-project true
 
-      - name: Setup environment and run tests
+      - name: Setup environment and run E2E tests
         run: |
           make setup
-          make test
+          make e2e-test

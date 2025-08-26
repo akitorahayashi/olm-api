@@ -41,10 +41,15 @@ help: ## Show this help message
 setup: ## Initialize project: install dependencies, create .env files and pull required Docker images.
 	@echo "Installing python dependencies with Poetry..."
 	@poetry install --no-root
-	@for env in dev prod test; do \
+	@echo "Creating environment files..."
+	@if [ ! -f .env.example ]; then echo ".env.example not found!"; exit 1; fi
+	@POSTGRES_DB_NAME=$$(grep POSTGRES_DB_NAME .env.example | cut -d '=' -f2); \
+	for env in dev prod test; do \
 		if [ ! -f .env.$${env} ]; then \
-			echo "Creating .env.$${env} from .env.example..."; \
+			echo "Creating .env.$${env}..." ; \
 			cp .env.example .env.$${env}; \
+			echo "\n# --- Dynamic settings ---" >> .env.$${env}; \
+			echo "POSTGRES_DB=$${POSTGRES_DB_NAME}-$${env}" >> .env.$${env}; \
 		else \
 			echo ".env.$${env} already exists. Skipping creation."; \
 		fi; \
@@ -120,9 +125,33 @@ lint-check: ## Check the code for issues with Ruff
 	@echo "Checking code with Ruff..."
 	poetry run ruff check src/ tests/
 
-test: ## Run the test suite
+test: ## Run the test suite in a self-contained environment
 	@echo "Running test suite..."
-	@echo "Linking .env.test to .env for test session..."
 	@ln -sf .env.test .env
-	@VENV_PATH=$$(poetry env info -p); \
-	$(SUDO) -E $$VENV_PATH/bin/python -m pytest -p no:xdist
+	@cleanup() { \
+		echo "Shutting down test services..."; \
+		$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) down --remove-orphans; \
+	}; \
+	trap cleanup EXIT; \
+	echo "Starting up test services..."; \
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) up -d; \
+	echo "Running pytest..."; \
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) exec api pytest -p no:xdist
+
+e2e-test: ## Run end-to-end tests in a self-contained environment
+	@echo "Running end-to-end tests..."
+	@ln -sf .env.test .env
+	@set -a; source .env.test; set +a; \
+	cleanup() { \
+		echo "Shutting down E2E test services..."; \
+		$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) down --remove-orphans; \
+	}; \
+	trap cleanup EXIT; \
+	echo "Starting up E2E test services..."; \
+	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) up -d --build; \
+	echo "Waiting for API service to be healthy..."; \
+	timeout 60s bash -c 'while [[ $$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:$$HOST_PORT/health) != "200" ]]; do echo "Waiting for API..."; sleep 2; done'; \
+	echo "API is healthy. Running E2E tests..."; \
+	(curl -f -s -X POST http://localhost:$$HOST_PORT/api/v1/generate \
+		-H "Content-Type: application/json" \
+		-d "{\"model\": \"$$BUILT_IN_OLLAMA_MODEL\",\"prompt\": \"Why is the sky blue?\",\"stream\": false}" | grep "choices" > /dev/null && echo "✅ Generate test PASSED") || (echo "❌ Generate test FAILED" && exit 1)
