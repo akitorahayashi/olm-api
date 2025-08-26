@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 import os
@@ -8,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 import ollama
-from src.api.schemas.generate import GenerateResponse
+from src.api.v1.schemas import GenerateResponse
 
 
 class OllamaService:
@@ -19,34 +20,50 @@ class OllamaService:
     async def _chat_stream_generator(self, response_iter):
         """
         Processes a streaming response from `ollama.chat` and yields SSE events.
+        Handles client disconnects silently.
         """
         try:
-            for chunk in response_iter:
-                content = chunk.get("message", {}).get("content")
-                if content:
-                    yield f"data: {content}\n\n"
+            iterator = await run_in_threadpool(iter, response_iter)
+            while True:
+                try:
+                    chunk = await run_in_threadpool(next, iterator)
+                    content = chunk.get("message", {}).get("content")
+                    if content:
+                        # SSE spec requires multi-line data to be sent as separate
+                        # 'data:' fields, terminated by a double newline.
+                        lines = content.split("\n")
+                        for line in lines:
+                            yield f"data: {line}\n"
+                        yield "\n"
+                except StopIteration:
+                    break
+        except asyncio.CancelledError:
+            # This block is entered when the client disconnects.
+            # No logging is needed, as this is an expected scenario.
+            return
         except (httpx.RequestError, ollama.ResponseError):
             logging.exception("Error during Ollama chat response streaming.")
             raise
 
     async def _non_chat_stream_generator(self, response_iter):
         """
-        Processes a generic streaming response from the ollama client (e.g., for pull)
-        and yields each JSON chunk as an SSE event.
+        Processes a generic streaming response (e.g., for pull) and yields
+        each JSON chunk as an SSE event. Handles client disconnects silently.
         """
-        # The `iter()` call on the response is blocking, so we wrap it in a threadpool.
-        iterator = await run_in_threadpool(iter, response_iter)
-        while True:
-            try:
-                # `next()` is a blocking call, so it must be run in a threadpool.
-                chunk = await run_in_threadpool(next, iterator)
-                yield f"data: {json.dumps(chunk)}\n\n"
-            except StopIteration:
-                # The generator is exhausted, so we're done.
-                break
-            except (httpx.RequestError, ollama.ResponseError):
-                logging.exception("Error during Ollama non-chat response streaming.")
-                raise
+        try:
+            iterator = await run_in_threadpool(iter, response_iter)
+            while True:
+                try:
+                    chunk = await run_in_threadpool(next, iterator)
+                    yield f"data: {json.dumps(chunk)}\n\n"
+                except StopIteration:
+                    break
+        except asyncio.CancelledError:
+            # Client disconnected, which is expected. No error logging needed.
+            return
+        except (httpx.RequestError, ollama.ResponseError):
+            logging.exception("Error during Ollama non-chat response streaming.")
+            raise
 
     async def generate_response(
         self,
@@ -111,10 +128,10 @@ class OllamaService:
         await run_in_threadpool(self.client.delete, model=model_name)
 
 
-@lru_cache
+@lru_cache(maxsize=1)
 def get_ollama_service() -> OllamaService:
     """
     Dependency provider for the OllamaService.
-    Using lru_cache ensures that only one instance of the service is created.
+    Using lru_cache(maxsize=1) makes the singleton intent explicit.
     """
     return OllamaService()
