@@ -11,5 +11,4 @@ class Settings(BaseSettings):
     """
 
     BUILT_IN_OLLAMA_MODEL: str
-    DEFAULT_GENERATION_MODEL: str
     DATABASE_URL: str
