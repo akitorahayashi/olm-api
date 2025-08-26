@@ -29,12 +29,11 @@ class OllamaService:
                     chunk = await run_in_threadpool(next, iterator)
                     content = chunk.get("message", {}).get("content")
                     if content:
-                        # SSE spec requires multi-line data to be sent as separate
-                        # 'data:' fields, terminated by a double newline.
-                        lines = content.split("\n")
-                        for line in lines:
-                            yield f"data: {line}\n"
-                        yield "\n"
+                        # SSE spec requires data to be a JSON string.
+                        # We wrap the content in a dictionary to match the
+                        # non-streaming response format.
+                        sse_data = {"response": content}
+                        yield f"data: {json.dumps(sse_data)}\n\n"
                 except StopIteration:
                     break
         except asyncio.CancelledError:

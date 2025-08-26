@@ -55,7 +55,6 @@ def pytest_configure(config: pytest.Config):
     # Set environment variables needed by Alembic and the application during tests.
     # This must be done before any application code that imports Settings is loaded.
     os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-built-in-model"
-    os.environ["DEFAULT_GENERATION_MODEL"] = "test-default-model"
 
     # Start the container using credentials from the environment
     container = PostgresContainer(

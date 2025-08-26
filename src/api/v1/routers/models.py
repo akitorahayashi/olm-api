@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from src.api.v1.services import setting_service
 from src.api.v1.services.ollama_service import OllamaService, get_ollama_service
+from src.config.settings import Settings, get_settings
 from src.db.database import get_db
 
 # ==============================================================================
@@ -73,10 +74,20 @@ async def pull_new_model(
 async def remove_model(
     model_name: str,
     ollama_service: OllamaService = Depends(get_ollama_service),
+    settings: Settings = Depends(get_settings),
 ):
     """
     Delete a model from the local Ollama storage.
+
+    The built-in model specified by the `BUILT_IN_OLLAMA_MODEL` environment
+    variable cannot be deleted.
     """
+    if model_name == settings.BUILT_IN_OLLAMA_MODEL:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"The built-in model '{model_name}' cannot be deleted.",
+        )
+
     await ollama_service.delete_model(model_name)
     return None
 

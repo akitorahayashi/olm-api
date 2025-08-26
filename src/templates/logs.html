@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Request Logs</title>
+    <style>
+        body { font-family: sans-serif; margin: 2em; }
+        table { border-collapse: collapse; width: 100%; }
+        th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; }
+        th { background-color: #f2f2f2; }
+        tr:nth-child(even) { background-color: #f9f9f9; }
+        pre { white-space: pre-wrap; word-wrap: break-word; }
+    </style>
+</head>
+<body>
+    <h1>Request Logs</h1>
+    <table id="log-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>Client Host</th>
+                <th>Method</th>
+                <th>Path</th>
+                <th>Status</th>
+                <th>Prompt</th>
+                <th>Generated Response</th>
+                <th>Error Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            <!-- Log data will be inserted here by JavaScript -->
+        </tbody>
+    </table>
+
+    <script>
+        async function fetchLogs() {
+            try {
+                const response = await fetch('/api/v1/logs');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const logs = await response.json();
+                const tableBody = document.getElementById('log-table').getElementsByTagName('tbody')[0];
+                tableBody.innerHTML = ''; // Clear existing rows
+
+                for (const log of logs) {
+                    const row = tableBody.insertRow();
+                    row.insertCell(0).innerText = new Date(log.timestamp).toLocaleString();
+                    row.insertCell(1).innerText = log.client_host;
+                    row.insertCell(2).innerText = log.request_method;
+                    row.insertCell(3).innerText = log.request_path;
+                    row.insertCell(4).innerText = log.response_status_code;
+
+                    const promptCell = row.insertCell(5);
+                    const promptPre = document.createElement('pre');
+                    promptPre.textContent = log.prompt || '';
+                    promptCell.appendChild(promptPre);
+
+                    const responseCell = row.insertCell(6);
+                    const responsePre = document.createElement('pre');
+                    responsePre.textContent = log.generated_response || '';
+                    responseCell.appendChild(responsePre);
+
+                    const errorCell = row.insertCell(7);
+                    const errorPre = document.createElement('pre');
+                    errorPre.textContent = log.error_details || '';
+                    errorCell.appendChild(errorPre);
+                }
+            } catch (error) {
+                console.error("Failed to fetch logs:", error);
+                const tableBody = document.getElementById('log-table').getElementsByTagName('tbody')[0];
+                const row = tableBody.insertRow();
+                const cell = row.insertCell(0);
+                cell.colSpan = 8;
+                cell.textContent = `Error loading logs: ${error.message}`;
+            }
+        }
+
+        // Fetch logs on initial page load
+        fetchLogs();
+
+        // Refresh logs every 5 seconds
+        setInterval(fetchLogs, 5000);
+    </script>
+</body>
+</html>
