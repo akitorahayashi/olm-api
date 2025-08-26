@@ -1,14 +1,11 @@
-import json
 import os
-from pathlib import Path
-from types import SimpleNamespace
-from typing import AsyncGenerator, Generator
+from typing import AsyncGenerator, Generator, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from filelock import FileLock
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
+from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
 from testcontainers.postgres import PostgresContainer
 
@@ -21,96 +18,105 @@ from src.main import app
 from src.middlewares import db_logging_middleware
 
 
-def is_xdist_worker(request: pytest.FixtureRequest) -> bool:
-    """Check if the current pytest session is running under pytest-xdist."""
-    return "worker_id" in request.fixturenames
+def _is_xdist_master(config: pytest.Config) -> bool:
+    """Check if the current process is the master node in an xdist session."""
+    return not hasattr(config, "workerinput")
 
 
-@pytest.fixture(scope="session")
-def db_container(
-    tmp_path_factory: pytest.TempPathFactory, request: pytest.FixtureRequest
-) -> Generator[PostgresContainer | SimpleNamespace, None, None]:
+def _is_xdist_worker(config: pytest.Config) -> bool:
+    """Check if the current process is a worker node in an xdist session."""
+    return hasattr(config, "workerinput")
+
+
+def _run_alembic_upgrade(db_url: str):
+    """A helper function to run alembic migrations programmatically."""
+    alembic_cfg = Config()
+    alembic_cfg.set_main_option("script_location", "alembic")
+    alembic_cfg.set_main_option("sqlalchemy.url", db_url)
+    command.upgrade(alembic_cfg, "head")
+
+
+def pytest_configure(config: pytest.Config):
     """
-    Manages a PostgreSQL container for the test session.
+    Pytest hook called before test session starts.
 
-    If running with pytest-xdist, it uses file-based locking to ensure only
-    one container is created for all workers. Otherwise, it starts a
-    container for a normal single-process session.
+    If running in an xdist master process, it sets up environment variables,
+    starts a PostgreSQL container, runs migrations, and stores the connection
+    URL for worker processes.
     """
-    if not is_xdist_worker(request):
-        # Standard, non-parallel execution
-        with PostgresContainer("postgres:16-alpine", driver="psycopg") as container:
-            yield container
+    if not _is_xdist_master(config):
         return
 
-    # Parallel execution with pytest-xdist
-    worker_id = request.getfixturevalue("worker_id")
-    if worker_id == "master":
-        yield None
-        return
-
-    root_tmp_dir = tmp_path_factory.getbasetemp().parent
-    lock_file = root_tmp_dir / ".db.lock"
-    db_conn_file = root_tmp_dir / ".db.json"
-
-    with FileLock(str(lock_file)):
-        if not db_conn_file.is_file():
-            # Primary worker starts the container
-            container = PostgresContainer("postgres:16-alpine", driver="psycopg")
-            container.start()
-            conn_details = {"url": container.get_connection_url()}
-            db_conn_file.write_text(json.dumps(conn_details))
-            request.addfinalizer(container.stop)
-            request.addfinalizer(db_conn_file.unlink)
-            yield container
-        else:
-            # Secondary workers read connection info
-            conn_details = json.loads(db_conn_file.read_text())
-            yield SimpleNamespace(get_connection_url=lambda: conn_details["url"])
-
-
-@pytest.fixture(scope="session")
-def db_url(db_container: PostgresContainer | SimpleNamespace) -> str:
-    """
-    Fixture to get the database connection URL from the container.
-    """
-    if db_container:
-        return db_container.get_connection_url()
-    return None
-
-
-@pytest.fixture(scope="session", autouse=True)
-def setup_test_environment_and_db(db_url: str, request: pytest.FixtureRequest) -> None:
-    """
-    Auto-used session-scoped fixture to set up the test environment and run migrations.
-    This is safe for both single-process and parallel execution.
-    """
-    if not db_url:
-        return
-
+    # Set environment variables needed by Alembic and the application during tests.
+    # This must be done before any application code that imports Settings is loaded.
     os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-built-in-model"
     os.environ["DEFAULT_GENERATION_MODEL"] = "test-default-model"
-    os.environ["DATABASE_URL"] = db_url
 
-    # In parallel mode, ensure migrations are run only once.
-    if is_xdist_worker(request):
-        # Fallback to a standard temp directory if the xdist-specific one isn't available
-        xdist_tmp_str = os.environ.get("PYTEST_XDIST_TESTRUNUID", "test_run_temp")
-        root_tmp_dir = Path(request.config.rootpath) / ".pytest_run" / xdist_tmp_str
-        root_tmp_dir.mkdir(parents=True, exist_ok=True)
+    # Start the container
+    container = PostgresContainer("postgres:16-alpine", driver="psycopg")
+    container.start()
 
-        migration_lock_file = root_tmp_dir / ".migration.lock"
-        with FileLock(str(migration_lock_file)):
-            alembic_cfg = Config()
-            alembic_cfg.set_main_option("script_location", "alembic")
-            alembic_cfg.set_main_option("sqlalchemy.url", db_url)
-            command.upgrade(alembic_cfg, "head")
-    else:
-        # In single-process mode, just run the migration.
-        alembic_cfg = Config()
-        alembic_cfg.set_main_option("script_location", "alembic")
-        alembic_cfg.set_main_option("sqlalchemy.url", db_url)
-        command.upgrade(alembic_cfg, "head")
+    # Store container instance and connection URL
+    config.db_container = container
+    db_url = container.get_connection_url()
+    config.db_url = db_url
+    os.environ["DATABASE_URL"] = db_url  # Set for the master process
+
+    # Run migrations, which requires the DATABASE_URL env var
+    _run_alembic_upgrade(db_url)
+
+    # If xdist is active, save connection URL for workers
+    if config.pluginmanager.is_registered("xdist"):
+        # `getbasetemp` provides a reliable shared directory
+        xdist_tmp_dir = config.getbasetemp().parent
+        db_conn_file = xdist_tmp_dir / "db_url.txt"
+        db_conn_file.write_text(db_url)
+
+
+# def pytest_configure_node(node):
+#     """
+#     Pytest hook called to configure a worker node.
+#
+#     It reads the database connection URL from the file created by the master
+#     process and stores it in the worker's config.
+#     """
+#     # Read the db_url from the file created by the master process
+#     xdist_tmp_dir = node.config.getbasetemp().parent
+#     db_conn_file = xdist_tmp_dir / "db_url.txt"
+#     if db_conn_file.is_file():
+#         node.config.db_url = db_conn_file.read_text()
+
+
+def pytest_unconfigure(config: pytest.Config):
+    """
+    Pytest hook called after the entire test session finishes.
+
+    If running in the master process, it stops the PostgreSQL container
+    and cleans up the temporary connection file.
+    """
+    if not _is_xdist_master(config):
+        return
+
+    # Stop the container if it was started
+    if hasattr(config, "db_container"):
+        config.db_container.stop()
+
+    # Clean up the temp file used for xdist
+    if config.pluginmanager.is_registered("xdist"):
+        xdist_tmp_dir = config.getbasetemp().parent
+        db_conn_file = xdist_tmp_dir / "db_url.txt"
+        db_conn_file.unlink(missing_ok=True)
+
+
+@pytest.fixture(scope="session")
+def db_url(request: pytest.FixtureRequest) -> str:
+    """
+    Fixture to provide the database URL to tests.
+
+    It retrieves the URL that was set up by the `pytest_configure` or
+    `pytest_configure_node` hooks.
+    """
+    return request.config.db_url
 
 
 @pytest.fixture
@@ -118,20 +124,27 @@ def db_session(db_url: str, monkeypatch) -> Generator[Session, None, None]:
     """
     Provides a transactional scope for each test function.
     """
-    engine = create_engine(db_url)
-    TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-    db = TestingSessionLocal()
-
-    monkeypatch.setattr(db_logging_middleware, "create_db_session", lambda: db)
-    app.dependency_overrides[create_db_session] = lambda: db
-
+    engine: Optional[Engine] = None
+    db: Optional[Session] = None
     try:
+        engine = create_engine(db_url)
+        TestingSessionLocal = sessionmaker(
+            autocommit=False, autoflush=False, bind=engine
+        )
+        db = TestingSessionLocal()
+
+        monkeypatch.setattr(db_logging_middleware, "create_db_session", lambda: db)
+        app.dependency_overrides[create_db_session] = lambda: db
+
         yield db
     finally:
-        db.rollback()
-        db.query(Log).delete()
-        db.commit()
-        db.close()
+        if db:
+            db.rollback()
+            db.query(Log).delete()
+            db.commit()
+            db.close()
+        if engine:
+            engine.dispose()  # Dispose of the engine's connection pool
         app.dependency_overrides.pop(create_db_session, None)
 
 

@@ -24,8 +24,9 @@ async def lifespan(app: FastAPI):
     - On shutdown, it performs any necessary cleanup.
     """
     # Startup logic
-    db: Session = create_db_session()
+    db: Session | None = None
     try:
+        db = create_db_session()
         # Check if an active model is already set in the database
         active_model = setting_service.get_active_model(db)
         if not active_model:
@@ -39,7 +40,8 @@ async def lifespan(app: FastAPI):
             "Database is not ready. Please ensure it is running and migrations are applied."
         ) from e
     finally:
-        db.close()
+        if db:
+            db.close()
 
     yield
     # Shutdown logic (if any)

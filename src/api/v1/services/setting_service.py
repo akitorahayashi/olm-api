@@ -22,15 +22,13 @@ def get_active_model(db: Session) -> str | None:
 
 def set_active_model(db: Session, model_name: str):
     """
-    Sets the active model name in the database.
+    Sets the active model name in the database using a last-writer-wins strategy.
 
-    This function performs an "upsert" operation. If the setting for the
-    active model already exists, it updates the value. If it does not exist,
-    it creates a new entry.
-
-    In a concurrent environment, another worker might create the setting
-    between our `SELECT` and `INSERT`. This is handled by catching the
-    `IntegrityError` and falling back to an `UPDATE`.
+    This function performs an "upsert" operation. It first attempts to update
+    the existing setting. If the setting does not exist, it attempts to insert it.
+    If a race condition occurs where another process inserts the setting
+    concurrently, this function catches the `IntegrityError`, rolls back, and
+    then performs an `UPDATE` to ensure the caller's intended value is stored.
 
     Args:
         db (Session): The database session.
@@ -43,14 +41,20 @@ def set_active_model(db: Session, model_name: str):
         .update({"value": model_name}, synchronize_session=False)
     )
 
-    # If no record was updated, try to insert a new one.
-    if not updated:
-        try:
-            setting = Setting(key=ACTIVE_MODEL_KEY, value=model_name)
-            db.add(setting)
-            db.commit()
-        except IntegrityError:
-            # Another worker created the record in the meantime. Rollback and ignore.
-            db.rollback()
-    else:
+    if updated:
+        db.commit()
+        return
+
+    # If no record was updated, it might not exist. Try to insert.
+    try:
+        setting = Setting(key=ACTIVE_MODEL_KEY, value=model_name)
+        db.add(setting)
+        db.commit()
+    except IntegrityError:
+        # A concurrent transaction created the record. Rollback the failed
+        # insert and then update the record to ensure last-writer-wins.
+        db.rollback()
+        db.query(Setting).filter(Setting.key == ACTIVE_MODEL_KEY).update(
+            {"value": model_name}, synchronize_session=False
+        )
         db.commit()

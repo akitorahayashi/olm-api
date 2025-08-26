@@ -65,10 +65,7 @@ down: ## Stop and remove all development containers
 	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) down --remove-orphans
 
 clean: ## Stop and remove all dev containers, networks, and volumes (use with CONFIRM=1)
-	@if [ "$(CONFIRM)" != "1" ]; then \
-		echo "This is a destructive operation. Please run 'make clean CONFIRM=1' to confirm."; \
-		exit 1; \
-	fi
+	@if [ "$(CONFIRM)" != "1" ]; then echo "This is a destructive operation. Please run 'make clean CONFIRM=1' to confirm."; exit 1; fi
 	@echo "Cleaning up all development Docker resources (including volumes)..."
 	@ln -sf .env.dev .env
 	$(SUDO) docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) down --volumes --remove-orphans
@@ -128,4 +125,4 @@ lint-check: ## Check the code for issues with Ruff
 test: ## Run the test suite
 	@echo "Running test suite..."
 	@VENV_PATH=$$(poetry env info -p); \
-	$(SUDO) $$VENV_PATH/bin/pytest
+	$(SUDO) -E $$VENV_PATH/bin/pytest -p no:xdist
