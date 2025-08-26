@@ -40,7 +40,7 @@ help: ## Show this help message
 
 setup: ## Initialize project: install dependencies, create .env files and pull required Docker images.
 	@echo "Installing python dependencies with Poetry..."
-	@poetry install --no-root --only dev
+	@poetry install --no-root
 	@for env in dev prod test; do \
 		if [ ! -f .env.$${env} ]; then \
 			echo "Creating .env.$${env} from .env.example..."; \
