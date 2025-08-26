@@ -51,6 +51,12 @@ setup: ## Initialize project: create .env files and pull required Docker images.
 	else \
 		echo ".env.prod already exists. Skipping creation."; \
 	fi
+	@if [ ! -f .env.test ]; then \
+		echo "Creating .env.test from .env.example..."; \
+		cp .env.example .env.test; \
+	else \
+		echo ".env.test already exists. Skipping creation."; \
+	fi
 	@echo "Pulling PostgreSQL image for tests..."
 	$(SUDO) docker pull postgres:16-alpine
 
@@ -124,5 +130,7 @@ lint-check: ## Check the code for issues with Ruff
 
 test: ## Run the test suite
 	@echo "Running test suite..."
+	@echo "Linking .env.test to .env for test session..."
+	@ln -sf .env.test .env
 	@VENV_PATH=$$(poetry env info -p); \
 	$(SUDO) -E $$VENV_PATH/bin/pytest -p no:xdist
