@@ -1,7 +1,7 @@
 services:
   db:
     ports:
-      - "5432:5432"
+      - "5433:5432"
 
   api:
     build:
@@ -15,9 +15,4 @@ services:
       # Mount tests so they can be run inside the container if needed
       - ./tests:/app/tests
     # The command enables hot-reloading with watchmedo
-    command: >
-      sh -c "
-        . /app/.venv/bin/activate &&
-        watchmedo auto-restart --directory ./src --pattern '*.py' --recursive
-        uvicorn src.main:app --host "${API_LISTEN_IP:-0.0.0.0}" --port "${API_PORT:-8000}"
-      "
+    command: tail -f /dev/null
