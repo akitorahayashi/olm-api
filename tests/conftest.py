@@ -12,7 +12,6 @@ from testcontainers.postgres import PostgresContainer
 
 from alembic import command
 from alembic.config import Config
-
 from src.api.v1.services import setting_service
 from src.api.v1.services.ollama_service import get_ollama_service
 from src.db.database import create_db_session
@@ -233,7 +232,9 @@ async def unit_test_client(monkeypatch) -> AsyncGenerator[AsyncClient, None]:
 
     # 3. Disable the DB logging middleware to prevent DB writes
     monkeypatch.setattr(
-        db_logging_middleware.LoggingMiddleware, "_safe_log", lambda *args, **kwargs: None
+        db_logging_middleware.LoggingMiddleware,
+        "_safe_log",
+        lambda *args, **kwargs: None,
     )
 
     # 4. Yield the database-independent client
