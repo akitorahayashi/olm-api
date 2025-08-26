@@ -130,33 +130,9 @@ db-test: ## Run the slower, database-dependent tests locally
 	@echo "Running database tests..."
 	@poetry run pytest --db tests/db
 
-test: ## Run the full test suite within a Docker container (slow)
-	@echo "Running test suite..."
-	@ln -sf .env.test .env
-	@cleanup() { \
-		echo "Shutting down test services..."; \
-		docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) down --remove-orphans; \
-	}; \
-	trap cleanup EXIT; \
-	echo "Starting up test services..."; \
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) up -d; \
-	echo "Running pytest..."; \
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) exec api pytest -p no:xdist
+test: unit-test db-test e2e-test ## Run the full test suite (unit, db, and e2e)
 
-e2e-test: ## Run end-to-end tests in a self-contained environment
+e2e-test: ## Run end-to-end tests against a live application stack
 	@echo "Running end-to-end tests..."
 	@ln -sf .env.test .env
-	@set -a; source .env.test; set +a; \
-	cleanup() { \
-		echo "Shutting down E2E test services..."; \
-		docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) down --remove-orphans; \
-	}; \
-	trap cleanup EXIT; \
-	echo "Starting up E2E test services..."; \
-	docker compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(TEST_PROJECT_NAME) up -d --build; \
-	echo "Waiting for API service to be healthy..."; \
-	timeout 60s bash -c 'while [[ $$(curl -s -o /dev/null -w ''%{http_code}'' http://localhost:$$HOST_PORT/health) != "200" ]]; do echo "Waiting for API..."; sleep 2; done'; \
-	echo "API is healthy. Running E2E tests..."; \
-	(curl -f -s -X POST http://localhost:$$HOST_PORT/api/v1/generate \
-		-H "Content-Type: application/json" \
-		-d "{\"model\": \"$$BUILT_IN_OLLAMA_MODEL\",\"prompt\": \"Why is the sky blue?\",\"stream\": false}" | grep "choices" > /dev/null && echo "✅ Generate test PASSED") || (echo "❌ Generate test FAILED" && exit 1)
+	@poetry run pytest tests/e2e
