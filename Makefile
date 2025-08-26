@@ -124,15 +124,17 @@ lint-check: ## Check the code for issues with Ruff
 
 unit-test: ## Run the fast, database-independent unit tests locally
 	@echo "Running unit tests..."
-	@poetry run pytest tests/unit
+	@poetry run python -m pytest tests/unit
 
 db-test: ## Run the slower, database-dependent tests locally
 	@echo "Running database tests..."
-	@poetry run pytest --db tests/db
+	@VENV_PATH=$$(poetry env info -p); \
+	sudo $$VENV_PATH/bin/python -m pytest tests/db
 
 test: unit-test db-test e2e-test ## Run the full test suite (unit, db, and e2e)
 
 e2e-test: ## Run end-to-end tests against a live application stack
 	@echo "Running end-to-end tests..."
 	@ln -sf .env.test .env
-	@poetry run pytest tests/e2e
+	@VENV_PATH=$$(poetry env info -p); \
+	sudo $$VENV_PATH/bin/python -m pytest tests/e2e

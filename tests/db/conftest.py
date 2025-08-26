@@ -1,4 +1,5 @@
 import os
+import time
 from typing import AsyncGenerator, Generator, Optional
 from unittest.mock import AsyncMock, MagicMock
 
@@ -19,78 +20,77 @@ from src.main import app
 from src.middlewares import db_logging_middleware
 
 
-def _is_xdist_master(config: pytest.Config) -> bool:
-    """Check if the current process is the master node in an xdist session."""
-    return not hasattr(config, "workerinput")
-
-
-def pytest_configure(config: pytest.Config):
+@pytest.fixture(scope="session", autouse=True)
+def db_setup(
+    request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
+) -> Generator[str, None, None]:
     """
-    Pytest hook called before test session starts.
+    Session-scoped fixture to manage the test database container.
 
-    If running in an xdist master process, it sets up environment variables,
-    starts a PostgreSQL container, runs migrations, and stores the connection
-    URL for worker processes.
+    This fixture is automatically used by all tests in this directory and its
+    subdirectories. It handles xdist by having the master node create the DB
+    container and share its connection URL with worker nodes via a temporary file.
     """
-    if not config.getoption("--db"):
-        return
+    is_master = not hasattr(request.config, "workerinput")
 
-    if not _is_xdist_master(config):
-        return
+    db_conn_file = None
+    if request.config.pluginmanager.is_registered("xdist"):
+        # In xdist, tmp_path_factory provides a shared directory for the session.
+        root_tmp_dir = tmp_path_factory.getbasetemp().parent
+        db_conn_file = root_tmp_dir / "db_url.txt"
 
-    load_dotenv()
-    os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-built-in-model"
+    container: Optional[PostgresContainer] = None
+    db_url_value: str
 
-    container = PostgresContainer(
-        "postgres:16-alpine",
-        driver="psycopg",
-        username=os.environ.get("POSTGRES_USER"),
-        password=os.environ.get("POSTGRES_PASSWORD"),
-        dbname=os.environ.get("POSTGRES_DB"),
-    )
-    container.start()
+    if is_master:
+        load_dotenv()
+        os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-built-in-model"
 
-    config.db_container = container
-    db_url = container.get_connection_url()
-    config.db_url = db_url
-    os.environ["DATABASE_URL"] = db_url
+        container = PostgresContainer(
+            "postgres:16-alpine",
+            driver="psycopg",
+            username=os.environ.get("POSTGRES_USER"),
+            password=os.environ.get("POSTGRES_PASSWORD"),
+            dbname=os.environ.get("POSTGRES_DB"),
+        )
+        container.start()
+        db_url_value = container.get_connection_url()
+        os.environ["DATABASE_URL"] = db_url_value
 
-    alembic_cfg = Config()
-    alembic_cfg.set_main_option("script_location", "alembic")
-    alembic_cfg.set_main_option("sqlalchemy.url", db_url)
-    command.upgrade(alembic_cfg, "head")
+        alembic_cfg = Config()
+        alembic_cfg.set_main_option("script_location", "alembic")
+        alembic_cfg.set_main_option("sqlalchemy.url", db_url_value)
+        command.upgrade(alembic_cfg, "head")
 
-    if config.pluginmanager.is_registered("xdist"):
-        xdist_tmp_dir = config.getbasetemp().parent
-        db_conn_file = xdist_tmp_dir / "db_url.txt"
-        db_conn_file.write_text(db_url)
+        if db_conn_file:
+            db_conn_file.write_text(db_url_value)
+    else:  # worker node
+        if not db_conn_file:
+            pytest.fail("xdist is running but the db_conn_file path could not be determined.")
 
+        timeout = 20
+        start_time = time.time()
+        while not db_conn_file.exists():
+            if time.time() - start_time > timeout:
+                pytest.fail(f"Worker could not find db_url.txt after {timeout} seconds.")
+            time.sleep(0.1)
+        db_url_value = db_conn_file.read_text()
 
-def pytest_unconfigure(config: pytest.Config):
-    """
-    Pytest hook called after the entire test session finishes.
-    """
-    if not config.getoption("--db"):
-        return
+    yield db_url_value
 
-    if not _is_xdist_master(config):
-        return
-
-    if hasattr(config, "db_container"):
-        config.db_container.stop()
-
-    if config.pluginmanager.is_registered("xdist"):
-        xdist_tmp_dir = config.getbasetemp().parent
-        db_conn_file = xdist_tmp_dir / "db_url.txt"
-        db_conn_file.unlink(missing_ok=True)
+    if is_master and container:
+        container.stop()
+        if db_conn_file and db_conn_file.exists():
+            db_conn_file.unlink(missing_ok=True)
 
 
 @pytest.fixture(scope="session")
-def db_url(request: pytest.FixtureRequest) -> str:
+def db_url(db_setup: str) -> str:
     """
     Fixture to provide the database URL to tests.
+    It receives the URL from the session-scoped db_setup fixture.
     """
-    return request.config.db_url
+    return db_setup
 
 
 @pytest.fixture
