@@ -38,7 +38,9 @@ async def lifespan(app: FastAPI):
         # 2. Get all available local models from Ollama
         local_models_data = ollama_service.list()
         local_model_names = {
-            model["name"] for model in local_models_data.get("models", [])
+            model.get("name")
+            for model in local_models_data.get("models", [])
+            if model.get("name")
         }
 
         # 3. Validate if the active model is available
@@ -64,8 +66,9 @@ async def lifespan(app: FastAPI):
         ) from e
     except httpx.RequestError as e:
         # If Ollama service is not reachable, this will raise a more informative error.
+        url = getattr(e.request, "url", "unknown")
         raise RuntimeError(
-            f"Could not connect to Ollama service at {e.request.url}. "
+            f"Could not connect to Ollama service at {url}. "
             "Please ensure Ollama is running and accessible."
         ) from e
     finally:

@@ -53,18 +53,27 @@
                     row.insertCell(4).innerText = log.response_status_code;
 
                     const promptCell = row.insertCell(5);
-                    promptCell.innerHTML = `<pre>${log.prompt || ''}</pre>`;
+                    const promptPre = document.createElement('pre');
+                    promptPre.textContent = log.prompt || '';
+                    promptCell.appendChild(promptPre);
 
                     const responseCell = row.insertCell(6);
-                    responseCell.innerHTML = `<pre>${log.generated_response || ''}</pre>`;
+                    const responsePre = document.createElement('pre');
+                    responsePre.textContent = log.generated_response || '';
+                    responseCell.appendChild(responsePre);
 
                     const errorCell = row.insertCell(7);
-                    errorCell.innerHTML = `<pre>${log.error_details || ''}</pre>`;
+                    const errorPre = document.createElement('pre');
+                    errorPre.textContent = log.error_details || '';
+                    errorCell.appendChild(errorPre);
                 }
             } catch (error) {
                 console.error("Failed to fetch logs:", error);
                 const tableBody = document.getElementById('log-table').getElementsByTagName('tbody')[0];
-                tableBody.innerHTML = `<tr><td colspan="8">Error loading logs: ${error.message}</td></tr>`;
+                const row = tableBody.insertRow();
+                const cell = row.insertCell(0);
+                cell.colSpan = 8;
+                cell.textContent = `Error loading logs: ${error.message}`;
             }
         }
 

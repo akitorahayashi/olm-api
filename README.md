@@ -70,8 +70,7 @@ Key variables include:
 - **`API_PORT`**: The external port to expose for the API server.
 - **`API_LISTEN_IP`**: The IP address the Uvicorn server listens on inside the container. This usually remains `0.0.0.0`.
 - **`DATABASE_URL`**: The full connection string for the PostgreSQL database.
-- **`BUILT_IN_OLLAMA_MODEL`**: The name of the Ollama model to be baked into the Docker image during the build process.
-- **`DEFAULT_GENERATION_MODEL`**: The model that will be active by default on server startup. Must match `BUILT_IN_OLLAMA_MODEL`.
+- **`BUILT_IN_OLLAMA_MODEL`**: The name of the Ollama model to be baked into the Docker image during the build process. This model will be active by default on server startup and cannot be deleted via the API.
 
 ## API Specification
 
@@ -88,7 +87,7 @@ The request body must be a JSON object with the following fields:
 | `prompt`  | string  |         | **Required.** The input text for the LLM. |
 | `stream`  | boolean | `false` | If `true`, the response will be streamed. |
 
-**Note**: The model used for generation is the one currently active on the server. The default model is set via the `DEFAULT_GENERATION_MODEL` environment variable, and it can be changed dynamically using the `POST /api/v1/models/switch/{model_name}` endpoint.
+**Note**: The model used for generation is the one currently active on the server. The default model is set via the `BUILT_IN_OLLAMA_MODEL` environment variable, and it can be changed dynamically using the `POST /api/v1/models/switch/{model_name}` endpoint.
 
 ### Response Body
 

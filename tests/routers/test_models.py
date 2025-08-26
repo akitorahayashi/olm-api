@@ -186,18 +186,21 @@ async def test_remove_model_fails_for_built_in_model(
     client: AsyncClient, mock_ollama_service: MagicMock
 ):
     """
-    Test that the DELETE /api/v1/models/{model_name} endpoint returns a 400
+    Test that the DELETE /api/v1/models/{model_name} endpoint returns a 403
     error when attempting to delete the built-in model.
     """
     # Arrange
     # This env var is set in tests/conftest.py
-    built_in_model = os.environ["BUILT_IN_OLLAMA_MODEL"]
+    built_in_model = os.getenv("BUILT_IN_OLLAMA_MODEL")
+    assert (
+        built_in_model is not None
+    ), "BUILT_IN_OLLAMA_MODEL environment variable must be set for this test"
 
     # Act
     response = await client.delete(f"/api/v1/models/{built_in_model}")
 
     # Assert
-    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.status_code == status.HTTP_403_FORBIDDEN
     assert "cannot be deleted" in response.json()["detail"]
     # Ensure the service's delete method was never called
     mock_ollama_service.delete_model.assert_not_called()

@@ -32,7 +32,7 @@ def upgrade() -> None:
         "logs",
         "timestamp",
         existing_type=postgresql.TIMESTAMP(timezone=True),
-        server_default=None,
+        server_default=sa.text("now()"),
         existing_nullable=True,
     )
     # ### end Alembic commands ###
@@ -45,7 +45,7 @@ def downgrade() -> None:
         "logs",
         "timestamp",
         existing_type=postgresql.TIMESTAMP(timezone=True),
-        server_default=sa.text("now()"),
+        server_default=None,
         existing_nullable=True,
     )
     op.drop_table("settings")

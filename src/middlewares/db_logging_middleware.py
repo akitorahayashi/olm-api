@@ -4,6 +4,7 @@ import traceback
 from typing import Optional
 
 from fastapi import Request, Response
+from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
 from src.db.database import create_db_session
@@ -36,11 +37,17 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
         try:
             response = await call_next(new_request)
+
+            # We must capture the media type BEFORE consuming the stream, as
+            # consuming it can invalidate the response object's state.
+            media_type = response.media_type
+            is_streaming = "event-stream" in (media_type or "") or "x-ndjson" in (
+                media_type or ""
+            )
+
             response_body_bytes = b""
             async for chunk in response.body_iterator:
                 response_body_bytes += chunk
-
-            is_streaming = "content-length" not in response.headers
 
             if is_streaming:
                 generated_response = self._decode_sse_body(response_body_bytes)
@@ -49,11 +56,12 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     response_body_bytes
                 )
 
+            # Re-create the response since we've consumed the iterator
             response = Response(
                 content=response_body_bytes,
                 status_code=response.status_code,
                 headers=dict(response.headers),
-                media_type=response.media_type,
+                media_type=media_type, # Use the captured media type
             )
 
             if response.status_code >= 400:
@@ -106,7 +114,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
     def _safe_log(
         self,
-        db,
+        db: Session,
         request: Request,
         status_code: int,
         prompt: Optional[str],
