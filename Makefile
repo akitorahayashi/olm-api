@@ -128,13 +128,11 @@ unit-test: ## Run the fast, database-independent unit tests locally
 
 db-test: ## Run the slower, database-dependent tests locally
 	@echo "Running database tests..."
-	@VENV_PATH=$$(poetry env info -p); \
-	sudo $$VENV_PATH/bin/python -m pytest tests/db
+	@poetry run python -m pytest tests/db
 
 test: unit-test db-test e2e-test ## Run the full test suite (unit, db, and e2e)
 
 e2e-test: ## Run end-to-end tests against a live application stack
 	@echo "Running end-to-end tests..."
 	@ln -sf .env.test .env
-	@VENV_PATH=$$(poetry env info -p); \
-	sudo $$VENV_PATH/bin/python -m pytest tests/e2e
+	@poetry run python -m pytest tests/e2e

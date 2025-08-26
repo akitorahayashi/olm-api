@@ -66,13 +66,17 @@ def db_setup(
             db_conn_file.write_text(db_url_value)
     else:  # worker node
         if not db_conn_file:
-            pytest.fail("xdist is running but the db_conn_file path could not be determined.")
+            pytest.fail(
+                "xdist is running but the db_conn_file path could not be determined."
+            )
 
         timeout = 20
         start_time = time.time()
         while not db_conn_file.exists():
             if time.time() - start_time > timeout:
-                pytest.fail(f"Worker could not find db_url.txt after {timeout} seconds.")
+                pytest.fail(
+                    f"Worker could not find db_url.txt after {timeout} seconds."
+                )
             time.sleep(0.1)
         db_url_value = db_conn_file.read_text()
 
