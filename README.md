@@ -51,7 +51,7 @@ make up
 
 This command builds the necessary Docker images, including the custom Ollama image with the model specified in your `.env` file baked in. **The Makefile automatically selects the correct `.env.dev` configuration by creating a symbolic link (`.env`) that Docker Compose uses by default.** This provides a seamless developer experience.
 
-The API will be accessible at `http://127.0.0.1:8000` by default (configurable via `DOCKER_HOST_BIND_IP` and `API_PORT` in `.env.dev`). The source code is mounted as a volume, enabling hot-reloading on code changes.
+The API will be accessible at `http://127.0.0.1:8000`. The source code is mounted as a volume, enabling hot-reloading on code changes.
 
 ### 3. Run Database Migrations (If Needed)
 
@@ -67,8 +67,6 @@ This project follows the **DRY (Don't Repeat Yourself)** principle by defining a
 
 Key variables include:
 - **`HOST_BIND_IP`**: The IP address on the host machine to which the API server port will bind. Use `127.0.0.1` for local access only (recommended for development) and `0.0.0.0` to allow external access (for production).
-- **`API_PORT`**: The external port to expose for the API server.
-- **`API_LISTEN_IP`**: The IP address the Uvicorn server listens on inside the container. This usually remains `0.0.0.0`.
 - **`DATABASE_URL`**: The full connection string for the PostgreSQL database.
 - **`BUILT_IN_OLLAMA_MODEL`**: The name of the Ollama model to be baked into the Docker image during the build process. This model will be active by default on server startup and cannot be deleted via the API.
 
@@ -125,7 +123,7 @@ data: {}
 
 ### Standard Request (curl)
 
-The host and port depend on your `.env.dev` settings (`HOST_BIND_IP` and `API_PORT`).
+The host depends on your `.env.dev` settings (`HOST_BIND_IP`). The port is fixed at `8000`.
 
 ```sh
 curl -X POST "http://127.0.0.1:8000/api/v1/generate" \
