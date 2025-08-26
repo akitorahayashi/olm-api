@@ -5,7 +5,6 @@ from typing import Optional
 
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-from starlette.responses import StreamingResponse
 
 from src.db.database import create_db_session
 from src.db.models.log import Log
@@ -41,14 +40,15 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             async for chunk in response.body_iterator:
                 response_body_bytes += chunk
 
-            if isinstance(response, StreamingResponse):
-                generated_response = self._decode_streamed_body(response_body_bytes)
+            is_streaming = "content-length" not in response.headers
+
+            if is_streaming:
+                generated_response = self._decode_sse_body(response_body_bytes)
             else:
                 generated_response = self._extract_text_from_json_body(
                     response_body_bytes
                 )
 
-            # Re-create the response since we've consumed the iterator
             response = Response(
                 content=response_body_bytes,
                 status_code=response.status_code,
@@ -88,26 +88,20 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         except (json.JSONDecodeError, TypeError):
             return body.decode("utf-8", errors="ignore")
 
-    def _decode_streamed_body(self, body_bytes: bytes) -> str:
+    def _decode_sse_body(self, body_bytes: bytes) -> str:
         """
-        Decodes the full byte string from a streaming response.
-        Each chunk is a JSON object, so we need to parse them line by line.
+        Decodes a response body in Server-Sent Events (SSE) format.
         """
         full_text = []
-        # The body may contain multiple JSON objects, not separated by newlines
-        # e.g., b'{"key":"val1"}{"key":"val2"}'
-        # A robust solution would use a streaming JSON parser.
-        # For this case, we can split on the boundary of JSON objects.
-        decoded_body = body_bytes.decode("utf-8").strip()
-        # This is a simplification assuming each JSON object is sent as a chunk.
-        # We replace '}{' with '}\n{' to handle concatenated JSONs.
-        for line in decoded_body.replace("}{", "}\n{").splitlines():
-            if line:
-                try:
-                    data = json.loads(line)
-                    full_text.append(data.get("response", ""))
-                except json.JSONDecodeError:
-                    continue
+        for line in body_bytes.decode("utf-8").splitlines():
+            if line.startswith("data:"):
+                json_str = line[len("data:") :].strip()
+                if json_str:
+                    try:
+                        data = json.loads(json_str)
+                        full_text.append(data.get("response", ""))
+                    except json.JSONDecodeError:
+                        continue
         return "".join(full_text)
 
     def _safe_log(

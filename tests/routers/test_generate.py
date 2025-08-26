@@ -102,21 +102,22 @@ async def test_generate_streaming_logs_full_response(
     """Test that a successful streaming request logs the complete concatenated response."""
     # Arrange
     prompt = "Stream me a story."
-    stream_chunks = [
-        b'{"response": "Once "}',
-        b'{"response": "upon "}',
-        b'{"response": "a time."}',
+    sse_chunks = [
+        'data: {"response": "Once "}\n\n',
+        'data: {"response": "upon "}\n\n',
+        'data: {"response": "a time."}\n\n',
     ]
+    stream_chunks_bytes = [c.encode("utf-8") for c in sse_chunks]
     full_response = "Once upon a time."
 
     async def stream_generator():
-        for chunk in stream_chunks:
+        for chunk in stream_chunks_bytes:
             yield chunk
 
     setting_service.set_active_model(db_session, "test-model")
     # The service returns a StreamingResponse for stream=True
     mock_ollama_service.generate_response.return_value = StreamingResponse(
-        stream_generator()
+        stream_generator(), media_type="application/x-ndjson"
     )
 
     # Act
@@ -129,7 +130,7 @@ async def test_generate_streaming_logs_full_response(
 
     # Ensure the client can consume the stream
     content = await response.aread()
-    assert content == b"".join(stream_chunks)
+    assert content == b"".join(stream_chunks_bytes)
 
     # Verify the log entry
     log_entry = db_session.query(Log).one()
