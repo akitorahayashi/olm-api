@@ -38,25 +38,17 @@ help: ## Show this help message
 # PROJECT SETUP & ENVIRONMENT
 # ==============================================================================
 
-setup: ## Initialize project: create .env files and pull required Docker images.
-	@if [ ! -f .env.dev ]; then \
-		echo "Creating .env.dev from .env.example..."; \
-		cp .env.example .env.dev; \
-	else \
-		echo ".env.dev already exists. Skipping creation."; \
-	fi
-	@if [ ! -f .env.prod ]; then \
-		echo "Creating .env.prod from .env.example..."; \
-		cp .env.example .env.prod; \
-	else \
-		echo ".env.prod already exists. Skipping creation."; \
-	fi
-	@if [ ! -f .env.test ]; then \
-		echo "Creating .env.test from .env.example..."; \
-		cp .env.example .env.test; \
-	else \
-		echo ".env.test already exists. Skipping creation."; \
-	fi
+setup: ## Initialize project: install dependencies, create .env files and pull required Docker images.
+	@echo "Installing python dependencies with Poetry..."
+	@poetry install --no-root --only dev
+	@for env in dev prod test; do \
+		if [ ! -f .env.$${env} ]; then \
+			echo "Creating .env.$${env} from .env.example..."; \
+			cp .env.example .env.$${env}; \
+		else \
+			echo ".env.$${env} already exists. Skipping creation."; \
+		fi; \
+	done
 	@echo "Pulling PostgreSQL image for tests..."
 	$(SUDO) docker pull postgres:16-alpine
 
