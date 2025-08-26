@@ -29,7 +29,8 @@ jobs:
           poetry config virtualenvs.create true
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
-      - name: Setup environment and run tests
-        run: |
-          make setup
-          make ${{ matrix.test_target }}
+      - name: Setup environment
+        run: make setup
+
+      - name: Run tests
+        run: make ${{ matrix.test_target }}
