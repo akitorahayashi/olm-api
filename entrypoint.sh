@@ -26,13 +26,12 @@ if [ "$#" -eq 0 ] || [ "$1" = "uvicorn" ]; then
 fi
 
 # --- Start Uvicorn server (or run another command) ---
-echo "Starting server on 0.0.0.0:8000 with 1 worker(s)..."
-
 # If arguments are passed to the script, execute them instead of the default server.
 # This allows running commands like `make shell`.
 if [ "$#" -gt 0 ]; then
     exec "$@"
 else
+    echo "Starting server on 0.0.0.0:8000 with 1 worker(s)..."
     exec uvicorn src.main:app \
         --host "0.0.0.0" \
         --port "8000" \

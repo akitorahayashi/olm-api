@@ -35,7 +35,7 @@ services:
       dockerfile: Dockerfile
       target: runner
     ports:
-      - "${HOST_BIND_IP}:8000:8000"
+      - "${HOST_BIND_IP:-127.0.0.1}:8000:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -44,7 +44,7 @@ services:
     env_file:
       - .env
     healthcheck:
-      test: [ "CMD", "python", "-c", "import sys, os, urllib.request; sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{os.environ.get(\"HEALTHCHECK_PATH\")}') else sys.exit(1)" ]
+      test: [ "CMD", "python", "-c", "import sys, os, urllib.request; path=os.environ.get('HEALTHCHECK_PATH', '/health'); sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{path}') else sys.exit(1)" ]
       interval: 30s
       timeout: 10s
       start_period: 5s

@@ -51,7 +51,7 @@ make up
 
 This command builds the necessary Docker images, including the custom Ollama image with the model specified in your `.env` file baked in. **The Makefile automatically selects the correct `.env.dev` configuration by creating a symbolic link (`.env`) that Docker Compose uses by default.** This provides a seamless developer experience.
 
-The API will be accessible at `http://127.0.0.1:8000`. The source code is mounted as a volume, enabling hot-reloading on code changes.
+The API will be accessible at `http://127.0.0.1:8000` by default. If you set `HOST_BIND_IP=0.0.0.0`, access it via `http://<your-host-ip>:8000`. The source code is mounted as a volume, enabling hot-reloading on code changes.
 
 ### 3. Run Database Migrations (If Needed)
 
@@ -123,7 +123,7 @@ data: {}
 
 ### Standard Request (curl)
 
-The host depends on your `.env.dev` settings (`HOST_BIND_IP`). The port is fixed at `8000`.
+The host depends on your `.env.dev` settings (`HOST_BIND_IP`). The port is fixed at `8000`. If `HOST_BIND_IP=0.0.0.0`, replace `127.0.0.1` with your host IP in the examples below.
 
 ```sh
 curl -X POST "http://127.0.0.1:8000/api/v1/generate" \
@@ -195,7 +195,7 @@ This project is configured for continuous integration, which automatically build
 The deployment process is now simpler and more consistent with the development workflow.
 
 1.  **Prepare your server**: Ensure Docker, Docker Compose, `make`, and NVIDIA container toolkit/drivers are installed.
-2.  **Create `.env.prod` file**: Manually create a `.env.prod` file on your server. Use `.env.example` as a reference. Populate it with your production-level configurations (e.g., database credentials, `HOST_BIND_IP=0.0.0.0`, a non-default `API_PORT` if desired).
+2.  **Create `.env.prod` file**: Manually create a `.env.prod` file on your server. Use `.env.example` as a reference. Populate it with your production-level configurations (e.g., database credentials, `HOST_BIND_IP=0.0.0.0`). The API port is fixed at `8000`.
 3.  **Pull the image**: Pull the latest Docker image from GHCR.
 4.  **Start services**: Use the `make up-prod` command. This command uses `docker-compose.yml` without any overrides and automatically selects your `.env.prod` file for configuration.
 
