@@ -7,7 +7,7 @@ from sqlalchemy.exc import OperationalError, ProgrammingError
 from sqlalchemy.orm import Session
 
 import ollama
-from src.api.v1.routers import generate, models
+from src.api.v1.routers import generate, logs, models
 from src.api.v1.services import setting_service
 from src.config.settings import Settings
 from src.db.database import create_db_session
@@ -93,6 +93,7 @@ app.add_middleware(LoggingMiddleware)
 # Include the routers from the v1 API
 app.include_router(generate.router)
 app.include_router(models.router)
+app.include_router(logs.router)
 
 
 # ==============================================================================
