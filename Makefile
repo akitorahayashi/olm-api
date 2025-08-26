@@ -133,4 +133,4 @@ test: ## Run the test suite
 	@echo "Linking .env.test to .env for test session..."
 	@ln -sf .env.test .env
 	@VENV_PATH=$$(poetry env info -p); \
-	$(SUDO) -E $$VENV_PATH/bin/pytest -p no:xdist
+	$(SUDO) -E $$VENV_PATH/bin/python -m pytest -p no:xdist
