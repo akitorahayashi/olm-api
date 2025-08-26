@@ -12,6 +12,8 @@ from testcontainers.postgres import PostgresContainer
 
 from alembic import command
 from alembic.config import Config
+
+from src.api.v1.services import setting_service
 from src.api.v1.services.ollama_service import get_ollama_service
 from src.db.database import create_db_session
 from src.db.models.log import Log
@@ -37,6 +39,16 @@ def _run_alembic_upgrade(db_url: str):
     command.upgrade(alembic_cfg, "head")
 
 
+def pytest_addoption(parser):
+    """Add a command line option to pytest to run database-dependent tests."""
+    parser.addoption(
+        "--db",
+        action="store_true",
+        default=False,
+        help="run database-dependent tests",
+    )
+
+
 def pytest_configure(config: pytest.Config):
     """
     Pytest hook called before test session starts.
@@ -45,6 +57,10 @@ def pytest_configure(config: pytest.Config):
     starts a PostgreSQL container, runs migrations, and stores the connection
     URL for worker processes.
     """
+    # Skip database setup if --db option is not provided
+    if not config.getoption("--db"):
+        return
+
     if not _is_xdist_master(config):
         return
 
@@ -104,6 +120,10 @@ def pytest_unconfigure(config: pytest.Config):
     If running in the master process, it stops the PostgreSQL container
     and cleans up the temporary connection file.
     """
+    # Skip database teardown if --db option was not provided
+    if not config.getoption("--db"):
+        return
+
     if not _is_xdist_master(config):
         return
 
@@ -179,6 +199,44 @@ async def client() -> AsyncGenerator[AsyncClient, None]:
     """
     Create an httpx.AsyncClient instance for each test function.
     """
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
+        yield c
+
+
+@pytest.fixture
+async def unit_test_client(monkeypatch) -> AsyncGenerator[AsyncClient, None]:
+    """
+    Provides a test client that operates independently of the database.
+
+    This fixture achieves database isolation by:
+    1.  **Mocking the Setting Service**: It uses `monkeypatch` to replace the
+        `get_active_model` and `set_active_model` functions in the `setting_service`
+        module. This prevents any database calls for model settings.
+
+    2.  **Disabling Logging Middleware**: It uses `monkeypatch` to neutralize the
+        `_safe_log` method of the `LoggingMiddleware`, preventing database writes.
+
+    Yields:
+        An `AsyncClient` configured for database-free testing.
+    """
+    # 1. Set dummy environment variables to satisfy Pydantic settings
+    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://test:test@localhost/test")
+    monkeypatch.setenv("BUILT_IN_OLLAMA_MODEL", "test-built-in-model")
+
+    # 2. Mock setting_service functions to avoid DB queries
+    monkeypatch.setattr(
+        setting_service, "get_active_model", lambda db: "test-unit-model"
+    )
+    monkeypatch.setattr(setting_service, "set_active_model", lambda db, name: None)
+
+    # 3. Disable the DB logging middleware to prevent DB writes
+    monkeypatch.setattr(
+        db_logging_middleware.LoggingMiddleware, "_safe_log", lambda *args, **kwargs: None
+    )
+
+    # 4. Yield the database-independent client
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as c:

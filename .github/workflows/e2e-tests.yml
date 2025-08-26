@@ -22,5 +22,6 @@ jobs:
 
       - name: Setup environment and run E2E tests
         run: |
+          export PATH="$HOME/.local/bin:$PATH"
           make setup
           make e2e-test
