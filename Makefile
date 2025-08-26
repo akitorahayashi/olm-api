@@ -37,7 +37,7 @@ help: ## Show this help message
 
 setup: ## Initialize project: install dependencies, create .env files and pull required Docker images.
 	@echo "Installing python dependencies with Poetry..."
-	@poetry install --no-root
+	@poetry install --no-root --sync
 	@echo "Creating environment files..."
 	@if [ ! -f .env.example ]; then echo ".env.example not found!"; exit 1; fi
 	@POSTGRES_DB_NAME=$$(grep POSTGRES_DB_NAME .env.example | cut -d '=' -f2); \

@@ -21,7 +21,7 @@ jobs:
           poetry config virtualenvs.in-project true
 
       - name: Install dependencies
-        run: poetry install --only dev --no-root --sync
+        run: make setup
 
       - name: Run Ruff Linter
         run: make lint-check
