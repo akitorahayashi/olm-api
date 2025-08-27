@@ -12,28 +12,17 @@ from dotenv import load_dotenv
 def e2e_setup() -> Generator[None, None, None]:
     """
     Manages the lifecycle of the application for end-to-end testing.
-
-    This session-scoped fixture automatically performs the following steps:
-    1.  **Loads Environment**: Reads configuration from the `.env.test` file.
-    2.  **Starts Services**: Executes `docker-compose up` to build and start all
-        required services (API, database, Ollama).
-    3.  **Health Check**: Polls the API's `/health` endpoint, waiting until the
-        server is responsive before allowing tests to proceed.
-    4.  **Yields Control**: Pauses and allows the E2E tests to run against the
-        live application stack.
-    5.  **Stops Services**: Executes `docker-compose down` to stop and remove
-        all services and networks, ensuring a clean state after the test
-        session concludes.
     """
-    # 1. Load environment variables from .env.test
     load_dotenv(".env.test")
     host_port = os.getenv("HOST_PORT", "8000")
     health_url = f"http://localhost:{host_port}/health"
 
-    # 2. Start services using docker-compose
-    print("\n🚀 Starting E2E services...")
-    compose_up_command = [
-        "docker",
+    # Determine if sudo should be used based on environment variable
+    use_sudo = os.getenv("SUDO") == "true"
+    docker_command = ["sudo", "docker"] if use_sudo else ["docker"]
+
+    # Define compose commands
+    compose_up_command = docker_command + [
         "compose",
         "-f",
         "docker-compose.yml",
@@ -43,11 +32,20 @@ def e2e_setup() -> Generator[None, None, None]:
         "-d",
         "--build",
     ]
-    subprocess.run(compose_up_command, check=True)
+    compose_down_command = docker_command + ["compose", "down", "--remove-orphans"]
 
-    # 3. Health Check
+    # Start services, ensuring cleanup on failure
+    print("\n🚀 Starting E2E services...")
+    try:
+        subprocess.run(compose_up_command, check=True)
+    except subprocess.CalledProcessError:
+        print("\n🛑 compose up failed; performing cleanup...")
+        subprocess.run(compose_down_command, check=False)
+        raise
+
+    # Health Check
     start_time = time.time()
-    timeout = 120  # 2 minutes timeout
+    timeout = 120
     is_healthy = False
     while time.time() - start_time < timeout:
         try:
@@ -61,13 +59,14 @@ def e2e_setup() -> Generator[None, None, None]:
             time.sleep(5)
 
     if not is_healthy:
-        subprocess.run(["docker", "compose", "logs", "api"])
+        subprocess.run(docker_command + ["compose", "logs", "api"])
+        # Ensure teardown on health check failure
+        print("\n🛑 Stopping E2E services due to health check failure...")
+        subprocess.run(compose_down_command, check=False)
         pytest.fail(f"API did not become healthy within {timeout} seconds.")
 
-    # 4. Yield control to the tests
     yield
 
-    # 5. Stop services
+    # Stop services
     print("\n🛑 Stopping E2E services...")
-    compose_down_command = ["docker", "compose", "down", "--remove-orphans"]
     subprocess.run(compose_down_command, check=True)
