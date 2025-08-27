@@ -53,14 +53,12 @@ setup: ## Initialize project: install dependencies, create .env files and pull r
 	@echo "Installing python dependencies with Poetry..."
 	@poetry install --no-root
 	@echo "Creating environment files..."
-	@if [ ! -f .env.example ]; then echo ".env.example not found!"; exit 1; fi
-	@POSTGRES_DB_NAME=$$(grep POSTGRES_DB_NAME .env.example | cut -d '=' -f2); \
-	for env in dev prod test; do \
+	@for env in dev prod test; do \
 		if [ ! -f .env.$${env} ]; then \
-			echo "Creating .env.$${env}..." ; \
+			echo "Creating .env.$${env} from .env.example..." ; \
 			cp .env.example .env.$${env}; \
-			echo "\n# --- Dynamic settings ---" >> .env.$${env}; \
-			echo "POSTGRES_DB=$${POSTGRES_DB_NAME}-$${env}" >> .env.$${env}; \
+			sed -i.bak "s|pvt-llm-api|pvt-llm-api-$${env}|g" .env.$${env}; \
+			rm .env.$${env}.bak; \
 		else \
 			echo ".env.$${env} already exists. Skipping creation."; \
 		fi; \
@@ -134,9 +132,10 @@ migrate: ## Run database migrations against the development database
 # ==============================================================================
 
 .PHONY: format
-format: ## Format the code using Black
-	@echo "Formatting code with Black..."
+format: ## Format code with black and ruff --fix
+	@echo "Formatting code with black and ruff..."
 	poetry run black src/ tests/
+	poetry run ruff check src/ tests/ --fix
 
 .PHONY: format-check
 format-check: ## Check if the code is formatted with Black
@@ -144,9 +143,10 @@ format-check: ## Check if the code is formatted with Black
 	poetry run black --check src/ tests/
 
 .PHONY: lint
-lint: ## Lint and fix the code with Ruff automatically
-	@echo "Linting and fixing code with Ruff..."
-	poetry run ruff check src/ tests/ --fix
+lint: ## Lint code with black check and ruff
+	@echo "Linting code with black check and ruff..."
+	poetry run black --check src/ tests/
+	poetry run ruff check src/ tests/
 
 .PHONY: lint-check
 lint-check: ## Check the code for issues with Ruff
@@ -168,6 +168,14 @@ e2e-test: ## Run end-to-end tests against a live application stack
 	@echo "Running end-to-end tests..."
 	@ln -sf .env.test .env
 	@poetry run python -m pytest tests/e2e
+
+.PHONY: build-test
+build-test: ## Build Docker image for testing without leaving artifacts
+	@echo "Building Docker image for testing (clean build)..."
+	@TEMP_IMAGE_TAG=$$(date +%s)-build-test; \
+	$(DOCKER_CMD) build --target runner --tag temp-build-test:$$TEMP_IMAGE_TAG . && \
+	echo "Build successful. Cleaning up temporary image..." && \
+	$(DOCKER_CMD) rmi temp-build-test:$$TEMP_IMAGE_TAG || true
 
 .PHONY: test
 test: unit-test db-test e2e-test ## Run the full test suite

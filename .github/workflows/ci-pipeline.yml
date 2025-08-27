@@ -13,6 +13,3 @@ jobs:
 
   run-tests:
     uses: ./.github/workflows/run-tests.yml
-
-  build-check:
-    uses: ./.github/workflows/build-check.yml
