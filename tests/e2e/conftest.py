@@ -37,7 +37,9 @@ def e2e_setup() -> Generator[None, None, None]:
     # Start services, ensuring cleanup on failure
     print("\n🚀 Starting E2E services...")
     try:
-        subprocess.run(compose_up_command, check=True)
+        subprocess.run(
+            compose_up_command, check=True, timeout=600
+        )  # 10 minutes timeout
     except subprocess.CalledProcessError:
         print("\n🛑 compose up failed; performing cleanup...")
         subprocess.run(compose_down_command, check=False)
@@ -45,7 +47,7 @@ def e2e_setup() -> Generator[None, None, None]:
 
     # Health Check
     start_time = time.time()
-    timeout = 120
+    timeout = 600  # 10 minutes for qwen3:0.6b model download
     is_healthy = False
     while time.time() - start_time < timeout:
         try:
