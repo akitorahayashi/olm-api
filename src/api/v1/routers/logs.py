@@ -27,4 +27,4 @@ async def view_logs(request: Request):
     """
     Serves the HTML page to view logs.
     """
-    return templates.TemplateResponse("logs.html", {"request": request})
+    return templates.TemplateResponse(request, "logs.html")

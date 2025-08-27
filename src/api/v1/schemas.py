@@ -1,10 +1,12 @@
 from datetime import datetime
 from typing import Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 class LogRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    
     id: int
     timestamp: datetime
     client_host: Optional[str] = None
@@ -14,9 +16,6 @@ class LogRead(BaseModel):
     prompt: Optional[str] = None
     generated_response: Optional[str] = None
     error_details: Optional[str] = None
-
-    class Config:
-        from_attributes = True
 
 
 class GenerateRequest(BaseModel):
