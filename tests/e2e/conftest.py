@@ -24,6 +24,8 @@ def e2e_setup() -> Generator[None, None, None]:
     # Define compose commands
     compose_up_command = docker_command + [
         "compose",
+        "--env-file",
+        ".env.test",
         "-f",
         "docker-compose.yml",
         "-f",

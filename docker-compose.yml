@@ -21,6 +21,7 @@ services:
       context: ./ollama
       args:
         - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
+    # The healthcheck is now defined within the ollama/Dockerfile
     entrypoint: ollama
     command: serve
     environment:
@@ -40,7 +41,8 @@ services:
       db:
         condition: service_healthy
       ollama:
-        condition: service_started
+        # Change condition from service_started to service_healthy
+        condition: service_healthy
     env_file:
       - .env
     healthcheck:
