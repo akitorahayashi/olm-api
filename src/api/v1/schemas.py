@@ -6,7 +6,7 @@ from pydantic import BaseModel, ConfigDict
 
 class LogRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
-    
+
     id: int
     timestamp: datetime
     client_host: Optional[str] = None

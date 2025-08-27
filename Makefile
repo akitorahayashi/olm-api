@@ -128,30 +128,27 @@ migrate: ## Run database migrations against the development database
 	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
 
 # ==============================================================================
-# CODE QUALITY & TESTING
+# CODE QUALITY 
 # ==============================================================================
 
 .PHONY: format
 format: ## Format code with black and ruff --fix
 	@echo "Formatting code with black and ruff..."
-	poetry run black src/ tests/
-	poetry run ruff check src/ tests/ --fix
-
-.PHONY: format-check
-format-check: ## Check if the code is formatted with Black
-	@echo "Checking code format with Black..."
-	poetry run black --check src/ tests/
+	poetry run black .
+	poetry run ruff check . --fix
 
 .PHONY: lint
 lint: ## Lint code with black check and ruff
 	@echo "Linting code with black check and ruff..."
-	poetry run black --check src/ tests/
-	poetry run ruff check src/ tests/
+	poetry run black --check .
+	poetry run ruff check .
 
-.PHONY: lint-check
-lint-check: ## Check the code for issues with Ruff
-	@echo "Checking code with Ruff..."
-	poetry run ruff check src/ tests/
+# ==============================================================================
+# TESTING
+# ==============================================================================
+
+.PHONY: test
+test: unit-test build-test db-test e2e-test ## Run the full test suite
 
 .PHONY: unit-test
 unit-test: ## Run the fast, database-independent unit tests locally
@@ -176,6 +173,3 @@ build-test: ## Build Docker image for testing without leaving artifacts
 	$(DOCKER_CMD) build --target runner --tag temp-build-test:$$TEMP_IMAGE_TAG . && \
 	echo "Build successful. Cleaning up temporary image..." && \
 	$(DOCKER_CMD) rmi temp-build-test:$$TEMP_IMAGE_TAG || true
-
-.PHONY: test
-test: unit-test db-test e2e-test ## Run the full test suite
