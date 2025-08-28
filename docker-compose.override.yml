@@ -5,14 +5,15 @@ services:
 
   api:
     build:
-      target: builder
+      target: runner
     environment:
       - APP_ENV=dev
+      - OLLAMA_BASE_URL=http://ollama:11434
     volumes:
       - ./src:/app/src
       # Also mount alembic files for development
       - ./alembic:/app/alembic
       # Mount tests so they can be run inside the container if needed
       - ./tests:/app/tests
-    # Use entrypoint script to properly start uvicorn
+    # Use default entrypoint with modified worker count
     command: []
