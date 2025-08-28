@@ -32,6 +32,8 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-root
 
+      - name: Create empty .env file
+        run: touch .env
 
       - name: Run tests
         env:
