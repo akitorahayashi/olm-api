@@ -17,7 +17,7 @@ def perf_setup() -> Generator[None, None, None]:
     docker_command = ["sudo", "docker"] if use_sudo else ["docker"]
 
     host_bind_ip = os.getenv("HOST_BIND_IP", "127.0.0.1")
-    host_port = "8001"  # Fixed test port (mapped from container 8000)
+    host_port = os.getenv("HOST_PORT", "8000")
     health_url = f"http://{host_bind_ip}:{host_port}/health"
 
     # Define compose commands (environment variables handled by docker-compose.test.override.yml)

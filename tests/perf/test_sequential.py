@@ -46,7 +46,7 @@ async def run_sequential_requests_with_interval(
     """
     Run sequential requests with specified interval and return total elapsed time and individual request times.
     """
-    host_port = os.getenv("HOST_PORT", "8001")
+    host_port = os.getenv("HOST_PORT", "8000")
     model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
     assert model_name, "BUILT_IN_OLLAMA_MODEL environment variable must be set"
 
