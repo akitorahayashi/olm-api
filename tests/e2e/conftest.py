@@ -16,8 +16,9 @@ def e2e_setup() -> Generator[None, None, None]:
     use_sudo = os.getenv("SUDO") == "true"
     docker_command = ["sudo", "docker"] if use_sudo else ["docker"]
 
+    host_bind_ip = os.getenv("HOST_BIND_IP", "127.0.0.1")
     host_port = os.getenv("HOST_PORT", "8001")  # Default to test port
-    health_url = f"http://localhost:{host_port}/health"
+    health_url = f"http://{host_bind_ip}:{host_port}/health"
 
     # Define compose commands (environment variables handled by docker-compose.test.override.yml)
     compose_up_command = docker_command + [
