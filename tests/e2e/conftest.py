@@ -34,7 +34,17 @@ def e2e_setup() -> Generator[None, None, None]:
         "-d",
         "--build",
     ]
-    compose_down_command = docker_command + ["compose", "down", "--remove-orphans"]
+    compose_down_command = docker_command + [
+        "compose",
+        "--env-file",
+        ".env.test",
+        "-f",
+        "docker-compose.yml",
+        "-f",
+        "docker-compose.override.yml",
+        "down",
+        "--remove-orphans",
+    ]
 
     # Start services, ensuring cleanup on failure
     print("\n🚀 Starting E2E services...")
@@ -63,7 +73,21 @@ def e2e_setup() -> Generator[None, None, None]:
             time.sleep(5)
 
     if not is_healthy:
-        subprocess.run(docker_command + ["compose", "logs", "api"])
+        subprocess.run(
+            docker_command
+            + [
+                "compose",
+                "--env-file",
+                ".env.test",
+                "-f",
+                "docker-compose.yml",
+                "-f",
+                "docker-compose.override.yml",
+                "logs",
+                "api",
+                "ollama",
+            ]
+        )
         # Ensure teardown on health check failure
         print("\n🛑 Stopping E2E services due to health check failure...")
         subprocess.run(compose_down_command, check=False)
