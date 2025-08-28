@@ -37,10 +37,6 @@ services:
         condition: service_healthy
       ollama:
         condition: service_healthy
-    # OLLAMA_HOST is read from .env.test - change it there to switch between container/host
-    # Default for tests: use host Ollama (faster with GPU)
-    environment:
-      - OLLAMA_HOST=http://host.docker.internal:11434
 
 volumes:
   postgres_data_test:
