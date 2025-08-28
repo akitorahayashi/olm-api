@@ -113,6 +113,19 @@ migrate: ## Run database migrations against the development database
 	@echo "Running database migrations for dev environment..."
 	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
 
+
+
+.PHONY: migration
+migration: ## Generate a new database migration file. Usage: make migration m="Your migration message"
+	@if [ -z "$(m)" ]; then \
+		echo "  \033[31mError: Migration message is required.\033[0m"; \
+		echo "  Usage: make migration m=\"Your migration message\""; \
+		exit 1; \
+	fi
+	@echo "Generating new migration for dev environment with message: $(m)..."
+	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic revision --autogenerate -m \"$(m)\""
+
+
 # ==============================================================================
 # CODE QUALITY 
 # ==============================================================================
