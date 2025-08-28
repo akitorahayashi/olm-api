@@ -49,18 +49,21 @@ help: ## Show this help message
 # ==============================================================================
 
 .PHONY: setup
-setup: ## Initialize project: install dependencies, create .env files and pull required Docker images.
+setup: ## Initialize project: install dependencies, create .env file and pull required Docker images.
 	@echo "Installing python dependencies with Poetry..."
 	@poetry install --no-root
-	@echo "Creating environment files..."
-	@for env in dev prod test; do \
-		if [ ! -f .env.$${env} ]; then \
-			echo "Creating .env.$${env} from .env.example..." ; \
-			cp .env.example .env.$${env}; \
-		else \
-			echo ".env.$${env} already exists. Skipping creation."; \
-		fi; \
-	done
+	@echo "Creating environment file..."
+	@if [ ! -f .env ]; then \
+		echo "Creating .env from .env.example..." ; \
+		cp .env.example .env; \
+	else \
+		echo ".env already exists. Skipping creation."; \
+	fi
+	@echo "✅ Environment file created (.env)"
+	@echo "💡 You can customize .env for your specific needs:"
+	@echo "   📝 Change OLLAMA_HOST to switch between container/host Ollama"
+	@echo "   📝 Adjust other settings as needed"
+	@echo ""
 	@echo "Pulling PostgreSQL image for tests..."
 	$(DOCKER_CMD) pull postgres:16-alpine
 
@@ -77,12 +80,6 @@ up: ## Start all development containers in detached mode
 down: ## Stop and remove all development containers
 	@echo "Shutting down development services..."
 	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) down --remove-orphans
-
-.PHONY: clean
-clean: ## Stop and remove all dev containers, networks, and volumes (use with CONFIRM=1)
-	@if [ "$(CONFIRM)" != "1" ]; then echo "This is a destructive operation. Please run 'make clean CONFIRM=1' to confirm."; exit 1; fi
-	@echo "Cleaning up all development Docker resources (including volumes)..."
-	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) down --volumes --remove-orphans
 
 .PHONY: rebuild
 rebuild: ## Rebuild the api service without cache and restart it
