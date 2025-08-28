@@ -36,7 +36,7 @@ services:
   api:
     env_file: [] # Override base env_file to prevent .env loading
     ports:
-      - "8001:8000" # Fixed port mapping for tests (avoid conflict with dev)
+      - "8001:8001" # Fixed port mapping for tests (avoid conflict with dev)
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://user:password@db:5432/olm-api}
       - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL:-qwen3:8b}
