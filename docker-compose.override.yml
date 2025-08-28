@@ -14,5 +14,3 @@ services:
       - ./alembic:/app/alembic
       # Mount tests so they can be run inside the container if needed
       - ./tests:/app/tests
-    # The command enables hot-reloading with watchmedo
-    command: tail -f /dev/null
