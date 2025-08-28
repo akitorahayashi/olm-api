@@ -1,5 +1,4 @@
 import os
-import shutil
 import subprocess
 import time
 from typing import Generator
@@ -48,9 +47,6 @@ def e2e_setup() -> Generator[None, None, None]:
         "down",
         "--remove-orphans",
     ]
-
-    # Create a temporary .env file for docker-compose to use
-    shutil.copy(".env.test", ".env")
 
     try:
         # Start services, ensuring cleanup on failure
@@ -114,6 +110,4 @@ def e2e_setup() -> Generator[None, None, None]:
         print("\n🛑 Stopping E2E services...")
         subprocess.run(compose_down_command, check=True)
     finally:
-        # Clean up the temporary .env file
-        if os.path.exists(".env"):
-            os.remove(".env")
+        pass

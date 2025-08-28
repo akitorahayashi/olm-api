@@ -90,10 +90,7 @@ class OllamaService:
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
                 )
             else:
-                if (
-                    "message" in chat_response
-                    and "content" in chat_response["message"]
-                ):
+                if "message" in chat_response and "content" in chat_response["message"]:
                     response_content = chat_response["message"]["content"]
                     return GenerateResponse(response=response_content)
                 else:

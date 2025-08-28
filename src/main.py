@@ -41,7 +41,7 @@ async def lifespan(app: FastAPI):
         local_models_data = ollama_service.list()
         local_model_names = set()
         for model in local_models_data.models:
-            if hasattr(model, 'model'):
+            if hasattr(model, "model"):
                 local_model_names.add(model.model)
 
         # 3. Validate if the active model is available
