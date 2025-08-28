@@ -48,10 +48,14 @@ def e2e_setup() -> Generator[None, None, None]:
 
     # Start services, ensuring cleanup on failure
     print("\n🚀 Starting E2E services...")
+    print(f"Health check URL: {health_url}")
     try:
-        subprocess.run(
-            compose_up_command, check=True, timeout=600
-        )  # 10 minutes timeout
+        result = subprocess.run(
+            compose_up_command, check=True, timeout=300, capture_output=True, text=True
+        )  # 5 minutes timeout
+        print("Docker compose up output:", result.stdout)
+        if result.stderr:
+            print("Docker compose up stderr:", result.stderr)
     except subprocess.CalledProcessError:
         print("\n🛑 compose up failed; performing cleanup...")
         subprocess.run(compose_down_command, check=False)
@@ -59,7 +63,7 @@ def e2e_setup() -> Generator[None, None, None]:
 
     # Health Check
     start_time = time.time()
-    timeout = 600  # 10 minutes for qwen3:0.6b model download
+    timeout = 300  # 5 minutes for qwen3:0.6b model download
     is_healthy = False
     while time.time() - start_time < timeout:
         try:
@@ -68,8 +72,8 @@ def e2e_setup() -> Generator[None, None, None]:
                 print("✅ API is healthy!")
                 is_healthy = True
                 break
-        except httpx.RequestError:
-            print("⏳ API not yet healthy, retrying...")
+        except httpx.RequestError as e:
+            print(f"⏳ API not yet healthy, retrying... Error: {e}")
             time.sleep(5)
 
     if not is_healthy:
