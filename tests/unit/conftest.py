@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
-from src.api.v1.services import setting_service
 from src.api.v1.services.ollama_service import get_ollama_service
 from src.main import app
 from src.middlewares import db_logging_middleware
@@ -46,20 +45,14 @@ async def unit_test_client(monkeypatch) -> AsyncGenerator[AsyncClient, None]:
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://test:test@localhost/test")
     monkeypatch.setenv("BUILT_IN_OLLAMA_MODEL", "test-built-in-model")
 
-    # 2. Mock setting_service functions to avoid DB queries
-    monkeypatch.setattr(
-        setting_service, "get_active_model", lambda db: "test-unit-model"
-    )
-    monkeypatch.setattr(setting_service, "set_active_model", lambda db, name: None)
-
-    # 3. Disable the DB logging middleware to prevent DB writes
+    # 2. Disable the DB logging middleware to prevent DB writes
     monkeypatch.setattr(
         db_logging_middleware.LoggingMiddleware,
         "_safe_log",
         lambda *args, **kwargs: None,
     )
 
-    # 4. Yield the database-independent client
+    # 3. Yield the database-independent client
     async with AsyncClient(
         transport=ASGITransport(app=app), base_url="http://test"
     ) as c:

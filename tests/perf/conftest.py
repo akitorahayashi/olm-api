@@ -91,12 +91,11 @@ def perf_setup() -> Generator[None, None, None]:
                     "-f",
                     "docker-compose.yml",
                     "-f",
-                    "docker-compose.test.yml",
+                    "docker-compose.test.override.yml",
                     "--project-name",
                     "olm-api-test",
                     "logs",
                     "api",
-                    "ollama",
                 ]
             )
             # Ensure teardown on health check failure

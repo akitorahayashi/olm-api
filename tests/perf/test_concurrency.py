@@ -50,6 +50,7 @@ async def run_concurrent_requests_with_timing(num_requests: int) -> tuple[float,
     generate_url = f"http://localhost:{host_port}/api/v1/generate"
     request_payload = {
         "prompt": "What is 2+2?",
+        "model_name": model_name,
         "stream": False,
     }
 

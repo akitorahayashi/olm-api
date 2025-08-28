@@ -21,6 +21,7 @@ async def test_generate_endpoint_e2e():
     generate_url = f"http://localhost:{host_port}/api/v1/generate"
     request_payload = {
         "prompt": "Why is the sky blue?",
+        "model_name": model_name,
         "stream": False,
     }
 

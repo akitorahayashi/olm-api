@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from starlette.responses import StreamingResponse
 
 from src.api.v1.schemas import GenerateResponse
-from src.api.v1.services import setting_service
 from src.db.models.log import Log
 
 # Mark all tests in this file as asyncio
@@ -19,17 +18,19 @@ async def test_generate_logs_prompt_and_response(
     db_session: Session,
 ):
     """Test that a successful non-streaming request logs the prompt and response."""
+    import os
+    
     # Arrange
     prompt = "Hello, world!"
     expected_response = "This is a test response."
-    setting_service.set_active_model(db_session, "test-model")
+    model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
     mock_ollama_service.generate_response.return_value = GenerateResponse(
         response=expected_response
     )
 
     # Act
     response = await client.post(
-        "/api/v1/generate", json={"prompt": prompt, "stream": False}
+        "/api/v1/generate", json={"prompt": prompt, "model_name": model_name, "stream": False}
     )
 
     # Assert
@@ -48,8 +49,11 @@ async def test_generate_streaming_logs_full_response(
     db_session: Session,
 ):
     """Test that a successful streaming request logs the complete concatenated response."""
+    import os
+    
     # Arrange
     prompt = "Stream me a story."
+    model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
     sse_chunks = [
         'data: {"response": "Once "}\n\n',
         'data: {"response": "upon "}\n\n',
@@ -62,7 +66,6 @@ async def test_generate_streaming_logs_full_response(
         for chunk in stream_chunks_bytes:
             yield chunk
 
-    setting_service.set_active_model(db_session, "test-model")
     # The service returns a StreamingResponse for stream=True
     mock_ollama_service.generate_response.return_value = StreamingResponse(
         stream_generator(), media_type="text/event-stream; charset=utf-8"
@@ -70,7 +73,7 @@ async def test_generate_streaming_logs_full_response(
 
     # Act
     response = await client.post(
-        "/api/v1/generate", json={"prompt": prompt, "stream": True}
+        "/api/v1/generate", json={"prompt": prompt, "model_name": model_name, "stream": True}
     )
 
     # Assert
@@ -98,16 +101,18 @@ async def test_generate_api_error_is_logged(
     Test that a service-layer error from Ollama is handled correctly and
     that the error details are logged.
     """
+    import os
+    
     # Arrange
     prompt = "This will cause an error."
     error_message = "Ollama go boom"
-    setting_service.set_active_model(db_session, "test-model")
+    model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
     mock_ollama_service.generate_response.side_effect = Exception(error_message)
 
     # Act
     # The global exception handler will catch the exception and return a 500
     with pytest.raises(Exception, match=error_message):
-        await client.post("/api/v1/generate", json={"prompt": prompt, "stream": False})
+        await client.post("/api/v1/generate", json={"prompt": prompt, "model_name": model_name, "stream": False})
 
     # Assert
     log_entry = db_session.query(Log).one()

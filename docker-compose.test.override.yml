@@ -1,25 +1,49 @@
-# Test override - can be configured to use host Ollama for GPU acceleration in perf tests
+# Test override - includes built-in Ollama service
+# Switch between container and host Ollama by changing OLLAMA_HOST in .env.test:
+# - Container Ollama: OLLAMA_HOST=http://ollama:11434  
+# - Host Ollama: OLLAMA_HOST=http://host.docker.internal:11434
 services:
   db:
     volumes:
       # Use separate test database volume
       - postgres_data_test:/var/lib/postgresql/data
 
-  # Ollama service - comment out this entire section to use host Ollama for perf tests
+  # Built-in Ollama service (always created for easy switching)
   ollama:
+    image: ollama:latest
+    build:
+      context: ./ollama
+      args:
+        - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
+    entrypoint: ollama
+    command: serve
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-2}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
     volumes:
-      # Share ollama volume with prod to avoid re-downloading models
-      - ollama_data_prod:/root/.ollama
+      - ollama_data_test:/root/.ollama
+    healthcheck:
+      test: [ "CMD", "ollama", "list" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
 
   api:
-    # Uncomment the following for host Ollama perf tests (requires OLLAMA_HOST=http://host.docker.internal:11434)
-    # depends_on:
-    #   db:
-    #     condition: service_healthy
-    # environment:
-    #   - OLLAMA_HOST=http://host.docker.internal:11434
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    # OLLAMA_HOST is read from .env.test - change it there to switch between container/host
+    # Default for tests: use host Ollama (faster with GPU)
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
 
 volumes:
   postgres_data_test:
     driver: local
-  # ollama_data_prod is defined in main docker-compose.yml
+  ollama_data_test:
+    driver: local

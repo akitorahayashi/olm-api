@@ -14,29 +14,6 @@ services:
       retries: 5
     restart: unless-stopped
 
-  ollama:
-    image: ollama:latest
-    build:
-      context: ./ollama
-      args:
-        - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
-    # The healthcheck is now defined within the ollama/Dockerfile
-    entrypoint: ollama
-    command: serve
-    environment:
-      - OLLAMA_HOST=0.0.0.0
-      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-2}
-      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
-    volumes:
-      - ollama_data_prod:/root/.ollama
-    healthcheck:
-      test: [ "CMD", "ollama", "list" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
-
   api:
     image: olm-api:latest
     build:
@@ -48,12 +25,11 @@ services:
     depends_on:
       db:
         condition: service_healthy
-      ollama:
-        condition: service_healthy
     env_file:
       - .env
     environment:
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      # Production uses external Ollama by default
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://your-ollama-server:11434}
     healthcheck:
       test: [ "CMD", "python", "-c", "import sys, os, urllib.request; path=os.environ.get('HEALTHCHECK_PATH', '/health'); sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{path}') else sys.exit(1)" ]
       interval: 30s
@@ -64,6 +40,4 @@ services:
 
 volumes:
   postgres_data_prod:
-    driver: local
-  ollama_data_prod:
     driver: local

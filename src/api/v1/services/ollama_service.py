@@ -46,25 +46,6 @@ class OllamaService:
             logging.exception("Error during Ollama chat response streaming.")
             raise
 
-    async def _non_chat_stream_generator(self, response_iter):
-        """
-        Processes a generic streaming response (e.g., for pull) and yields
-        each JSON chunk as an SSE event. Handles client disconnects silently.
-        """
-        try:
-            iterator = await run_in_threadpool(iter, response_iter)
-            while True:
-                try:
-                    chunk = await run_in_threadpool(next, iterator)
-                    yield f"data: {json.dumps(chunk)}\n\n"
-                except StopIteration:
-                    break
-        except asyncio.CancelledError:
-            # Client disconnected, which is expected. No error logging needed.
-            return
-        except (httpx.RequestError, ollama.ResponseError):
-            logging.exception("Error during Ollama non-chat response streaming.")
-            raise
 
     async def generate_response(
         self,
@@ -99,23 +80,6 @@ class OllamaService:
                     )
                     raise ValueError("Invalid response structure from Ollama.")
 
-    async def pull_model(self, model_name: str, stream: bool):
-        """
-        Pulls a model from the Ollama registry. Can be streaming or blocking.
-        """
-        pull_response = await run_in_threadpool(
-            self.client.pull, model=model_name, stream=stream
-        )
-
-        if stream:
-            return StreamingResponse(
-                self._non_chat_stream_generator(pull_response),
-                media_type="text/event-stream; charset=utf-8",
-                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-            )
-        else:
-            # If not streaming, the response is the final status dictionary.
-            return pull_response
 
     async def list_models(self):
         """
@@ -123,11 +87,6 @@ class OllamaService:
         """
         return await run_in_threadpool(self.client.list)
 
-    async def delete_model(self, model_name: str):
-        """
-        Deletes a model from Ollama.
-        """
-        await run_in_threadpool(self.client.delete, model=model_name)
 
 
 @lru_cache

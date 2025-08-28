@@ -83,9 +83,10 @@ The request body must be a JSON object with the following fields:
 | Parameter | Type    | Default | Description                               |
 |-----------|---------|---------|-------------------------------------------|
 | `prompt`  | string  |         | **Required.** The input text for the LLM. |
+| `model_name` | string  |       | **Required.** The name of the model to use for generation. |
 | `stream`  | boolean | `false` | If `true`, the response will be streamed. |
 
-**Note**: The model used for generation is the one currently active on the server. The default model is set via the `BUILT_IN_OLLAMA_MODEL` environment variable, and it can be changed dynamically using the `POST /api/v1/models/switch/{model_name}` endpoint.
+**Note**: Clients must specify which model to use for each request. Model management is handled externally on the Ollama server.
 
 ### Response Body
 
@@ -128,7 +129,7 @@ The host depends on your `.env.dev` settings (`HOST_BIND_IP`). The port is fixed
 ```sh
 curl -X POST "http://127.0.0.1:8000/api/v1/generate" \
 -H "Content-Type: application/json" \
--d '{"prompt": "Why is the sky blue?"}'
+-d '{"prompt": "Why is the sky blue?", "model_name": "qwen3:0.6b"}'
 ```
 
 ### Streaming Request (curl)
@@ -138,7 +139,7 @@ The `-N` (or `--no-buffer`) flag is important for viewing the stream as it arriv
 ```sh
 curl -X POST "http://127.0.0.1:8000/api/v1/generate" \
 -H "Content-Type: application/json" \
--d '{"prompt": "Write a short story about a robot.", "stream": true}' -N
+-d '{"prompt": "Write a short story about a robot.", "model_name": "qwen3:0.6b", "stream": true}' -N
 ```
 
 ## Development Workflow
