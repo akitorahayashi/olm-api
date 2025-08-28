@@ -53,9 +53,13 @@ async def lifespan(app: FastAPI):
                 )
                 time.sleep(2)
         local_model_names = {
-            getattr(model, 'model', model.get("name") if hasattr(model, 'get') else None)
+            getattr(
+                model, "model", model.get("name") if hasattr(model, "get") else None
+            )
             for model in local_models_data.get("models", [])
-            if getattr(model, 'model', model.get("name") if hasattr(model, 'get') else None)
+            if getattr(
+                model, "model", model.get("name") if hasattr(model, "get") else None
+            )
         }
 
         # 3. Validate if the active model is available
