@@ -59,7 +59,9 @@ class OllamaService:
                 logging.error(f"Unable to connect to Ollama API during streaming: {e}")
                 raise
             except Exception:
-                logging.exception("An unexpected error occurred during Ollama streaming.")
+                logging.exception(
+                    "An unexpected error occurred during Ollama streaming."
+                )
                 raise
 
     async def generate_response(

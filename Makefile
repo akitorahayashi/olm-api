@@ -165,9 +165,19 @@ e2e-test: ## Run end-to-end tests against a live application stack
 	@poetry run python -m pytest tests/e2e -s
 
 .PHONY: perf-test
-perf-test: ## Run performance tests with concurrent request measurements
-	@echo "Running performance tests..."
+perf-test: ## Run all performance tests (both parallel and sequential)
+	@echo "Running all performance tests..."
 	@poetry run python -m pytest tests/perf -s
+
+.PHONY: perf-parallel
+perf-parallel: ## Run parallel performance tests (simultaneous requests)
+	@echo "Running parallel performance tests..."
+	@poetry run python -m pytest tests/perf/test_parallel.py -s
+
+.PHONY: perf-sequential
+perf-sequential: ## Run sequential performance tests (interval-based requests)
+	@echo "Running sequential performance tests..."
+	@poetry run python -m pytest tests/perf/test_sequential.py -s
 
 .PHONY: build-test
 build-test: ## Build Docker image for testing without leaving artifacts

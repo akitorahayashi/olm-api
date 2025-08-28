@@ -25,7 +25,12 @@ def upgrade() -> None:
     op.create_table(
         "logs",
         sa.Column("id", sa.Integer(), nullable=False),
-        sa.Column("timestamp", sa.DateTime(timezone=True), nullable=False, server_default=sa.text("CURRENT_TIMESTAMP")),
+        sa.Column(
+            "timestamp",
+            sa.DateTime(timezone=True),
+            nullable=False,
+            server_default=sa.text("CURRENT_TIMESTAMP"),
+        ),
         sa.Column("client_host", sa.String(), nullable=True),
         sa.Column("request_method", sa.String(), nullable=True),
         sa.Column("request_path", sa.String(), nullable=True),

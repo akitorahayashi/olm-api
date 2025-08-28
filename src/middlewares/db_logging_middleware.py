@@ -64,7 +64,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             if response.status_code >= 400:
                 error_details = generated_response or "[No error details in body]"
 
-        except Exception as e:
+        except Exception:
             error_details = traceback.format_exc()
             # Return a 500 response instead of re-raising
             response = Response(

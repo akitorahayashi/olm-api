@@ -15,7 +15,7 @@ def perf_setup() -> Generator[None, None, None]:
     # Determine if sudo should be used based on environment variable
     use_sudo = os.getenv("SUDO") == "true"
     docker_command = ["sudo", "docker"] if use_sudo else ["docker"]
-    
+
     host_port = os.getenv("HOST_PORT", "8001")  # Default to test port
     health_url = f"http://localhost:{host_port}/health"
 
@@ -53,9 +53,14 @@ def perf_setup() -> Generator[None, None, None]:
                 compose_up_command,
                 check=True,
                 timeout=300,
+                capture_output=True,
+                text=True,
             )  # 5 minutes timeout
-        except subprocess.CalledProcessError:
+        except subprocess.CalledProcessError as e:
             print("\n🛑 compose up failed; performing cleanup...")
+            print(f"Exit code: {e.returncode}")
+            print(f"STDOUT: {e.stdout}")
+            print(f"STDERR: {e.stderr}")
             subprocess.run(compose_down_command, check=False)
             raise
 

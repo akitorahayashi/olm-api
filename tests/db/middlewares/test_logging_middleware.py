@@ -117,7 +117,7 @@ async def test_generate_api_error_is_logged(
         "/api/v1/generate",
         json={"prompt": prompt, "model_name": model_name, "stream": False},
     )
-    
+
     # Assert the response status code
     assert response.status_code == 500
 

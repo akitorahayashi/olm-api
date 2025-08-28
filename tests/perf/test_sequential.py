@@ -107,10 +107,14 @@ async def test_30_requests_0_5_second_interval():
     print(f"   Total time: {total_time:.2f}s")
     print(f"   Average response time: {avg_time:.2f}s")
     print(f"   Min/Max response time: {min_time:.2f}s / {max_time:.2f}s")
-    print(f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n")
+    print(
+        f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n"
+    )
 
     assert total_time > 0, "Test should take some time to complete"
-    assert len(request_times) == num_requests, f"Should have {num_requests} response times"
+    assert (
+        len(request_times) == num_requests
+    ), f"Should have {num_requests} response times"
 
 
 @pytest.mark.asyncio
@@ -130,10 +134,14 @@ async def test_30_requests_1_second_interval():
     print(f"   Total time: {total_time:.2f}s")
     print(f"   Average response time: {avg_time:.2f}s")
     print(f"   Min/Max response time: {min_time:.2f}s / {max_time:.2f}s")
-    print(f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n")
+    print(
+        f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n"
+    )
 
     assert total_time > 0, "Test should take some time to complete"
-    assert len(request_times) == num_requests, f"Should have {num_requests} response times"
+    assert (
+        len(request_times) == num_requests
+    ), f"Should have {num_requests} response times"
 
 
 @pytest.mark.asyncio
@@ -153,10 +161,14 @@ async def test_30_requests_2_second_interval():
     print(f"   Total time: {total_time:.2f}s")
     print(f"   Average response time: {avg_time:.2f}s")
     print(f"   Min/Max response time: {min_time:.2f}s / {max_time:.2f}s")
-    print(f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n")
+    print(
+        f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n"
+    )
 
     assert total_time > 0, "Test should take some time to complete"
-    assert len(request_times) == num_requests, f"Should have {num_requests} response times"
+    assert (
+        len(request_times) == num_requests
+    ), f"Should have {num_requests} response times"
 
 
 @pytest.mark.asyncio
@@ -176,7 +188,11 @@ async def test_10_requests_0_1_second_interval():
     print(f"   Total time: {total_time:.2f}s")
     print(f"   Average response time: {avg_time:.2f}s")
     print(f"   Min/Max response time: {min_time:.2f}s / {max_time:.2f}s")
-    print(f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n")
+    print(
+        f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n"
+    )
 
     assert total_time > 0, "Test should take some time to complete"
-    assert len(request_times) == num_requests, f"Should have {num_requests} response times"
+    assert (
+        len(request_times) == num_requests
+    ), f"Should have {num_requests} response times"
