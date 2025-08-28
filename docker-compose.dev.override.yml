@@ -1,9 +1,11 @@
 # Development override - includes built-in Ollama service
-# Switch between container and host Ollama by changing OLLAMA_HOST in .env.dev:
-# - Container Ollama: OLLAMA_HOST=http://ollama:11434  
-# - Host Ollama: OLLAMA_HOST=http://host.docker.internal:11434
+# Environment variables are fixed for development (no .env override)
 services:
   db:
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=olm-api
     volumes:
       - postgres_data_dev:/var/lib/postgresql/data
 
@@ -13,12 +15,12 @@ services:
     build:
       context: ./ollama
       args:
-        - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
+        - BUILT_IN_OLLAMA_MODEL=qwen3:0.6b
     entrypoint: ollama
     command: serve
     environment:
       - OLLAMA_HOST=0.0.0.0
-      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-2}
+      - MAX_PARALLEL_PROCESSES=${MAX_PARALLEL_PROCESSES:-2}
       - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
     volumes:
       - ollama_data_dev:/root/.ollama
@@ -33,6 +35,16 @@ services:
   api:
     build:
       target: runner
+    environment:
+      - DATABASE_URL=postgresql+psycopg://user:password@db:5432/olm-api
+      - BUILT_IN_OLLAMA_MODEL=qwen3:0.6b
+      - HOST_BIND_IP=127.0.0.1
+      - HOST_PORT=8000
+      - NUM_OF_UVICORN_WORKERS=1
+      - CONCURRENT_REQUEST_LIMIT=1
+      - MAX_PARALLEL_PROCESSES=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_HOST=http://ollama:11434
     volumes:
       - ./src:/app/src
       # Also mount alembic files for development
@@ -44,9 +56,8 @@ services:
         condition: service_healthy
       ollama:
         condition: service_healthy
-    # OLLAMA_HOST is read from .env.dev - change it there to switch between container/host
-    # Use default entrypoint
-    command: []
+    # Environment variables are fixed for development isolation
+    # Use default entrypoint and command from Dockerfile
 
 volumes:
   postgres_data_dev:

@@ -71,6 +71,18 @@ async def ollama_response_exception_handler(
     )
 
 
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    """
+    Handles all unhandled exceptions, returning a 500 Internal Server Error.
+    This prevents sensitive server information from being exposed to clients.
+    """
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
+
+
 @app.get("/health", tags=["Health Check"])
 async def health_check():
     """

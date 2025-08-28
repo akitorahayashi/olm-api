@@ -1,9 +1,11 @@
 # Test override - includes built-in Ollama service
-# Switch between container and host Ollama by changing OLLAMA_HOST in .env.test:
-# - Container Ollama: OLLAMA_HOST=http://ollama:11434  
-# - Host Ollama: OLLAMA_HOST=http://host.docker.internal:11434
+# Environment variables are set directly here for test isolation
 services:
   db:
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB_NAME:-olm-api}
     volumes:
       # Use separate test database volume
       - postgres_data_test:/var/lib/postgresql/data
@@ -14,12 +16,12 @@ services:
     build:
       context: ./ollama
       args:
-        - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
+        - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL:-qwen3:0.6b}
     entrypoint: ollama
     command: serve
     environment:
       - OLLAMA_HOST=0.0.0.0
-      - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-2}
+      - MAX_PARALLEL_PROCESSES=${MAX_PARALLEL_PROCESSES:-2}
       - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
     volumes:
       - ollama_data_test:/root/.ollama
@@ -32,6 +34,20 @@ services:
     restart: unless-stopped
 
   api:
+    env_file: [] # Override base env_file to prevent .env loading
+    ports:
+      - "8001:8000" # Fixed port mapping for tests (avoid conflict with dev)
+    environment:
+      - DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://user:password@db:5432/olm-api}
+      - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL:-qwen3:8b}
+      - HOST_BIND_IP=${HOST_BIND_IP:-127.0.0.1}
+      - HOST_PORT=${HOST_PORT:-8001}
+      - NUM_OF_UVICORN_WORKERS=${NUM_OF_UVICORN_WORKERS:-3}
+      - CONCURRENT_REQUEST_LIMIT=${CONCURRENT_REQUEST_LIMIT:-10}
+      - MAX_PARALLEL_PROCESSES=${MAX_PARALLEL_PROCESSES:-3}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      # - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
     depends_on:
       db:
         condition: service_healthy

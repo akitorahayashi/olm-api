@@ -64,10 +64,14 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             if response.status_code >= 400:
                 error_details = generated_response or "[No error details in body]"
 
-            return response
-        except Exception:
+        except Exception as e:
             error_details = traceback.format_exc()
-            raise
+            # Return a 500 response instead of re-raising
+            response = Response(
+                content=json.dumps({"detail": "Internal server error"}),
+                status_code=500,
+                headers={"content-type": "application/json"},
+            )
         finally:
             status_code = response.status_code if response else 500
             self._safe_log(
@@ -78,6 +82,8 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 generated_response=generated_response,
                 error_details=error_details,
             )
+
+        return response
 
     def _extract_prompt_from_body(self, body: bytes) -> Optional[str]:
         try:

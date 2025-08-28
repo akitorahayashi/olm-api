@@ -113,11 +113,13 @@ async def test_generate_api_error_is_logged(
 
     # Act
     # The global exception handler will catch the exception and return a 500
-    with pytest.raises(Exception, match=error_message):
-        await client.post(
-            "/api/v1/generate",
-            json={"prompt": prompt, "model_name": model_name, "stream": False},
-        )
+    response = await client.post(
+        "/api/v1/generate",
+        json={"prompt": prompt, "model_name": model_name, "stream": False},
+    )
+    
+    # Assert the response status code
+    assert response.status_code == 500
 
     # Assert
     log_entry = db_session.query(Log).one()

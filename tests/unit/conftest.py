@@ -31,9 +31,9 @@ async def unit_test_client(monkeypatch) -> AsyncGenerator[AsyncClient, None]:
     Provides a test client that operates independently of the database.
 
     This fixture achieves database isolation by:
-    1.  **Mocking the Setting Service**: It uses `monkeypatch` to replace the
-        `get_active_model` and `set_active_model` functions in the `setting_service`
-        module. This prevents any database calls for model settings.
+    1.  **Setting Environment Variables**: It sets dummy environment variables
+        to satisfy Pydantic settings validation without requiring actual database
+        connection or configuration.
 
     2.  **Disabling Logging Middleware**: It uses `monkeypatch` to neutralize the
         `_safe_log` method of the `LoggingMiddleware`, preventing database writes.

@@ -5,7 +5,6 @@ from typing import Generator
 
 import httpx
 import pytest
-from dotenv import load_dotenv
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -13,20 +12,16 @@ def e2e_setup() -> Generator[None, None, None]:
     """
     Manages the lifecycle of the application for end-to-end testing.
     """
-    # Load the environment from the symlinked .env file
-    load_dotenv(".env", override=True)
-    host_port = os.getenv("HOST_PORT", "8000")
-    health_url = f"http://localhost:{host_port}/health"
-
     # Determine if sudo should be used based on environment variable
     use_sudo = os.getenv("SUDO") == "true"
     docker_command = ["sudo", "docker"] if use_sudo else ["docker"]
+    
+    host_port = os.getenv("HOST_PORT", "8001")  # Default to test port
+    health_url = f"http://localhost:{host_port}/health"
 
-    # Define compose commands
+    # Define compose commands (environment variables handled by docker-compose.test.override.yml)
     compose_up_command = docker_command + [
         "compose",
-        "--env-file",
-        ".env",
         "-f",
         "docker-compose.yml",
         "-f",
@@ -38,8 +33,6 @@ def e2e_setup() -> Generator[None, None, None]:
     ]
     compose_down_command = docker_command + [
         "compose",
-        "--env-file",
-        ".env",
         "-f",
         "docker-compose.yml",
         "-f",
@@ -55,8 +48,6 @@ def e2e_setup() -> Generator[None, None, None]:
         print("\n🚀 Building docker images...")
         build_command = docker_command + [
             "compose",
-            "--env-file",
-            ".env",
             "-f",
             "docker-compose.yml",
             "-f",
@@ -94,19 +85,17 @@ def e2e_setup() -> Generator[None, None, None]:
                     break
             except httpx.RequestError as e:
                 print(f"⏳ API not yet healthy, retrying... Error: {e}")
-                time.sleep(5)
+            time.sleep(5)
 
         if not is_healthy:
             subprocess.run(
                 docker_command
                 + [
                     "compose",
-                    "--env-file",
-                    ".env",
                     "-f",
                     "docker-compose.yml",
                     "-f",
-                    "docker-compose.test.yml",
+                    "docker-compose.test.override.yml",
                     "--project-name",
                     "olm-api-test",
                     "logs",

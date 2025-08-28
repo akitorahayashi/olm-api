@@ -27,9 +27,6 @@ services:
         condition: service_healthy
     env_file:
       - .env
-    environment:
-      # Production uses external Ollama by default
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://your-ollama-server:11434}
     healthcheck:
       test: [ "CMD", "python", "-c", "import sys, os, urllib.request; path=os.environ.get('HEALTHCHECK_PATH', '/health'); sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{path}') else sys.exit(1)" ]
       interval: 30s

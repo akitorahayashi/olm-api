@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 
 from src.api.v1.schemas import GenerateRequest
 from src.api.v1.services.ollama_service import OllamaService, get_ollama_service
@@ -20,8 +20,11 @@ async def generate(
     This endpoint takes a prompt and model name, then returns a generated response from the
     Ollama model. It supports both streaming and non-streaming responses.
     """
-    return await ollama_service.generate_response(
-        prompt=request.prompt,
-        model_name=request.model_name,
-        stream=request.stream,
-    )
+    try:
+        return await ollama_service.generate_response(
+            prompt=request.prompt,
+            model_name=request.model_name,
+            stream=request.stream,
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=502, detail=str(e))
