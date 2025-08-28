@@ -56,7 +56,7 @@ def db_setup(
             driver="psycopg",
             username=os.environ.get("POSTGRES_USER", "user"),
             password=os.environ.get("POSTGRES_PASSWORD", "password"),
-            dbname=os.environ.get("POSTGRES_DB_NAME", "olm-api-test-db),
+            dbname=os.environ.get("POSTGRES_DB_NAME", "olm-api-test-db"),
         )
         container.start()
         db_url_value = container.get_connection_url()
