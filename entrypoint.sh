@@ -13,6 +13,16 @@ set -eu
 if [ "$#" -eq 0 ] || [ "$1" = "uvicorn" ]; then
     count=0
     echo "Waiting for database to be ready..."
+    
+    # Create database if it doesn't exist
+    echo "Checking if database exists and creating if necessary..."
+    while ! PGPASSWORD="${POSTGRES_PASSWORD}" psql -h db -U "${POSTGRES_USER}" -d postgres -c "SELECT 1 FROM pg_database WHERE datname='${POSTGRES_DB_NAME}'" | grep -q 1; do
+        echo "Creating database ${POSTGRES_DB_NAME}..."
+        PGPASSWORD="${POSTGRES_PASSWORD}" psql -h db -U "${POSTGRES_USER}" -d postgres -c "CREATE DATABASE \"${POSTGRES_DB_NAME}\";" || true
+        sleep 1
+    done
+    echo "Database exists."
+    
     while ! alembic upgrade head; do
         count=$((count + 1))
         if [ ${count} -ge 30 ]; then
@@ -35,5 +45,5 @@ else
     exec uvicorn src.main:app \
         --host "0.0.0.0" \
         --port "8000" \
-        --workers "1"
+        --workers "4"
 fi

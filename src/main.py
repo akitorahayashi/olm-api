@@ -30,18 +30,19 @@ async def lifespan(app: FastAPI):
     settings = Settings()
     try:
         db = create_db_session()
-        ollama_service = ollama.Client()
+        import os
+        ollama_host = os.environ.get("OLLAMA_HOST", "http://ollama:11434")
+        ollama_service = ollama.Client(host=ollama_host)
 
         # 1. Get the current active model from the DB
         active_model_name = setting_service.get_active_model(db)
 
         # 2. Get all available local models from Ollama
         local_models_data = ollama_service.list()
-        local_model_names = {
-            model.get("name")
-            for model in local_models_data.get("models", [])
-            if model.get("name")
-        }
+        local_model_names = set()
+        for model in local_models_data.models:
+            if hasattr(model, 'model'):
+                local_model_names.add(model.model)
 
         # 3. Validate if the active model is available
         is_active_model_valid = (
