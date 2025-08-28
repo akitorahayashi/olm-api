@@ -34,8 +34,9 @@ pip-log.txt
 .coverage.*
 htmlcov/
 
-# Visual Studio Code
+# editor
 .vscode/
+.claude/
 
 # JetBrains (PyCharm, etc.)
 .idea/

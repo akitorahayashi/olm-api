@@ -8,9 +8,9 @@ import pytest
 
 
 @pytest.fixture(scope="session", autouse=True)
-def e2e_setup() -> Generator[None, None, None]:
+def perf_setup() -> Generator[None, None, None]:
     """
-    Manages the lifecycle of the application for end-to-end testing.
+    Manages the lifecycle of the application for performance testing.
     """
     # Determine if sudo should be used based on environment variable
     use_sudo = os.getenv("SUDO") == "true"
@@ -21,11 +21,8 @@ def e2e_setup() -> Generator[None, None, None]:
     health_url = f"http://{host_bind_ip}:{host_port}/health"
 
     # Define compose commands (environment variables handled by docker-compose.test.override.yml)
-    # Use --env-file /dev/null to prevent reading .env file
     compose_up_command = docker_command + [
         "compose",
-        "--env-file",
-        "/dev/null",
         "-f",
         "docker-compose.yml",
         "-f",
@@ -34,11 +31,10 @@ def e2e_setup() -> Generator[None, None, None]:
         "olm-api-test",
         "up",
         "-d",
+        "--build",
     ]
     compose_down_command = docker_command + [
         "compose",
-        "--env-file",
-        "/dev/null",
         "-f",
         "docker-compose.yml",
         "-f",
@@ -50,13 +46,28 @@ def e2e_setup() -> Generator[None, None, None]:
     ]
 
     try:
-        subprocess.run(
-            compose_up_command, check=True, timeout=600
-        )  # 10 minutes timeout
+        # Start services, ensuring cleanup on failure
+        print("\n🚀 Starting Performance Test services...")
+        print(f"Health check URL: {health_url}")
+        try:
+            subprocess.run(
+                compose_up_command,
+                check=True,
+                timeout=300,
+                capture_output=True,
+                text=True,
+            )  # 5 minutes timeout
+        except subprocess.CalledProcessError as e:
+            print("\n🛑 compose up failed; performing cleanup...")
+            print(f"Exit code: {e.returncode}")
+            print(f"STDOUT: {e.stdout}")
+            print(f"STDERR: {e.stderr}")
+            subprocess.run(compose_down_command, check=False)
+            raise
 
         # Health Check
         start_time = time.time()
-        timeout = 600  # 10 minutes for qwen3:0.6b model download
+        timeout = 300  # 5 minutes for external Ollama connection
         is_healthy = False
         while time.time() - start_time < timeout:
             try:
@@ -74,8 +85,6 @@ def e2e_setup() -> Generator[None, None, None]:
                 docker_command
                 + [
                     "compose",
-                    "--env-file",
-                    "/dev/null",
                     "-f",
                     "docker-compose.yml",
                     "-f",
@@ -84,25 +93,19 @@ def e2e_setup() -> Generator[None, None, None]:
                     "olm-api-test",
                     "logs",
                     "api",
-                    "ollama",
                 ]
             )
             # Ensure teardown on health check failure
-            print("\n🛑 Stopping E2E services due to health check failure...")
+            print(
+                "\n🛑 Stopping Performance Test services due to health check failure..."
+            )
             subprocess.run(compose_down_command, check=False)
             pytest.fail(f"API did not become healthy within {timeout} seconds.")
 
         yield
 
-    except subprocess.CalledProcessError as e:
-        print("\n🛑 compose up failed; performing cleanup...")
-        if hasattr(e, "stdout") and hasattr(e, "stderr"):
-            print(f"Exit code: {e.returncode}")
-            print(f"STDOUT: {e.stdout}")
-            print(f"STDERR: {e.stderr}")
-        subprocess.run(compose_down_command, check=False)
-        raise
-    finally:
         # Stop services
-        print("\n🛑 Stopping E2E services...")
-        subprocess.run(compose_down_command, check=False)
+        print("\n🛑 Stopping Performance Test services...")
+        subprocess.run(compose_down_command, check=True)
+    finally:
+        pass

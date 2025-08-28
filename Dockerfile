@@ -79,6 +79,9 @@ RUN --mount=type=cache,target=/tmp/poetry_cache \
 # ==============================================================================
 FROM python:3.12-slim AS runner
 
+# Install PostgreSQL client for database operations
+RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+
 
 
 # Create a non-root user and group for security

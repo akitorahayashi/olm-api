@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 
 import pytest
 from httpx import AsyncClient
@@ -10,43 +10,41 @@ from src.api.v1.schemas import GenerateResponse
 pytestmark = pytest.mark.asyncio
 
 
-async def test_generate_uses_active_model(
+async def test_generate_with_model_name(
     unit_test_client: AsyncClient, mock_ollama_service: MagicMock
 ):
     """
-    Test that the /generate endpoint uses the active model provided by the mocked
-    setting service and validates call arguments strictly.
-    The active model name ('test-unit-model') is set in the unit_test_client fixture.
+    Test that the /generate endpoint uses the model specified in the request.
     """
+    import os
+
     # Arrange
     prompt = "Test prompt"
+    model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
     mock_ollama_service.generate_response.return_value = GenerateResponse(
         response="test response"
     )
 
     # Act
     response = await unit_test_client.post(
-        "/api/v1/generate", json={"prompt": prompt, "stream": False}
+        "/api/v1/generate",
+        json={"prompt": prompt, "model_name": model_name, "stream": False},
     )
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
     assert response.json() == {"response": "test response"}
     mock_ollama_service.generate_response.assert_called_once_with(
-        prompt=prompt, model_name="test-unit-model", stream=False
+        prompt=prompt, model_name=model_name, stream=False
     )
 
 
-@patch("src.api.v1.services.setting_service.get_active_model", return_value=None)
-async def test_generate_no_model_configured(
-    mock_get_model: MagicMock,
+async def test_generate_missing_model_name(
     unit_test_client: AsyncClient,
     mock_ollama_service: MagicMock,
 ):
     """
-    Test that a 503 error is returned if no model is configured.
-    This test patches the setting_service to simulate no model being set,
-    overriding the monkeypatch in the fixture for this specific test case.
+    Test that a 422 error is returned if model_name is not provided.
     """
     # Act
     response = await unit_test_client.post(
@@ -54,6 +52,5 @@ async def test_generate_no_model_configured(
     )
 
     # Assert
-    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
-    assert "No generation model is currently configured" in response.json()["detail"]
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     mock_ollama_service.generate_response.assert_not_called()

@@ -15,12 +15,12 @@ async def test_generate_endpoint_e2e():
     validates the response, simulating a basic user interaction.
     """
     host_port = os.getenv("HOST_PORT", "8000")
-    model_name = os.getenv("BUILT_IN_OLLAMA_MODEL")
-    assert model_name, "BUILT_IN_OLLAMA_MODEL environment variable must be set"
+    model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
 
     generate_url = f"http://localhost:{host_port}/api/v1/generate"
     request_payload = {
         "prompt": "Why is the sky blue?",
+        "model_name": model_name,
         "stream": False,
     }
 

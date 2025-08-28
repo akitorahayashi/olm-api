@@ -69,6 +69,9 @@ Key variables include:
 - **`HOST_BIND_IP`**: The IP address on the host machine to which the API server port will bind. Use `127.0.0.1` for local access only (recommended for development) and `0.0.0.0` to allow external access (for production).
 - **`DATABASE_URL`**: The full connection string for the PostgreSQL database.
 - **`BUILT_IN_OLLAMA_MODEL`**: The name of the Ollama model to be baked into the Docker image during the build process. This model will be active by default on server startup and cannot be deleted via the API.
+- **`CONCURRENT_REQUEST_LIMIT`**: Maximum number of concurrent requests that can be processed by the Ollama service (default: 4).
+- **`MAX_PARALLEL_PROCESSES`**: Number of parallel requests Ollama can handle internally (passed to Ollama server).
+- **`OLLAMA_MAX_LOADED_MODELS`**: Maximum number of models that can be loaded simultaneously in Ollama memory.
 
 ## API Specification
 
@@ -83,9 +86,10 @@ The request body must be a JSON object with the following fields:
 | Parameter | Type    | Default | Description                               |
 |-----------|---------|---------|-------------------------------------------|
 | `prompt`  | string  |         | **Required.** The input text for the LLM. |
+| `model_name` | string  |       | **Required.** The name of the model to use for generation. |
 | `stream`  | boolean | `false` | If `true`, the response will be streamed. |
 
-**Note**: The model used for generation is the one currently active on the server. The default model is set via the `BUILT_IN_OLLAMA_MODEL` environment variable, and it can be changed dynamically using the `POST /api/v1/models/switch/{model_name}` endpoint.
+**Note**: Clients must specify which model to use for each request. There is no fallback to `BUILT_IN_OLLAMA_MODEL` - the model_name parameter is required for every request. Model management is handled externally on the Ollama server.
 
 ### Response Body
 
@@ -128,7 +132,7 @@ The host depends on your `.env.dev` settings (`HOST_BIND_IP`). The port is fixed
 ```sh
 curl -X POST "http://127.0.0.1:8000/api/v1/generate" \
 -H "Content-Type: application/json" \
--d '{"prompt": "Why is the sky blue?"}'
+-d '{"prompt": "Why is the sky blue?", "model_name": "qwen3:0.6b"}'
 ```
 
 ### Streaming Request (curl)
@@ -138,7 +142,7 @@ The `-N` (or `--no-buffer`) flag is important for viewing the stream as it arriv
 ```sh
 curl -X POST "http://127.0.0.1:8000/api/v1/generate" \
 -H "Content-Type: application/json" \
--d '{"prompt": "Write a short story about a robot.", "stream": true}' -N
+-d '{"prompt": "Write a short story about a robot.", "model_name": "qwen3:0.6b", "stream": true}' -N
 ```
 
 ## Development Workflow

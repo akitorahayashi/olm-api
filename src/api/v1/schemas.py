@@ -20,6 +20,7 @@ class LogRead(BaseModel):
 
 class GenerateRequest(BaseModel):
     prompt: str
+    model_name: str
     stream: bool = False
 
 

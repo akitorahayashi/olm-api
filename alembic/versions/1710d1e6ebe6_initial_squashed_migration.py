@@ -1,19 +1,19 @@
-"""Create logs table
+"""Initial squashed migration
 
-Revision ID: 66121df78c57
+Revision ID: 1710d1e6ebe6
 Revises:
-Create Date: 2025-08-23 01:54:54.457709
+Create Date: 2025-08-28 08:55:54.627801
 
 """
 
 from typing import Sequence, Union
 
+from alembic import op
 import sqlalchemy as sa
 
-from alembic import op
 
 # revision identifiers, used by Alembic.
-revision: str = "66121df78c57"
+revision: str = "1710d1e6ebe6"
 down_revision: Union[str, Sequence[str], None] = None
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -28,13 +28,16 @@ def upgrade() -> None:
         sa.Column(
             "timestamp",
             sa.DateTime(timezone=True),
-            server_default=sa.func.now(),
-            nullable=True,
+            nullable=False,
+            server_default=sa.text("CURRENT_TIMESTAMP"),
         ),
-        sa.Column("client_host", sa.String(length=255), nullable=True),
-        sa.Column("request_method", sa.String(length=10), nullable=True),
-        sa.Column("request_path", sa.Text(), nullable=True),
+        sa.Column("client_host", sa.String(), nullable=True),
+        sa.Column("request_method", sa.String(), nullable=True),
+        sa.Column("request_path", sa.String(), nullable=True),
         sa.Column("response_status_code", sa.Integer(), nullable=True),
+        sa.Column("prompt", sa.Text(), nullable=True),
+        sa.Column("generated_response", sa.Text(), nullable=True),
+        sa.Column("error_details", sa.Text(), nullable=True),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_index(op.f("ix_logs_client_host"), "logs", ["client_host"], unique=False)

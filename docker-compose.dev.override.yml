@@ -1,0 +1,66 @@
+# Development override - includes built-in Ollama service
+# Environment variables are fixed for development (no .env override)
+services:
+  db:
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=olm-api
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+
+  # Built-in Ollama service (always created for easy switching)
+  ollama:
+    image: ollama:latest
+    build:
+      context: ./ollama
+      args:
+        - BUILT_IN_OLLAMA_MODEL=qwen3:0.6b
+    entrypoint: ollama
+    command: serve
+    environment:
+      - OLLAMA_HOST=0.0.0.0
+      - MAX_PARALLEL_PROCESSES=${MAX_PARALLEL_PROCESSES:-2}
+      - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
+    volumes:
+      - ollama_data_dev:/root/.ollama
+    healthcheck:
+      test: [ "CMD", "ollama", "list" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
+  api:
+    build:
+      target: runner
+    environment:
+      - DATABASE_URL=postgresql+psycopg://user:password@db:5432/olm-api
+      - BUILT_IN_OLLAMA_MODEL=qwen3:0.6b
+      - HOST_BIND_IP=127.0.0.1
+      - HOST_PORT=8000
+      - NUM_OF_UVICORN_WORKERS=1
+      - CONCURRENT_REQUEST_LIMIT=1
+      - MAX_PARALLEL_PROCESSES=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_HOST=http://ollama:11434
+    volumes:
+      - ./src:/app/src
+      # Also mount alembic files for development
+      - ./alembic:/app/alembic
+      # Mount tests so they can be run inside the container if needed
+      - ./tests:/app/tests
+    depends_on:
+      db:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    # Environment variables are fixed for development isolation
+    # Use default entrypoint and command from Dockerfile
+
+volumes:
+  postgres_data_dev:
+    driver: local
+  ollama_data_dev:
+    driver: local

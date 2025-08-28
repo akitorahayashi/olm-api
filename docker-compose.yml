@@ -1,46 +1,34 @@
 services:
   db:
     image: postgres:16-alpine
-    ports:
-      - "127.0.0.1:5432:5432"
     environment:
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER:-user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB=${POSTGRES_DB_NAME:-olm-api-test-db}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_prod:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB_NAME:-olm-api-test-db}" ]
       interval: 10s
       timeout: 5s
       retries: 5
     restart: unless-stopped
 
-  ollama:
-    build:
-      context: ./ollama
-      args:
-        - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
-    entrypoint: ollama
-    command: serve
-    environment:
-      - OLLAMA_HOST=0.0.0.0
-    volumes:
-      - ollama_data:/root/.ollama
-    restart: unless-stopped
-
   api:
+    image: olm-api:latest
     build:
       context: .
       dockerfile: Dockerfile
       target: runner
     ports:
       - "${HOST_BIND_IP:-127.0.0.1}:${HOST_PORT:-8000}:8000"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB_NAME=${POSTGRES_DB_NAME:-olm-api}
     depends_on:
       db:
         condition: service_healthy
-      ollama:
-        condition: service_started
     env_file:
       - .env
     healthcheck:
@@ -52,7 +40,5 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
-    driver: local
-  ollama_data:
+  postgres_data_prod:
     driver: local
