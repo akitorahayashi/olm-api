@@ -9,9 +9,9 @@ from dotenv import load_dotenv
 
 
 @pytest.fixture(scope="session", autouse=True)
-def e2e_setup() -> Generator[None, None, None]:
+def perf_setup() -> Generator[None, None, None]:
     """
-    Manages the lifecycle of the application for end-to-end testing.
+    Manages the lifecycle of the application for performance testing.
     """
     # Load the environment from the symlinked .env file
     load_dotenv(".env", override=True)
@@ -49,7 +49,7 @@ def e2e_setup() -> Generator[None, None, None]:
 
     try:
         # Start services, ensuring cleanup on failure
-        print("\n🚀 Starting E2E services...")
+        print("\n🚀 Starting Performance Test services...")
         print(f"Health check URL: {health_url}")
         try:
             result = subprocess.run(
@@ -94,14 +94,14 @@ def e2e_setup() -> Generator[None, None, None]:
                 ]
             )
             # Ensure teardown on health check failure
-            print("\n🛑 Stopping E2E services due to health check failure...")
+            print("\n🛑 Stopping Performance Test services due to health check failure...")
             subprocess.run(compose_down_command, check=False)
             pytest.fail(f"API did not become healthy within {timeout} seconds.")
 
         yield
 
         # Stop services
-        print("\n🛑 Stopping E2E services...")
+        print("\n🛑 Stopping Performance Test services...")
         subprocess.run(compose_down_command, check=True)
     finally:
         pass

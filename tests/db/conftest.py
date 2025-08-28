@@ -1,3 +1,4 @@
+import logging
 import os
 import time
 from typing import AsyncGenerator, Generator, Optional
@@ -47,6 +48,10 @@ def db_setup(
         # Set a dummy model for DB tests, which don't need a real one.
         # This is required for Alembic's env.py to validate settings.
         os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-db-model"
+        
+        # Enable testcontainers logging to show container startup progress
+        logging.getLogger("testcontainers").setLevel(logging.INFO)
+        print("\n🚀 Starting PostgreSQL test container...")
 
         container = PostgresContainer(
             "postgres:16-alpine",
@@ -58,11 +63,14 @@ def db_setup(
         container.start()
         db_url_value = container.get_connection_url()
         os.environ["DATABASE_URL"] = db_url_value
+        print(f"✅ PostgreSQL container started: {db_url_value}")
+        print("🔄 Running database migrations...")
 
         alembic_cfg = Config()
         alembic_cfg.set_main_option("script_location", "alembic")
         alembic_cfg.set_main_option("sqlalchemy.url", db_url_value)
         command.upgrade(alembic_cfg, "head")
+        print("✅ Database migrations completed!")
 
         if db_conn_file:
             db_conn_file.write_text(db_url_value)

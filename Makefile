@@ -161,8 +161,14 @@ db-test: ## Run the slower, database-dependent tests locally
 .PHONY: e2e-test
 e2e-test: ## Run end-to-end tests against a live application stack
 	@echo "Running end-to-end tests..."
-	@ln -sf .env.test .env
+	@ln -sf .env.dev .env
 	@poetry run python -m pytest tests/e2e
+
+.PHONY: perf-test
+perf-test: ## Run performance tests with concurrent request measurements
+	@echo "Running performance tests..."
+	@ln -sf .env.dev .env
+	@poetry run python -m pytest tests/perf
 
 .PHONY: build-test
 build-test: ## Build Docker image for testing without leaving artifacts

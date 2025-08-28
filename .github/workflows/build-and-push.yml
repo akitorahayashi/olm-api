@@ -40,13 +40,13 @@ jobs:
 
       - name: Lowercase Image Name
         id: image-name-lower
-        run: echo "IMAGE_NAME_LOWER=$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_ENV
+        run: echo "image_name_lower=$(echo ${{ env.IMAGE_NAME }} | tr '[:upper:]' '[:lower:]')" >> $GITHUB_OUTPUT
 
       - name: Extract metadata for Docker
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME_LOWER }}
+          images: ${{ env.REGISTRY }}/${{ steps.image-name-lower.outputs.image_name_lower }}
           tags: |
             type=sha
             type=raw,value=latest,enable={{is_default_branch}}

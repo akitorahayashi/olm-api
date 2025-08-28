@@ -25,7 +25,7 @@ jobs:
           echo "$HOME/.local/bin" >> $GITHUB_PATH
 
       - name: Install dependencies
-        run: make setup
+        run: poetry install --no-root
 
       - name: Run Linters
         run: make lint
