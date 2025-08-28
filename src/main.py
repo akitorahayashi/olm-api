@@ -1,3 +1,4 @@
+import os
 from contextlib import asynccontextmanager
 
 import httpx
@@ -30,7 +31,6 @@ async def lifespan(app: FastAPI):
     settings = Settings()
     try:
         db = create_db_session()
-        import os
         ollama_host = os.environ.get("OLLAMA_HOST", "http://ollama:11434")
         ollama_service = ollama.Client(host=ollama_host)
 

@@ -17,10 +17,12 @@ services:
     restart: unless-stopped
 
   ollama:
+    image: pvt-llm-api-ollama:latest
     build:
       context: ./ollama
       args:
         - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
+    # The healthcheck is now defined within the ollama/Dockerfile
     entrypoint: ollama
     command: serve
     environment:
@@ -36,6 +38,7 @@ services:
     restart: unless-stopped
 
   api:
+    image: pvt-llm-api:latest
     build:
       context: .
       dockerfile: Dockerfile
