@@ -4,11 +4,11 @@ services:
     environment:
       - POSTGRES_USER=${POSTGRES_USER:-user}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
-      - POSTGRES_DB=${POSTGRES_DB_NAME:-olm-api}
+      - POSTGRES_DB=${POSTGRES_DB_NAME:-olm-api-test-db}
     volumes:
       - postgres_data_prod:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB_NAME:-olm-api}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB_NAME:-olm-api-test-db}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,12 +22,15 @@ services:
       target: runner
     ports:
       - "${HOST_BIND_IP:-127.0.0.1}:${HOST_PORT:-8000}:8000"
-    depends_on:ports:
-      - "${HOST_BIND_IP:-127.0.0.1}:${HOST_PORT:-8000}:8000"
-    db:
-      condition: service_healthy
-    env_file:
-      - .env
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB_NAME=${POSTGRES_DB_NAME:-olm-api}
+    depends_on:
+      db:
+        condition: service_healthy
+    # env_file:
+    #   - .env
     healthcheck:
       test: [ "CMD", "python", "-c", "import sys, os, urllib.request; path=os.environ.get('HEALTHCHECK_PATH', '/health'); sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{path}') else sys.exit(1)" ]
       interval: 30s

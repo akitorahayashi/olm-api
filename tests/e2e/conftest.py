@@ -21,8 +21,11 @@ def e2e_setup() -> Generator[None, None, None]:
     health_url = f"http://{host_bind_ip}:{host_port}/health"
 
     # Define compose commands (environment variables handled by docker-compose.test.override.yml)
+    # Use --env-file /dev/null to prevent reading .env file
     compose_up_command = docker_command + [
         "compose",
+        "--env-file",
+        "/dev/null",
         "-f",
         "docker-compose.yml",
         "-f",
@@ -34,6 +37,8 @@ def e2e_setup() -> Generator[None, None, None]:
     ]
     compose_down_command = docker_command + [
         "compose",
+        "--env-file",
+        "/dev/null",
         "-f",
         "docker-compose.yml",
         "-f",
@@ -49,6 +54,8 @@ def e2e_setup() -> Generator[None, None, None]:
         print("\n🚀 Building docker images...")
         build_command = docker_command + [
             "compose",
+            "--env-file",
+            "/dev/null",
             "-f",
             "docker-compose.yml",
             "-f",
@@ -98,6 +105,8 @@ def e2e_setup() -> Generator[None, None, None]:
                 docker_command
                 + [
                     "compose",
+                    "--env-file",
+                    "/dev/null",
                     "-f",
                     "docker-compose.yml",
                     "-f",

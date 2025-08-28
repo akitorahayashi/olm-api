@@ -4,9 +4,6 @@
 # or if an unset variable is used ('u').
 set -eu
 
-# Activate the virtual environment.
-. /app/.venv/bin/activate
-
 # --- Wait for DB and run migrations ---
 # This section is skipped if the command is not the default uvicorn server
 # (e.g., if a user runs 'shell' or another command).

@@ -36,7 +36,10 @@ services:
   api:
     env_file: [] # Override base env_file to prevent .env loading
     environment:
-      - DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://user:password@db:5432/olm-api}
+      - DATABASE_URL=${DATABASE_URL:-postgresql+psycopg://user:password@db:5432/olm-api-test-db}
+      - POSTGRES_USER=${POSTGRES_USER:-user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-password}
+      - POSTGRES_DB_NAME=${POSTGRES_DB_NAME:-olm-api-test-db}
       - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL:-qwen3:8b}
       - HOST_BIND_IP=${HOST_BIND_IP:-127.0.0.1}
       - HOST_PORT=${HOST_PORT:-8000}
@@ -44,8 +47,8 @@ services:
       - CONCURRENT_REQUEST_LIMIT=${CONCURRENT_REQUEST_LIMIT:-3}
       - MAX_PARALLEL_PROCESSES=${MAX_PARALLEL_PROCESSES:-3}
       - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
-      - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
-      # - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
+      # - OLLAMA_HOST=${OLLAMA_HOST:-http://host.docker.internal:11434}
+      - OLLAMA_HOST=${OLLAMA_HOST:-http://ollama:11434}
     depends_on:
       db:
         condition: service_healthy
