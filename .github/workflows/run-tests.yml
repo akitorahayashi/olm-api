@@ -32,20 +32,22 @@ jobs:
       - name: Install dependencies
         run: poetry install --no-root
 
+      - name: Create .env file from secrets or defaults
+        run: |
+          cat > .env << 'EOF'
+          BUILT_IN_OLLAMA_MODEL=${{ secrets.BUILT_IN_OLLAMA_MODEL || 'qwen3:0.6b' }}
+          HOST_BIND_IP=${{ secrets.HOST_BIND_IP || '127.0.0.1' }}
+          HOST_PORT=${{ secrets.HOST_PORT || '8000' }}
+          OLLAMA_CONCURRENT_REQUEST_LIMIT=${{ secrets.OLLAMA_CONCURRENT_REQUEST_LIMIT || '2' }}
+          OLLAMA_NUM_PARALLEL=${{ secrets.OLLAMA_NUM_PARALLEL || '2' }}
+          OLLAMA_MAX_LOADED_MODELS=${{ secrets.OLLAMA_MAX_LOADED_MODELS || '1' }}
+          OLLAMA_HOST=${{ secrets.OLLAMA_HOST || 'http://ollama:11434' }}
+          DATABASE_URL=${{ secrets.DATABASE_URL || 'postgresql+psycopg://user:password@db:5432/olm-api' }}
+          POSTGRES_USER=${{ secrets.POSTGRES_USER || 'user' }}
+          POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD || 'password' }}
+          POSTGRES_DB_NAME=${{ secrets.POSTGRES_DB_NAME || 'olm-api' }}
+          SUDO=${{ secrets.SUDO || 'true' }}
+          EOF
+
       - name: Run tests
-        env:
-          # Set environment variables for Docker Compose tests
-          BUILT_IN_OLLAMA_MODEL: ${{ secrets.BUILT_IN_OLLAMA_MODEL || 'qwen3:0.6b' }}
-          HOST_BIND_IP: ${{ secrets.HOST_BIND_IP || '127.0.0.1' }}
-          HOST_PORT: ${{ secrets.HOST_PORT || '8001' }}
-          NUM_OF_UVICORN_WORKERS: ${{ secrets.NUM_OF_UVICORN_WORKERS || '1' }}
-          CONCURRENT_REQUEST_LIMIT: ${{ secrets.CONCURRENT_REQUEST_LIMIT || '2' }}
-          MAX_PARALLEL_PROCESSES: ${{ secrets.MAX_PARALLEL_PROCESSES || '2' }}
-          OLLAMA_MAX_LOADED_MODELS: ${{ secrets.OLLAMA_MAX_LOADED_MODELS || '1' }}
-          OLLAMA_HOST: ${{ secrets.OLLAMA_HOST || 'http://ollama:11434' }}
-          DATABASE_URL: ${{ secrets.DATABASE_URL || 'postgresql+psycopg://user:password@db:5432/olm-api-test-db' }}
-          POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'user' }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'password' }}
-          POSTGRES_DB_NAME: ${{ secrets.POSTGRES_DB_NAME || 'olm-api-test-db' }}
-          SUDO: ${{ secrets.SUDO || 'true' }}
         run: make ${{ matrix.test_target }}
