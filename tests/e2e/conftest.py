@@ -53,35 +53,10 @@ def e2e_setup() -> Generator[None, None, None]:
         subprocess.run(
             compose_up_command, check=True, timeout=600
         )  # 10 minutes timeout
-    except subprocess.CalledProcessError:
-        print("\n🛑 compose up failed; performing cleanup...")
-        subprocess.run(compose_down_command, check=False)
-        raise
-
-    # Health Check
-    start_time = time.time()
-    timeout = 600  # 10 minutes for qwen3:0.6b model download
-    is_healthy = False
-    while time.time() - start_time < timeout:
-        try:
-            subprocess.run(
-                compose_up_command,
-                check=True,
-                timeout=120,
-                capture_output=True,
-                text=True,
-            )  # Reduced to 2 minutes since images are pre-pulled
-        except subprocess.CalledProcessError as e:
-            print("\n🛑 compose up failed; performing cleanup...")
-            print(f"Exit code: {e.returncode}")
-            print(f"STDOUT: {e.stdout}")
-            print(f"STDERR: {e.stderr}")
-            subprocess.run(compose_down_command, check=False)
-            raise
 
         # Health Check
         start_time = time.time()
-        timeout = 300  # 5 minutes for qwen3:0.6b model download
+        timeout = 600  # 10 minutes for qwen3:0.6b model download
         is_healthy = False
         while time.time() - start_time < timeout:
             try:
@@ -119,8 +94,15 @@ def e2e_setup() -> Generator[None, None, None]:
 
         yield
 
+    except subprocess.CalledProcessError as e:
+        print("\n🛑 compose up failed; performing cleanup...")
+        if hasattr(e, "stdout") and hasattr(e, "stderr"):
+            print(f"Exit code: {e.returncode}")
+            print(f"STDOUT: {e.stdout}")
+            print(f"STDERR: {e.stderr}")
+        subprocess.run(compose_down_command, check=False)
+        raise
+    finally:
         # Stop services
         print("\n🛑 Stopping E2E services...")
-        subprocess.run(compose_down_command, check=True)
-    finally:
-        pass
+        subprocess.run(compose_down_command, check=False)
