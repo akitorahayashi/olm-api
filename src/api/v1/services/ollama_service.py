@@ -10,12 +10,14 @@ from starlette.concurrency import run_in_threadpool
 
 import ollama
 from src.api.v1.schemas import GenerateResponse
+from src.config.settings import Settings, get_settings
 
 
 class OllamaService:
-    def __init__(self):
+    def __init__(self, settings: Settings):
         host = os.environ.get("OLLAMA_HOST", "http://ollama:11434")
         self.client = ollama.Client(host=host)
+        self.semaphore = asyncio.Semaphore(settings.OLLAMA_CONCURRENT_REQUEST_LIMIT)
 
     async def _chat_stream_generator(self, response_iter):
         """
@@ -71,30 +73,34 @@ class OllamaService:
         stream: bool,
     ):
         """
-        Generates a response from the Ollama model.
+        Generates a response from the Ollama model, with concurrency limiting.
         """
-        chat_response = await run_in_threadpool(
-            self.client.chat,
-            model=model_name,
-            messages=[{"role": "user", "content": prompt}],
-            stream=stream,
-        )
-
-        if stream:
-            return StreamingResponse(
-                self._chat_stream_generator(chat_response),
-                media_type="text/event-stream; charset=utf-8",
-                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+        async with self.semaphore:
+            chat_response = await run_in_threadpool(
+                self.client.chat,
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+                stream=stream,
             )
-        else:
-            if "message" in chat_response and "content" in chat_response["message"]:
-                response_content = chat_response["message"]["content"]
-                return GenerateResponse(response=response_content)
-            else:
-                logging.error(
-                    f"Invalid response structure from Ollama: {chat_response}"
+
+            if stream:
+                return StreamingResponse(
+                    self._chat_stream_generator(chat_response),
+                    media_type="text/event-stream; charset=utf-8",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
                 )
-                raise ValueError("Invalid response structure from Ollama.")
+            else:
+                if (
+                    "message" in chat_response
+                    and "content" in chat_response["message"]
+                ):
+                    response_content = chat_response["message"]["content"]
+                    return GenerateResponse(response=response_content)
+                else:
+                    logging.error(
+                        f"Invalid response structure from Ollama: {chat_response}"
+                    )
+                    raise ValueError("Invalid response structure from Ollama.")
 
     async def pull_model(self, model_name: str, stream: bool):
         """
@@ -127,10 +133,18 @@ class OllamaService:
         await run_in_threadpool(self.client.delete, model=model_name)
 
 
-@lru_cache(maxsize=1)
+@lru_cache
 def get_ollama_service() -> OllamaService:
     """
     Dependency provider for the OllamaService.
-    Using lru_cache(maxsize=1) makes the singleton intent explicit.
+
+    This function returns a singleton instance of the OllamaService.
+    Using @lru_cache without arguments ensures that the same instance is returned
+    for every call, making it a singleton across the application's lifecycle.
+
+    It directly calls get_settings() to obtain the application settings.
+    This is a clean and testable way to inject dependencies into a singleton,
+    as the get_settings dependency can be mocked during tests.
     """
-    return OllamaService()
+    settings = get_settings()
+    return OllamaService(settings)

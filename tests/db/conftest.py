@@ -44,7 +44,9 @@ def db_setup(
 
     if is_master:
         load_dotenv()
-        os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-built-in-model"
+        # Set a dummy model for DB tests, which don't need a real one.
+        # This is required for Alembic's env.py to validate settings.
+        os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-db-model"
 
         container = PostgresContainer(
             "postgres:16-alpine",

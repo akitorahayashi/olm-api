@@ -14,6 +14,7 @@ class Settings(BaseSettings):
 
     BUILT_IN_OLLAMA_MODEL: str
     DATABASE_URL: str
+    OLLAMA_CONCURRENT_REQUEST_LIMIT: int = 2
 
 
 @lru_cache
