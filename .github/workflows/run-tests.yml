@@ -39,7 +39,7 @@ jobs:
         env:
           # Set environment variables for Docker Compose tests
           BUILT_IN_OLLAMA_MODEL: ${{ secrets.BUILT_IN_OLLAMA_MODEL || 'qwen3:0.6b' }}
-          HOST_BIND_IP: ${{ secrets.HOST_BIND_IP || '0.0.0.0' }}
+          HOST_BIND_IP: ${{ secrets.HOST_BIND_IP || '127.0.0.1' }}
           HOST_PORT: ${{ secrets.HOST_PORT || '8001' }}
           NUM_OF_UVICORN_WORKERS: ${{ secrets.NUM_OF_UVICORN_WORKERS || '1' }}
           CONCURRENT_REQUEST_LIMIT: ${{ secrets.CONCURRENT_REQUEST_LIMIT || '2' }}
