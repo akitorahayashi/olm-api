@@ -66,12 +66,12 @@ def e2e_setup() -> Generator[None, None, None]:
             "build",
         ]
         subprocess.run(build_command, check=True, timeout=300)
-        
+
         # Start services, ensuring cleanup on failure
         print("\n🚀 Starting E2E services...")
         print(f"Health check URL: {health_url}")
         try:
-            result = subprocess.run(
+            subprocess.run(
                 compose_up_command,
                 check=True,
                 timeout=120,

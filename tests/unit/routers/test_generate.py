@@ -17,7 +17,7 @@ async def test_generate_with_model_name(
     Test that the /generate endpoint uses the model specified in the request.
     """
     import os
-    
+
     # Arrange
     prompt = "Test prompt"
     model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
@@ -27,7 +27,8 @@ async def test_generate_with_model_name(
 
     # Act
     response = await unit_test_client.post(
-        "/api/v1/generate", json={"prompt": prompt, "model_name": model_name, "stream": False}
+        "/api/v1/generate",
+        json={"prompt": prompt, "model_name": model_name, "stream": False},
     )
 
     # Assert

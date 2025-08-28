@@ -19,7 +19,7 @@ async def test_generate_logs_prompt_and_response(
 ):
     """Test that a successful non-streaming request logs the prompt and response."""
     import os
-    
+
     # Arrange
     prompt = "Hello, world!"
     expected_response = "This is a test response."
@@ -30,7 +30,8 @@ async def test_generate_logs_prompt_and_response(
 
     # Act
     response = await client.post(
-        "/api/v1/generate", json={"prompt": prompt, "model_name": model_name, "stream": False}
+        "/api/v1/generate",
+        json={"prompt": prompt, "model_name": model_name, "stream": False},
     )
 
     # Assert
@@ -50,7 +51,7 @@ async def test_generate_streaming_logs_full_response(
 ):
     """Test that a successful streaming request logs the complete concatenated response."""
     import os
-    
+
     # Arrange
     prompt = "Stream me a story."
     model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
@@ -73,7 +74,8 @@ async def test_generate_streaming_logs_full_response(
 
     # Act
     response = await client.post(
-        "/api/v1/generate", json={"prompt": prompt, "model_name": model_name, "stream": True}
+        "/api/v1/generate",
+        json={"prompt": prompt, "model_name": model_name, "stream": True},
     )
 
     # Assert
@@ -102,7 +104,7 @@ async def test_generate_api_error_is_logged(
     that the error details are logged.
     """
     import os
-    
+
     # Arrange
     prompt = "This will cause an error."
     error_message = "Ollama go boom"
@@ -112,7 +114,10 @@ async def test_generate_api_error_is_logged(
     # Act
     # The global exception handler will catch the exception and return a 500
     with pytest.raises(Exception, match=error_message):
-        await client.post("/api/v1/generate", json={"prompt": prompt, "model_name": model_name, "stream": False})
+        await client.post(
+            "/api/v1/generate",
+            json={"prompt": prompt, "model_name": model_name, "stream": False},
+        )
 
     # Assert
     log_entry = db_session.query(Log).one()

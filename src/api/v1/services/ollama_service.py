@@ -46,7 +46,6 @@ class OllamaService:
             logging.exception("Error during Ollama chat response streaming.")
             raise
 
-
     async def generate_response(
         self,
         prompt: str,
@@ -80,13 +79,11 @@ class OllamaService:
                     )
                     raise ValueError("Invalid response structure from Ollama.")
 
-
     async def list_models(self):
         """
         Lists all models available locally in Ollama.
         """
         return await run_in_threadpool(self.client.list)
-
 
 
 @lru_cache

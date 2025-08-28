@@ -56,7 +56,7 @@ def perf_setup() -> Generator[None, None, None]:
         print("\n🚀 Starting Performance Test services...")
         print(f"Health check URL: {health_url}")
         try:
-            result = subprocess.run(
+            subprocess.run(
                 compose_up_command,
                 check=True,
                 timeout=300,

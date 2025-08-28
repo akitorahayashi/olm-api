@@ -1,6 +1,5 @@
 import asyncio
 import os
-import sys
 import time
 
 import httpx
@@ -21,7 +20,7 @@ async def make_api_request(
     try:
         response = await client.post(url, json=payload)
         elapsed = time.time() - start_time
-        
+
         if response.status_code != 200:
             raise Exception(
                 f"Request {request_number} failed with status {response.status_code}: {response.text}"
@@ -36,10 +35,14 @@ async def make_api_request(
         return response_data, elapsed
     except Exception as e:
         elapsed = time.time() - start_time
-        raise Exception(f"Request {request_number} failed after {elapsed:.2f}s: {str(e)}")
+        raise Exception(
+            f"Request {request_number} failed after {elapsed:.2f}s: {str(e)}"
+        )
 
 
-async def run_concurrent_requests_with_timing(num_requests: int) -> tuple[float, list[float]]:
+async def run_concurrent_requests_with_timing(
+    num_requests: int,
+) -> tuple[float, list[float]]:
     """
     Run concurrent requests and return total elapsed time and individual request times.
     """
@@ -63,16 +66,18 @@ async def run_concurrent_requests_with_timing(num_requests: int) -> tuple[float,
                 result, individual_time = await make_api_request(
                     client, generate_url, request_payload, request_num
                 )
-            
+
             request_times.append(individual_time)
-            
+
             # Validate response
             if (
                 not isinstance(result.get("response"), str)
                 or len(result.get("response", "")) == 0
             ):
-                raise Exception(f"Request {request_num} returned invalid response content: {result}")
-            
+                raise Exception(
+                    f"Request {request_num} returned invalid response content: {result}"
+                )
+
             return result
         except Exception as e:
             raise Exception(f"Request {request_num} failed: {str(e)}")
@@ -83,7 +88,7 @@ async def run_concurrent_requests_with_timing(num_requests: int) -> tuple[float,
 
     total_elapsed = time.time() - start_time
     request_times.sort()  # Sort for easier analysis
-    
+
     return total_elapsed, request_times
 
 
@@ -93,10 +98,10 @@ async def test_1_concurrent_request():
     """Test performance with 1 concurrent request"""
     num_requests = 1
     total_time, request_times = await run_concurrent_requests_with_timing(num_requests)
-    
+
     print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
     print(f"✅ [CONCURRENCY TEST: {num_requests} request] COMPLETED\n")
-    
+
     assert total_time > 0, "Test should take some time to complete"
 
 
@@ -105,10 +110,10 @@ async def test_2_concurrent_requests():
     """Test performance with 2 concurrent requests"""
     num_requests = 2
     total_time, request_times = await run_concurrent_requests_with_timing(num_requests)
-    
+
     print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
     print(f"✅ [CONCURRENCY TEST: {num_requests} requests] COMPLETED\n")
-    
+
     assert total_time > 0, "Test should take some time to complete"
 
 
@@ -117,10 +122,10 @@ async def test_5_concurrent_requests():
     """Test performance with 5 concurrent requests"""
     num_requests = 5
     total_time, request_times = await run_concurrent_requests_with_timing(num_requests)
-    
+
     print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
     print(f"✅ [CONCURRENCY TEST: {num_requests} requests] COMPLETED\n")
-    
+
     assert total_time > 0, "Test should take some time to complete"
 
 
@@ -130,8 +135,8 @@ async def test_10_concurrent_requests():
     """Test performance with 10 concurrent requests"""
     num_requests = 10
     total_time, request_times = await run_concurrent_requests_with_timing(num_requests)
-    
+
     print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
     print(f"✅ [CONCURRENCY TEST: {num_requests} requests] COMPLETED\n")
-    
+
     assert total_time > 0, "Test should take some time to complete"
