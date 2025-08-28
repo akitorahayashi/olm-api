@@ -29,6 +29,12 @@ services:
       - OLLAMA_HOST=0.0.0.0
     volumes:
       - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   api:
@@ -43,10 +49,11 @@ services:
       db:
         condition: service_healthy
       ollama:
-        # Change condition from service_started to service_healthy
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
     healthcheck:
       test: [ "CMD", "python", "-c", "import sys, os, urllib.request; path=os.environ.get('HEALTHCHECK_PATH', '/health'); sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{path}') else sys.exit(1)" ]
       interval: 30s

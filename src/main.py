@@ -37,30 +37,12 @@ async def lifespan(app: FastAPI):
         # 1. Get the current active model from the DB
         active_model_name = setting_service.get_active_model(db)
 
-        # 2. Get all available local models from Ollama (with retry)
-        import time
-
-        max_retries = 30
-        for attempt in range(max_retries):
-            try:
-                local_models_data = ollama_service.list()
-                break
-            except Exception as e:
-                if attempt == max_retries - 1:
-                    raise e
-                print(
-                    f"Waiting for Ollama service... attempt {attempt + 1}/{max_retries}"
-                )
-                time.sleep(2)
-        local_model_names = {
-            getattr(
-                model, "model", model.get("name") if hasattr(model, "get") else None
-            )
-            for model in local_models_data.get("models", [])
-            if getattr(
-                model, "model", model.get("name") if hasattr(model, "get") else None
-            )
-        }
+        # 2. Get all available local models from Ollama
+        local_models_data = ollama_service.list()
+        local_model_names = set()
+        for model in local_models_data.models:
+            if hasattr(model, 'model'):
+                local_model_names.add(model.model)
 
         # 3. Validate if the active model is available
         is_active_model_valid = (
