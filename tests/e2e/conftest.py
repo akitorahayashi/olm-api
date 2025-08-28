@@ -30,7 +30,9 @@ def e2e_setup() -> Generator[None, None, None]:
         "-f",
         "docker-compose.yml",
         "-f",
-        "docker-compose.override.yml",
+        "docker-compose.test.override.yml",
+        "--project-name",
+        "olm-api-test",
         "up",
         "-d",
     ]
@@ -41,7 +43,9 @@ def e2e_setup() -> Generator[None, None, None]:
         "-f",
         "docker-compose.yml",
         "-f",
-        "docker-compose.override.yml",
+        "docker-compose.test.override.yml",
+        "--project-name",
+        "olm-api-test",
         "down",
         "--remove-orphans",
     ]
@@ -56,7 +60,9 @@ def e2e_setup() -> Generator[None, None, None]:
             "-f",
             "docker-compose.yml",
             "-f",
-            "docker-compose.override.yml",
+            "docker-compose.test.override.yml",
+            "--project-name",
+            "olm-api-test",
             "build",
         ]
         subprocess.run(build_command, check=True, timeout=300)
@@ -100,7 +106,9 @@ def e2e_setup() -> Generator[None, None, None]:
                     "-f",
                     "docker-compose.yml",
                     "-f",
-                    "docker-compose.override.yml",
+                    "docker-compose.test.yml",
+                    "--project-name",
+                    "olm-api-test",
                     "logs",
                     "api",
                     "ollama",

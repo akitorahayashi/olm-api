@@ -1,5 +1,6 @@
 import asyncio
 import os
+import sys
 import time
 
 import httpx
@@ -11,13 +12,16 @@ pytestmark = pytest.mark.asyncio
 
 async def make_api_request(
     client: httpx.AsyncClient, url: str, payload: dict, request_number: int
-) -> dict:
+) -> tuple[dict, float]:
     """
-    Make a single API request and return the response data.
+    Make a single API request and return the response data and elapsed time.
     Raises exception if the request fails.
     """
+    start_time = time.time()
     try:
         response = await client.post(url, json=payload)
+        elapsed = time.time() - start_time
+        
         if response.status_code != 200:
             raise Exception(
                 f"Request {request_number} failed with status {response.status_code}: {response.text}"
@@ -29,15 +33,15 @@ async def make_api_request(
                 f"Request {request_number} returned invalid response format: {response_data}"
             )
 
-        return response_data
+        return response_data, elapsed
     except Exception as e:
-        raise Exception(f"Request {request_number} failed: {str(e)}")
+        elapsed = time.time() - start_time
+        raise Exception(f"Request {request_number} failed after {elapsed:.2f}s: {str(e)}")
 
 
-async def run_concurrent_requests(num_requests: int) -> float:
+async def run_concurrent_requests_with_timing(num_requests: int) -> tuple[float, list[float]]:
     """
-    Run concurrent requests and return the elapsed time.
-    Raises exception if any request fails, including the request number.
+    Run concurrent requests and return total elapsed time and individual request times.
     """
     host_port = os.getenv("HOST_PORT", "8000")
     model_name = os.getenv("BUILT_IN_OLLAMA_MODEL")
@@ -50,51 +54,83 @@ async def run_concurrent_requests(num_requests: int) -> float:
     }
 
     start_time = time.time()
+    request_times = []
 
-    async with httpx.AsyncClient(timeout=120) as client:
-        # Create tasks for concurrent requests
-        tasks = [
-            make_api_request(client, generate_url, request_payload, i + 1)
-            for i in range(num_requests)
-        ]
+    async def request_with_timing(request_num):
+        try:
+            async with httpx.AsyncClient(timeout=120) as client:
+                result, individual_time = await make_api_request(
+                    client, generate_url, request_payload, request_num
+                )
+            
+            request_times.append(individual_time)
+            
+            # Validate response
+            if (
+                not isinstance(result.get("response"), str)
+                or len(result.get("response", "")) == 0
+            ):
+                raise Exception(f"Request {request_num} returned invalid response content: {result}")
+            
+            return result
+        except Exception as e:
+            raise Exception(f"Request {request_num} failed: {str(e)}")
 
-        # Wait for all requests to complete
-        results = await asyncio.gather(*tasks)
+    # Create and run tasks
+    tasks = [request_with_timing(i + 1) for i in range(num_requests)]
+    await asyncio.gather(*tasks)
 
-    elapsed_time = time.time() - start_time
+    total_elapsed = time.time() - start_time
+    request_times.sort()  # Sort for easier analysis
+    
+    return total_elapsed, request_times
 
-    # Validate all responses
-    for i, result in enumerate(results):
-        if (
-            not isinstance(result.get("response"), str)
-            or len(result.get("response", "")) == 0
-        ):
-            raise Exception(
-                f"Request {i+1} returned invalid response content: {result}"
-            )
 
-    return elapsed_time
+# Individual test functions for each concurrency level
+@pytest.mark.asyncio
+async def test_1_concurrent_request():
+    """Test performance with 1 concurrent request"""
+    num_requests = 1
+    total_time, request_times = await run_concurrent_requests_with_timing(num_requests)
+    
+    print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
+    print(f"✅ [CONCURRENCY TEST: {num_requests} request] COMPLETED\n")
+    
+    assert total_time > 0, "Test should take some time to complete"
 
 
 @pytest.mark.asyncio
-async def test_concurrency_performance():
-    """Test concurrent requests with 1 and 5 requests sequentially"""
-    test_cases = [1, 5]  # 10, 50  # テスト実装段階のため最初は少数に限定
+async def test_2_concurrent_requests():
+    """Test performance with 2 concurrent requests"""
+    num_requests = 2
+    total_time, request_times = await run_concurrent_requests_with_timing(num_requests)
+    
+    print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
+    print(f"✅ [CONCURRENCY TEST: {num_requests} requests] COMPLETED\n")
+    
+    assert total_time > 0, "Test should take some time to complete"
 
-    print("\n🚀 パフォーマンステスト開始")
-    print("=" * 50)
 
-    for i, num_requests in enumerate(test_cases):
-        test_name = f"test_concurrent_requests_{num_requests}"
-        print(f"\n🧪 テスト {i+1}/{len(test_cases)}: {num_requests}回の同時リクエスト")
+@pytest.mark.asyncio
+async def test_5_concurrent_requests():
+    """Test performance with 5 concurrent requests"""
+    num_requests = 5
+    total_time, request_times = await run_concurrent_requests_with_timing(num_requests)
+    
+    print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
+    print(f"✅ [CONCURRENCY TEST: {num_requests} requests] COMPLETED\n")
+    
+    assert total_time > 0, "Test should take some time to complete"
 
-        try:
-            elapsed = await run_concurrent_requests(num_requests)
-            print(f"✅ {num_requests}回の同時リクエスト: {elapsed:.2f}秒")
-        except Exception as e:
-            print(f"❌ テスト関数 '{test_name}' で失敗しました")
-            print(f"❌ 例外の詳細: {str(e)}")
-            pytest.fail(f"テスト関数 '{test_name}' で失敗: {str(e)}")
 
-    print("\n🎉 すべてのパフォーマンステストが成功しました！")
-    print("=" * 50)
+@pytest.mark.asyncio
+# @pytest.mark.skip(reason="Heavy load test - enable manually if needed")
+async def test_10_concurrent_requests():
+    """Test performance with 10 concurrent requests"""
+    num_requests = 10
+    total_time, request_times = await run_concurrent_requests_with_timing(num_requests)
+    
+    print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
+    print(f"✅ [CONCURRENCY TEST: {num_requests} requests] COMPLETED\n")
+    
+    assert total_time > 0, "Test should take some time to complete"

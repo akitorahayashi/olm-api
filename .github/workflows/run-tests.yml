@@ -41,10 +41,10 @@ jobs:
           OLLAMA_CONCURRENT_REQUEST_LIMIT=${{ secrets.OLLAMA_CONCURRENT_REQUEST_LIMIT || '2' }}
           OLLAMA_NUM_PARALLEL=${{ secrets.OLLAMA_NUM_PARALLEL || '2' }}
           OLLAMA_MAX_LOADED_MODELS=${{ secrets.OLLAMA_MAX_LOADED_MODELS || '1' }}
-          DATABASE_URL=${{ secrets.DATABASE_URL || 'postgresql+psycopg://user:password@db:5432/pvt-llm-api' }}
+          DATABASE_URL=${{ secrets.DATABASE_URL || 'postgresql+psycopg://user:password@db:5432/olm-api' }}
           POSTGRES_USER=${{ secrets.POSTGRES_USER || 'user' }}
           POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD || 'password' }}
-          POSTGRES_DB_NAME=${{ secrets.POSTGRES_DB_NAME || 'pvt-llm-api' }}
+          POSTGRES_DB_NAME=${{ secrets.POSTGRES_DB_NAME || 'olm-api' }}
           SUDO=${{ secrets.SUDO || 'true' }}
           EOF
 

@@ -1,0 +1,25 @@
+# Test override - can be configured to use host Ollama for GPU acceleration in perf tests
+services:
+  db:
+    volumes:
+      # Use separate test database volume
+      - postgres_data_test:/var/lib/postgresql/data
+
+  # Ollama service - comment out this entire section to use host Ollama for perf tests
+  ollama:
+    volumes:
+      # Share ollama volume with prod to avoid re-downloading models
+      - ollama_data_prod:/root/.ollama
+
+  api:
+    # Uncomment the following for host Ollama perf tests (requires OLLAMA_HOST=http://host.docker.internal:11434)
+    # depends_on:
+    #   db:
+    #     condition: service_healthy
+    # environment:
+    #   - OLLAMA_HOST=http://host.docker.internal:11434
+
+volumes:
+  postgres_data_test:
+    driver: local
+  # ollama_data_prod is defined in main docker-compose.yml
