@@ -5,7 +5,6 @@ from typing import AsyncGenerator, Generator, Optional
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest
-from dotenv import load_dotenv
 from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
@@ -44,7 +43,6 @@ def db_setup(
     db_url_value: str
 
     if is_master:
-        load_dotenv()
         # Set a dummy model for DB tests, which don't need a real one.
         # This is required for Alembic's env.py to validate settings.
         os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-db-model"

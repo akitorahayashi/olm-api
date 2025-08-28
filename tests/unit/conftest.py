@@ -28,18 +28,20 @@ def mock_ollama_service() -> MagicMock:
 @pytest.fixture
 async def unit_test_client(monkeypatch) -> AsyncGenerator[AsyncClient, None]:
     """
-    Provides a test client that operates independently of the database.
+    Provides a test client for unit tests, isolated from the database.
 
-    This fixture achieves database isolation by:
-    1.  **Mocking the Setting Service**: It uses `monkeypatch` to replace the
-        `get_active_model` and `set_active_model` functions in the `setting_service`
-        module. This prevents any database calls for model settings.
+    This fixture ensures database isolation through two main actions:
+    1.  **Setting Environment Variables**: It sets dummy values for `DATABASE_URL`
+        and `BUILT_IN_OLLAMA_MODEL` to satisfy Pydantic's settings validation
+        without requiring a real environment file.
 
-    2.  **Disabling Logging Middleware**: It uses `monkeypatch` to neutralize the
-        `_safe_log` method of the `LoggingMiddleware`, preventing database writes.
+    2.  **Disabling Logging Middleware**: It neutralizes the `_safe_log` method
+        of the `LoggingMiddleware` by replacing it with a function that does
+        nothing. This prevents any attempts to write logs to the database during
+        unit tests.
 
     Yields:
-        An `AsyncClient` configured for database-free testing.
+        An `AsyncClient` configured for database-free unit testing.
     """
     # 1. Set dummy environment variables to satisfy Pydantic settings
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://test:test@localhost/test")

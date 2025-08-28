@@ -45,8 +45,7 @@ services:
       ollama:
         condition: service_healthy
     # OLLAMA_HOST is read from .env.dev - change it there to switch between container/host
-    # Use default entrypoint
-    command: []
+    # Use default entrypoint from Dockerfile
 
 volumes:
   postgres_data_dev:

@@ -17,40 +17,58 @@ class OllamaService:
     def __init__(self, settings: Settings):
         host = os.environ.get("OLLAMA_HOST", "http://ollama:11434")
         self.client = ollama.Client(host=host)
-        self.semaphore = asyncio.Semaphore(settings.OLLAMA_CONCURRENT_REQUEST_LIMIT)
 
-    async def _chat_stream_generator(self, response_iter):
+        # Use BoundedSemaphore and add a guard clause for the limit
+        if settings.OLLAMA_CONCURRENT_REQUEST_LIMIT < 1:
+            raise ValueError("OLLAMA_CONCURRENT_REQUEST_LIMIT must be at least 1")
+        self.semaphore = asyncio.BoundedSemaphore(
+            settings.OLLAMA_CONCURRENT_REQUEST_LIMIT
+        )
+
+    async def _chat_stream_generator(self, prompt: str, model_name: str):
         """
-        Processes a streaming response from `ollama.chat` and yields SSE events.
-        Handles client disconnects silently.
+        Generates a streaming response from `ollama.chat` under semaphore control.
+        It acquires the semaphore, makes the API call, yields SSE events, and
+        ensures the semaphore is released when the stream is closed.
         """
-        try:
-            iterator = await run_in_threadpool(iter, response_iter)
-            while True:
-                try:
-                    chunk = await run_in_threadpool(next, iterator)
-                    content = chunk.get("message", {}).get("content")
-                    if content:
-                        sse_data = {"response": content}
-                        yield f"data: {json.dumps(sse_data)}\n\n"
-                except StopIteration:
-                    break
-        except asyncio.CancelledError:
-            return
-        except ollama.ResponseError as e:
-            error_message = e.args[0] if e.args else "Unknown error"
-            status_code = e.args[1] if len(e.args) > 1 else "N/A"
-            logging.error(
-                f"Ollama API request failed during streaming. Status: {status_code}, "
-                f"Response: {error_message}"
-            )
-            raise
-        except httpx.RequestError as e:
-            logging.error(f"Unable to connect to Ollama API during streaming: {e}")
-            raise
-        except Exception:
-            logging.exception("An unexpected error occurred during Ollama streaming.")
-            raise
+        async with self.semaphore:
+            try:
+                response_iter = await run_in_threadpool(
+                    self.client.chat,
+                    model=model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    stream=True,
+                )
+
+                iterator = await run_in_threadpool(iter, response_iter)
+                while True:
+                    try:
+                        chunk = await run_in_threadpool(next, iterator)
+                        content = chunk.get("message", {}).get("content")
+                        if content:
+                            sse_data = {"response": content}
+                            yield f"data: {json.dumps(sse_data)}\n\n"
+                    except StopIteration:
+                        break
+            except asyncio.CancelledError:
+                # This is a normal part of the client disconnecting
+                return
+            except ollama.ResponseError as e:
+                error_message = e.args[0] if e.args else "Unknown error"
+                status_code = e.args[1] if len(e.args) > 1 else "N/A"
+                logging.error(
+                    f"Ollama API request failed during streaming. Status: {status_code}, "
+                    f"Response: {error_message}"
+                )
+                raise
+            except httpx.RequestError as e:
+                logging.error(f"Unable to connect to Ollama API during streaming: {e}")
+                raise
+            except Exception:
+                logging.exception(
+                    "An unexpected error occurred during Ollama streaming."
+                )
+                raise
 
     async def generate_response(
         self,
@@ -61,36 +79,36 @@ class OllamaService:
         """
         Generates a response from the Ollama model, with concurrency limiting.
         """
-        async with self.semaphore:
-            try:
-                chat_response = await run_in_threadpool(
-                    self.client.chat,
-                    model=model_name,
-                    messages=[{"role": "user", "content": prompt}],
-                    stream=stream,
-                )
-            except ollama.ResponseError as e:
-                error_message = e.args[0] if e.args else "Unknown error"
-                status_code = e.args[1] if len(e.args) > 1 else "N/A"
-                logging.error(
-                    f"Ollama API request failed. Status: {status_code}, "
-                    f"Response: {error_message}"
-                )
-                raise
-            except httpx.RequestError as e:
-                logging.error(f"Unable to connect to Ollama API: {e}")
-                raise
-            except Exception:
-                logging.exception("An unexpected error occurred in OllamaService")
-                raise
+        if stream:
+            return StreamingResponse(
+                self._chat_stream_generator(prompt, model_name),
+                media_type="text/event-stream; charset=utf-8",
+                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            )
+        else:
+            async with self.semaphore:
+                try:
+                    chat_response = await run_in_threadpool(
+                        self.client.chat,
+                        model=model_name,
+                        messages=[{"role": "user", "content": prompt}],
+                        stream=False,
+                    )
+                except ollama.ResponseError as e:
+                    error_message = e.args[0] if e.args else "Unknown error"
+                    status_code = e.args[1] if len(e.args) > 1 else "N/A"
+                    logging.error(
+                        f"Ollama API request failed. Status: {status_code}, "
+                        f"Response: {error_message}"
+                    )
+                    raise
+                except httpx.RequestError as e:
+                    logging.error(f"Unable to connect to Ollama API: {e}")
+                    raise
+                except Exception:
+                    logging.exception("An unexpected error occurred in OllamaService")
+                    raise
 
-            if stream:
-                return StreamingResponse(
-                    self._chat_stream_generator(chat_response),
-                    media_type="text/event-stream; charset=utf-8",
-                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
-                )
-            else:
                 if "message" in chat_response and "content" in chat_response["message"]:
                     response_content = chat_response["message"]["content"]
                     return GenerateResponse(response=response_content)

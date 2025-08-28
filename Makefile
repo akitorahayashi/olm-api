@@ -52,14 +52,14 @@ help: ## Show this help message
 setup: ## Initialize project: install dependencies, create .env file and pull required Docker images.
 	@echo "Installing python dependencies with Poetry..."
 	@poetry install --no-root
-	@echo "Creating environment file..."
+	@echo "Checking for environment file..."
 	@if [ ! -f .env ]; then \
-		echo "Creating .env from .env.example..." ; \
+		echo "Creating .env from .env.example..."; \
 		cp .env.example .env; \
+		echo "✅ .env file created."; \
 	else \
-		echo ".env already exists. Skipping creation."; \
+		echo "✅ .env file already exists. Skipped creation."; \
 	fi
-	@echo "✅ Environment file created (.env)"
 	@echo "💡 You can customize .env for your specific needs:"
 	@echo "   📝 Change OLLAMA_HOST to switch between container/host Ollama"
 	@echo "   📝 Adjust other settings as needed"
@@ -145,6 +145,11 @@ lint: ## Lint code with black check and ruff
 # ==============================================================================
 # TESTING
 # ==============================================================================
+TEST_SUDO_PREFIX :=
+ifeq ($(SUDO),true)
+	# Use 'sudo -E' to preserve environment variables for pytest
+	TEST_SUDO_PREFIX := sudo -E
+endif
 
 .PHONY: test
 test: unit-test build-test db-test e2e-test## Run the full test suite
@@ -152,22 +157,22 @@ test: unit-test build-test db-test e2e-test## Run the full test suite
 .PHONY: unit-test
 unit-test: ## Run the fast, database-independent unit tests locally
 	@echo "Running unit tests..."
-	@poetry run python -m pytest tests/unit -s
+	@poetry run pytest tests/unit -s
 
 .PHONY: db-test
 db-test: ## Run the slower, database-dependent tests locally
 	@echo "Running database tests..."
-	@poetry run python -m pytest tests/db -s
+	@$(TEST_SUDO_PREFIX) poetry run pytest tests/db -s
 
 .PHONY: e2e-test
 e2e-test: ## Run end-to-end tests against a live application stack
 	@echo "Running end-to-end tests..."
-	@poetry run python -m pytest tests/e2e -s
+	@$(TEST_SUDO_PREFIX) poetry run pytest tests/e2e -s
 
 .PHONY: perf-test
 perf-test: ## Run performance tests with concurrent request measurements
 	@echo "Running performance tests..."
-	@poetry run python -m pytest tests/perf -s
+	@$(TEST_SUDO_PREFIX) poetry run pytest tests/perf -s
 
 .PHONY: build-test
 build-test: ## Build Docker image for testing without leaving artifacts

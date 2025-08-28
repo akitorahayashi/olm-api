@@ -68,7 +68,8 @@ This project follows the **DRY (Don't Repeat Yourself)** principle by defining a
 Key variables include:
 - **`HOST_BIND_IP`**: The IP address on the host machine to which the API server port will bind. Use `127.0.0.1` for local access only (recommended for development) and `0.0.0.0` to allow external access (for production).
 - **`DATABASE_URL`**: The full connection string for the PostgreSQL database.
-- **`BUILT_IN_OLLAMA_MODEL`**: The name of the Ollama model to be baked into the Docker image during the build process. This model will be active by default on server startup and cannot be deleted via the API.
+- **`BUILT_IN_OLLAMA_MODEL`**: The name of the Ollama model to be baked into the Docker image during the build process. This ensures the model is available to the API, but clients must still specify the desired model in each request.
+- **`OLLAMA_CONCURRENT_REQUEST_LIMIT`**: An integer that controls the maximum number of concurrent requests allowed to the Ollama service. This prevents the LLM from being overloaded. It defaults to `1`.
 
 ## API Specification
 

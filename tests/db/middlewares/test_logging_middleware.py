@@ -112,14 +112,17 @@ async def test_generate_api_error_is_logged(
     mock_ollama_service.generate_response.side_effect = Exception(error_message)
 
     # Act
-    # The global exception handler will catch the exception and return a 500
-    with pytest.raises(Exception, match=error_message):
-        await client.post(
-            "/api/v1/generate",
-            json={"prompt": prompt, "model_name": model_name, "stream": False},
-        )
+    # The global exception handler will catch the exception and return a 500 response.
+    response = await client.post(
+        "/api/v1/generate",
+        json={"prompt": prompt, "model_name": model_name, "stream": False},
+    )
 
     # Assert
+    # The client should receive a 500 status code, not an exception.
+    assert response.status_code == 500
+
+    # Verify that the error was logged to the database
     log_entry = db_session.query(Log).one()
     assert log_entry is not None
     assert (

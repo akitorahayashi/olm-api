@@ -5,7 +5,6 @@ from typing import Generator
 
 import httpx
 import pytest
-from dotenv import load_dotenv
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -13,8 +12,7 @@ def perf_setup() -> Generator[None, None, None]:
     """
     Manages the lifecycle of the application for performance testing.
     """
-    # Load the environment from the symlinked .env file
-    load_dotenv(".env", override=True)
+    # Environment variables are now controlled by the docker-compose.test.override.yml
     host_port = os.getenv("HOST_PORT", "8000")
     health_url = f"http://localhost:{host_port}/health"
 
@@ -25,8 +23,6 @@ def perf_setup() -> Generator[None, None, None]:
     # Define compose commands
     compose_up_command = docker_command + [
         "compose",
-        "--env-file",
-        ".env",
         "-f",
         "docker-compose.yml",
         "-f",
@@ -39,8 +35,6 @@ def perf_setup() -> Generator[None, None, None]:
     ]
     compose_down_command = docker_command + [
         "compose",
-        "--env-file",
-        ".env",
         "-f",
         "docker-compose.yml",
         "-f",
@@ -77,17 +71,20 @@ def perf_setup() -> Generator[None, None, None]:
                     print("✅ API is healthy!")
                     is_healthy = True
                     break
+                else:
+                    print(
+                        f"⏳ API is up (status {response.status_code}), but not healthy yet. Retrying..."
+                    )
             except httpx.RequestError as e:
                 print(f"⏳ API not yet healthy, retrying... Error: {e}")
-                time.sleep(5)
+            # Sleep at the end of the loop to prevent busy-waiting
+            time.sleep(5)
 
         if not is_healthy:
             subprocess.run(
                 docker_command
                 + [
                     "compose",
-                    "--env-file",
-                    ".env",
                     "-f",
                     "docker-compose.yml",
                     "-f",
