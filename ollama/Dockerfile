@@ -20,5 +20,5 @@ RUN ollama serve > /dev/null 2>&1 & \
     ollama pull ${BUILT_IN_OLLAMA_MODEL}
 
 # Add a healthcheck to ensure the Ollama server is responsive
-HEALTHCHECK --interval=10s --timeout=5s --start-period=5s --retries=10 \
+HEALTHCHECK --interval=10s --timeout=5s --start-period=300s --retries=30 \
   CMD curl -fsS http://127.0.0.1:11434 >/dev/null || exit 1

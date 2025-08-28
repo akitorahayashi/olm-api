@@ -57,8 +57,6 @@ setup: ## Initialize project: install dependencies, create .env files and pull r
 		if [ ! -f .env.$${env} ]; then \
 			echo "Creating .env.$${env} from .env.example..." ; \
 			cp .env.example .env.$${env}; \
-			sed -i.bak "s|pvt-llm-api|pvt-llm-api-$${env}|g" .env.$${env}; \
-			rm .env.$${env}.bak; \
 		else \
 			echo ".env.$${env} already exists. Skipping creation."; \
 		fi; \
