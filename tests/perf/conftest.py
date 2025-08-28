@@ -94,7 +94,9 @@ def perf_setup() -> Generator[None, None, None]:
                 ]
             )
             # Ensure teardown on health check failure
-            print("\n🛑 Stopping Performance Test services due to health check failure...")
+            print(
+                "\n🛑 Stopping Performance Test services due to health check failure..."
+            )
             subprocess.run(compose_down_command, check=False)
             pytest.fail(f"API did not become healthy within {timeout} seconds.")
 

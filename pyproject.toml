@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "pvt-llm-api"
+name = "olm-api"
 version = "0.1.0"
 description = "A local LLM wrapped as an API for reusable access."
 authors = ["Your Name <you@example.com>"]

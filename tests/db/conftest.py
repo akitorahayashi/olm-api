@@ -48,7 +48,7 @@ def db_setup(
         # Set a dummy model for DB tests, which don't need a real one.
         # This is required for Alembic's env.py to validate settings.
         os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-db-model"
-        
+
         # Enable testcontainers logging to show container startup progress
         logging.getLogger("testcontainers").setLevel(logging.INFO)
         print("\n🚀 Starting PostgreSQL test container...")

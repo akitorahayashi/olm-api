@@ -1,14 +1,12 @@
 services:
   db:
     image: postgres:16-alpine
-    ports:
-      - "127.0.0.1:5432:5432"
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB_NAME}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - postgres_data_prod:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB_NAME}" ]
       interval: 10s
@@ -17,7 +15,7 @@ services:
     restart: unless-stopped
 
   ollama:
-    image: pvt-llm-api-ollama:latest
+    image: ollama:latest
     build:
       context: ./ollama
       args:
@@ -30,9 +28,9 @@ services:
       - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL:-2}
       - OLLAMA_MAX_LOADED_MODELS=${OLLAMA_MAX_LOADED_MODELS:-1}
     volumes:
-      - ollama_data:/root/.ollama
+      - ollama_data_prod:/root/.ollama
     healthcheck:
-      test: ["CMD", "ollama", "list"]
+      test: [ "CMD", "ollama", "list" ]
       interval: 30s
       timeout: 10s
       retries: 5
@@ -40,13 +38,13 @@ services:
     restart: unless-stopped
 
   api:
-    image: pvt-llm-api:latest
+    image: olm-api:latest
     build:
       context: .
       dockerfile: Dockerfile
       target: runner
     ports:
-      - "${HOST_BIND_IP:-127.0.0.1}:${HOST_PORT:-8000}:8000"
+      - "${HOST_BIND_IP}:${HOST_PORT}:8000"
     depends_on:
       db:
         condition: service_healthy
@@ -65,7 +63,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data:
+  postgres_data_prod:
     driver: local
-  ollama_data:
+  ollama_data_prod:
     driver: local

@@ -33,7 +33,6 @@ def e2e_setup() -> Generator[None, None, None]:
         "docker-compose.override.yml",
         "up",
         "-d",
-        "--build",
     ]
     compose_down_command = docker_command + [
         "compose",
@@ -48,6 +47,20 @@ def e2e_setup() -> Generator[None, None, None]:
     ]
 
     try:
+        # Build images first to avoid timeout during compose up
+        print("\n🚀 Building docker images...")
+        build_command = docker_command + [
+            "compose",
+            "--env-file",
+            ".env",
+            "-f",
+            "docker-compose.yml",
+            "-f",
+            "docker-compose.override.yml",
+            "build",
+        ]
+        subprocess.run(build_command, check=True, timeout=300)
+        
         # Start services, ensuring cleanup on failure
         print("\n🚀 Starting E2E services...")
         print(f"Health check URL: {health_url}")
@@ -55,8 +68,8 @@ def e2e_setup() -> Generator[None, None, None]:
             result = subprocess.run(
                 compose_up_command,
                 check=True,
-                timeout=300,
-            )  # 5 minutes timeout
+                timeout=120,
+            )  # Reduced to 2 minutes since images are pre-pulled
         except subprocess.CalledProcessError:
             print("\n🛑 compose up failed; performing cleanup...")
             subprocess.run(compose_down_command, check=False)
