@@ -4,9 +4,9 @@ services:
     env_file:
       - .env
     volumes:
-      - postgres_data_prod:/var/lib/postgresql/data
+      - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB_NAME}" ]
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_HOST_DB_NAME}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -45,8 +45,10 @@ services:
         condition: service_healthy
     env_file:
       - .env
+    environment:
+      - POSTGRES_DB_NAME=${POSTGRES_HOST_DB_NAME}
     healthcheck:
-      test: [ "CMD", "python", "-c", "import sys, os, urllib.request; path=os.environ.get('HEALTHCHECK_PATH', '/health'); sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{path}') else sys.exit(1)" ]
+      test: [ "CMD", "python", "-c", "import sys, urllib.request; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health').getcode() == 200 else sys.exit(1)" ]
       interval: 30s
       timeout: 10s
       start_period: 5s
@@ -54,7 +56,7 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres_data_prod:
+  postgres_data:
     driver: local
   ollama_data:
     driver: local
