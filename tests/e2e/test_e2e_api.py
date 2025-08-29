@@ -2,6 +2,10 @@ import os
 
 import httpx
 import pytest
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio
@@ -14,7 +18,7 @@ async def test_generate_endpoint_e2e():
     This test sends a real HTTP request to the running API service and
     validates the response, simulating a basic user interaction.
     """
-    host_port = os.getenv("HOST_PORT", "8000")
+    host_port = os.getenv("TEST_PORT", "8002")
     model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
 
     generate_url = f"http://localhost:{host_port}/api/v1/generate"
@@ -26,6 +30,12 @@ async def test_generate_endpoint_e2e():
 
     async with httpx.AsyncClient(timeout=60) as client:
         response = await client.post(generate_url, json=request_payload)
+
+    # Debug output for failed requests
+    if response.status_code != 200:
+        print(f"Response status: {response.status_code}")
+        print(f"Response headers: {response.headers}")
+        print(f"Response body: {response.text}")
 
     # Assertions
     assert response.status_code == 200

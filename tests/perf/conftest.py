@@ -10,6 +10,11 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# Set environment variables for Docker Compose
+os.environ["HOST_BIND_IP"] = os.getenv("HOST_BIND_IP", "127.0.0.1")
+os.environ["TEST_PORT"] = os.getenv("TEST_PORT", "8002")
+os.environ["BUILT_IN_OLLAMA_MODEL"] = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
+
 
 @pytest.fixture(scope="session", autouse=True)
 def perf_setup() -> Generator[None, None, None]:
