@@ -5,6 +5,10 @@ from typing import Generator
 
 import httpx
 import pytest
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -17,15 +21,12 @@ def e2e_setup() -> Generator[None, None, None]:
     docker_command = ["sudo", "docker"] if use_sudo else ["docker"]
 
     host_bind_ip = os.getenv("HOST_BIND_IP", "127.0.0.1")
-    host_port = os.getenv("HOST_PORT", "8001")
+    host_port = os.getenv("TEST_PORT", "8002")
     health_url = f"http://{host_bind_ip}:{host_port}/health"
 
-    # Define compose commands (environment variables handled by docker-compose.test.override.yml)
-    # Use --env-file /dev/null to prevent reading .env file
+    # Define compose commands
     compose_up_command = docker_command + [
         "compose",
-        "--env-file",
-        "/dev/null",
         "-f",
         "docker-compose.yml",
         "-f",
@@ -37,8 +38,6 @@ def e2e_setup() -> Generator[None, None, None]:
     ]
     compose_down_command = docker_command + [
         "compose",
-        "--env-file",
-        "/dev/null",
         "-f",
         "docker-compose.yml",
         "-f",
@@ -74,8 +73,6 @@ def e2e_setup() -> Generator[None, None, None]:
                 docker_command
                 + [
                     "compose",
-                    "--env-file",
-                    "/dev/null",
                     "-f",
                     "docker-compose.yml",
                     "-f",
