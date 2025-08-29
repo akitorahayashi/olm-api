@@ -1,4 +1,4 @@
-# Private LLM API Server
+# Ollama API
 
 ## Overview
 
