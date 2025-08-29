@@ -5,11 +5,11 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     """
-    環境変数を管理するための設定クラス。
+    A configuration class for managing environment variables.
 
-    このクラスは、アプリケーション全体で使用される設定値を環境変数から読み込みます。
-    Docker Composeがプロジェクトルートの.envファイル（シンボリックリンク）を
-    自動的に読み込むため、ファイルパスを明示的に指定する必要はありません。
+    This class loads configuration values used throughout the application from environment variables.
+    Since Docker Compose automatically loads the .env file (symbolic link) in the project root,
+    it is not necessary to explicitly specify the file path.
     """
 
     BUILT_IN_OLLAMA_MODEL: str

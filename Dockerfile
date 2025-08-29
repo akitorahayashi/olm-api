@@ -71,7 +71,50 @@ RUN --mount=type=cache,target=/tmp/poetry_cache \
 
 
 # ==============================================================================
-# Stage 3: Production
+# Stage 3: Development
+# - Development environment with all dependencies and debugging tools
+# - Includes curl and other development utilities
+# ==============================================================================
+FROM python:3.12-slim AS development
+
+# Install PostgreSQL client and development tools
+RUN apt-get update && apt-get install -y postgresql-client curl && rm -rf /var/lib/apt/lists/*
+
+# Create a non-root user for development
+RUN groupadd -r appgroup && useradd -r -g appgroup -d /home/appuser -m appuser
+
+WORKDIR /app
+RUN chown appuser:appgroup /app
+
+# Copy the development virtual environment from dev-deps stage
+COPY --from=dev-deps /app/.venv ./.venv
+
+# Set the PATH to include the venv's bin directory
+ENV PATH="/app/.venv/bin:${PATH}"
+
+# Copy application code
+COPY --chown=appuser:appgroup src/ ./src
+COPY --chown=appuser:appgroup alembic/ ./alembic
+COPY --chown=appuser:appgroup pyproject.toml .
+COPY --chown=appuser:appgroup entrypoint.sh .
+
+RUN chmod +x entrypoint.sh
+
+# Switch to non-root user
+USER appuser
+
+EXPOSE 8000
+
+# Development healthcheck
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+  CMD python -c "import sys, urllib.request; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health').getcode() == 200 else sys.exit(1)"
+
+ENTRYPOINT ["/app/entrypoint.sh"]
+
+
+
+# ==============================================================================
+# Stage 4: Production
 # - Creates the final, lightweight production image.
 # - Copies the lean venv and only necessary application files.
 # ==============================================================================
@@ -112,12 +155,9 @@ USER appuser
 # Expose the port the app runs on (will be mapped by Docker Compose)
 EXPOSE 8000
 
-# Default healthcheck path
-ENV HEALTHCHECK_PATH=/health
-
 # Healthcheck using only Python's standard library to avoid extra dependencies
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD python -c "import sys, os, urllib.request; sys.exit(0) if urllib.request.urlopen(f'http://localhost:8000{os.environ.get(\"HEALTHCHECK_PATH\")}').getcode() == 200 else sys.exit(1)"
+  CMD python -c "import sys, urllib.request; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health').getcode() == 200 else sys.exit(1)"
 
 # Set the entrypoint script to be executed when the container starts
 ENTRYPOINT ["/app/entrypoint.sh"]

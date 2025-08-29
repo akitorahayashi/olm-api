@@ -2,48 +2,24 @@
 # Environment variables are fixed for development (no .env override)
 services:
   db:
-    volumes:
-      - postgres_data_dev:/var/lib/postgresql/data
-
-  # Built-in Ollama service (always created for easy switching)
-  ollama:
-    image: ollama:latest
-    build:
-      context: ./ollama
-      args:
-        - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
-    entrypoint: ollama
-    command: serve
-    volumes:
-      - ollama_data_dev:/root/.ollama
     healthcheck:
-      test: [ "CMD", "ollama", "list" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DEV_DB_NAME}" ]
+
+  ollama:
+    volumes:
+      - ollama_data:/root/.ollama
 
   api:
     build:
-      target: production
+      target: development
     ports:
       - "${HOST_BIND_IP}:${DEV_PORT}:8000"
     env_file:
       - .env
+    environment:
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DEV_DB_NAME}
+      - POSTGRES_DB_NAME=${POSTGRES_DEV_DB_NAME}
     volumes:
       - .:/app
       - /app/.venv
-    depends_on:
-      db:
-        condition: service_healthy
-      ollama:
-        condition: service_healthy
-    # Environment variables are fixed for development isolation
-    # Use default entrypoint and command from Dockerfile
 
-volumes:
-  postgres_data_dev:
-    driver: local
-  ollama_data_dev:
-    driver: local

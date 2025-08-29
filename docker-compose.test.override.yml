@@ -2,42 +2,19 @@
 # Environment variables are set directly here for test isolation
 services:
   db:
-    volumes:
-      # Use separate test database volume
-      - postgres_data_test:/var/lib/postgresql/data
-
-  # Built-in Ollama service (always created for easy switching)
-  ollama:
-    image: ollama:latest
-    build:
-      context: ./ollama
-      args:
-        - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
-    entrypoint: ollama
-    command: serve
-    volumes:
-      - ollama_data_test:/root/.ollama
     healthcheck:
-      test: [ "CMD", "ollama", "list" ]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 60s
-    restart: unless-stopped
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_TEST_DB_NAME}" ]
+
+  ollama:
+    volumes:
+      - ollama_data:/root/.ollama
 
   api:
-    env_file:
-      - .env
+    build:
+      target: development
     ports:
       - "${HOST_BIND_IP}:${TEST_PORT}:8000"
-    depends_on:
-      db:
-        condition: service_healthy
-      ollama:
-        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_TEST_DB_NAME}
+      - POSTGRES_DB_NAME=${POSTGRES_TEST_DB_NAME}
 
-volumes:
-  postgres_data_test:
-    driver: local
-  ollama_data_test:
-    driver: local
