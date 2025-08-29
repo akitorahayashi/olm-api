@@ -52,7 +52,7 @@ def db_setup(
         print("\n🚀 Starting PostgreSQL test container...")
 
         container = PostgresContainer(
-            "postgres:16-alpine",
+            f"postgres:{os.environ.get('POSTGRES_VERSION', '16-alpine')}",
             driver="psycopg",
             username=os.environ.get("POSTGRES_USER", "user"),
             password=os.environ.get("POSTGRES_PASSWORD", "password"),

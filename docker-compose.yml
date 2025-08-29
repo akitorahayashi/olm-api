@@ -12,6 +12,24 @@ services:
       retries: 5
     restart: unless-stopped
 
+  ollama:
+    image: ollama:latest
+    build:
+      context: ./ollama
+      args:
+        - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
+    entrypoint: ollama
+    command: serve
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: [ "CMD", "ollama", "list" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    restart: unless-stopped
+
   api:
     image: olm-api:latest
     build:
@@ -22,6 +40,8 @@ services:
       - "${HOST_BIND_IP}:${HOST_PORT}:8000"
     depends_on:
       db:
+        condition: service_healthy
+      ollama:
         condition: service_healthy
     env_file:
       - .env
@@ -35,4 +55,6 @@ services:
 
 volumes:
   postgres_data_prod:
+    driver: local
+  ollama_data:
     driver: local
