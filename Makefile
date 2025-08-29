@@ -183,6 +183,6 @@ perf-sequential: ## Run sequential performance tests (interval-based requests)
 build-test: ## Build Docker image for testing without leaving artifacts
 	@echo "Building Docker image for testing (clean build)..."
 	@TEMP_IMAGE_TAG=$$(date +%s)-build-test; \
-	$(DOCKER_CMD) build --target runner --tag temp-build-test:$$TEMP_IMAGE_TAG . && \
+	$(DOCKER_CMD) build --target production --tag temp-build-test:$$TEMP_IMAGE_TAG . && \
 	echo "Build successful. Cleaning up temporary image..." && \
 	$(DOCKER_CMD) rmi temp-build-test:$$TEMP_IMAGE_TAG || true

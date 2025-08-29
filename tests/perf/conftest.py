@@ -5,6 +5,15 @@ from typing import Generator
 
 import httpx
 import pytest
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Set environment variables for Docker Compose
+os.environ["HOST_BIND_IP"] = os.getenv("HOST_BIND_IP", "127.0.0.1")
+os.environ["TEST_PORT"] = os.getenv("TEST_PORT", "8002")
+os.environ["BUILT_IN_OLLAMA_MODEL"] = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -17,7 +26,7 @@ def perf_setup() -> Generator[None, None, None]:
     docker_command = ["sudo", "docker"] if use_sudo else ["docker"]
 
     host_bind_ip = os.getenv("HOST_BIND_IP", "127.0.0.1")
-    host_port = os.getenv("HOST_PORT", "8001")
+    host_port = os.getenv("TEST_PORT", "8002")
     health_url = f"http://{host_bind_ip}:{host_port}/health"
 
     # Define compose commands (environment variables handled by docker-compose.test.override.yml)
