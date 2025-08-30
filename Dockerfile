@@ -1,47 +1,9 @@
 # syntax=docker/dockerfile:1.7-labs
 # ==============================================================================
-# Stage 1: Dev Dependencies
-# - Installs ALL dependencies (including development) to create a cached layer
-#   that can be leveraged by CI/CD for linting, testing, etc.
+# Stage 1: Base
+# - Base stage with Poetry setup and dependency files
 # ==============================================================================
-FROM python:3.12-slim as dev-deps
-
-# Argument for pinning the Poetry version
-ARG POETRY_VERSION=2.1.4
-
-# Set environment variables for Poetry
-ENV POETRY_NO_INTERACTION=1 \
-  POETRY_VIRTUALENVS_IN_PROJECT=true \
-  POETRY_CACHE_DIR=/tmp/poetry_cache \
-  PATH="/root/.local/bin:${PATH}"
-
-WORKDIR /app
-
-# Install system dependencies required for the application
-# - curl: used for debugging in the development container
-RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
-
-# Install Poetry
-RUN --mount=type=cache,target=/root/.cache \
-  pip install pipx && \
-  pipx ensurepath && \
-  pipx install "poetry==${POETRY_VERSION}"
-
-# Copy dependency definition files
-COPY pyproject.toml poetry.lock ./ 
-
-# Install all dependencies, including development ones
-RUN --mount=type=cache,target=/tmp/poetry_cache \
-  poetry config virtualenvs.in-project true && \
-  poetry install --no-root
-
-
-
-# ==============================================================================
-# Stage 2: Production Dependencies
-# - Creates a lean virtual environment with only production dependencies.
-# ==============================================================================
-FROM python:3.12-slim as prod-deps
+FROM python:3.12-slim as base
 
 # Argument for pinning the Poetry version
 ARG POETRY_VERSION=2.1.4
@@ -63,6 +25,30 @@ RUN --mount=type=cache,target=/root/.cache \
 # Copy dependency definition files
 COPY pyproject.toml poetry.lock ./
 
+
+# ==============================================================================
+# Stage 2: Dev Dependencies
+# - Installs ALL dependencies (including development) to create a cached layer
+#   that can be leveraged by CI/CD for linting, testing, etc.
+# ==============================================================================
+FROM base as dev-deps
+
+# Install system dependencies required for the application
+# - curl: used for debugging in the development container
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
+
+# Install all dependencies, including development ones
+RUN --mount=type=cache,target=/tmp/poetry_cache \
+  poetry config virtualenvs.in-project true && \
+  poetry install --no-root
+
+
+# ==============================================================================
+# Stage 3: Production Dependencies
+# - Creates a lean virtual environment with only production dependencies.
+# ==============================================================================
+FROM base as prod-deps
+
 # Install only production dependencies
 RUN --mount=type=cache,target=/tmp/poetry_cache \
   poetry config virtualenvs.in-project true && \
@@ -71,7 +57,7 @@ RUN --mount=type=cache,target=/tmp/poetry_cache \
 
 
 # ==============================================================================
-# Stage 3: Development
+# Stage 4: Development
 # - Development environment with all dependencies and debugging tools
 # - Includes curl and other development utilities
 # ==============================================================================
@@ -114,7 +100,7 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 
 
 # ==============================================================================
-# Stage 4: Production
+# Stage 5: Production
 # - Creates the final, lightweight production image.
 # - Copies the lean venv and only necessary application files.
 # ==============================================================================
