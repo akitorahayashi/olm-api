@@ -1,7 +1,21 @@
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Union
 
-from src.api.v1.schemas import GenerateRequest
-from src.api.v1.services.ollama_service import OllamaService, get_ollama_service
+from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
+
+from src.api.v1.services.ollama_service import (
+    GenerateResponse,
+    OllamaService,
+    get_ollama_service,
+)
+
+
+class GenerateRequest(BaseModel):
+    prompt: str
+    model_name: str
+    stream: bool = False
+
 
 router = APIRouter(
     prefix="/api/v1",
@@ -9,11 +23,11 @@ router = APIRouter(
 )
 
 
-@router.post("/generate")
+@router.post("/generate", response_model=GenerateResponse)
 async def generate(
     request: GenerateRequest,
     ollama_service: OllamaService = Depends(get_ollama_service),
-):
+) -> Union[GenerateResponse, StreamingResponse]:
     """
     Endpoint to generate text based on a prompt using the specified model.
 
