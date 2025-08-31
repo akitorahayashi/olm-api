@@ -6,11 +6,15 @@ from functools import lru_cache
 
 import httpx
 from fastapi.responses import StreamingResponse
+from pydantic import BaseModel
 from starlette.concurrency import run_in_threadpool
 
 import ollama
-from src.api.v1.schemas import GenerateResponse
 from src.config.settings import Settings, get_settings
+
+
+class GenerateResponse(BaseModel):
+    response: str
 
 
 class OllamaService:
