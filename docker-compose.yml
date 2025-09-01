@@ -47,6 +47,7 @@ services:
       - .env
     environment:
       - POSTGRES_DB_NAME=${POSTGRES_HOST_DB_NAME}
+      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_HOST_DB_NAME}
     healthcheck:
       test: [ "CMD", "python", "-c", "import sys, urllib.request; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health').getcode() == 200 else sys.exit(1)" ]
       interval: 30s
