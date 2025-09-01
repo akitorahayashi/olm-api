@@ -1,13 +1,13 @@
 import logging
 import os
-from pydantic import ValidationError
 
+from pydantic import ValidationError
 from sqlalchemy import create_engine, pool
 
 import src.db.models  # noqa: F401
 from alembic import context
-from src.db.database import Base
 from src.config.settings import Settings
+from src.db.database import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

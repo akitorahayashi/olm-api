@@ -36,7 +36,10 @@ htmlcov/
 
 # editor
 .vscode/
+
+# Claude
 .claude/
+.serena/
 
 # JetBrains (PyCharm, etc.)
 .idea/

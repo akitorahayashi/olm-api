@@ -50,8 +50,8 @@ help: ## Show this help message
 
 .PHONY: setup
 setup: ## Initialize project: install dependencies, create .env file and pull required Docker images.
-	@echo "Installing python dependencies with Poetry..."
-	@poetry install --no-root
+	@echo "Installing python dependencies with uv..."
+	@uv sync --extra dev
 	@echo "Creating environment file..."
 	@if [ ! -f .env ]; then \
 		echo "Creating .env from .env.example..." ; \
@@ -133,14 +133,14 @@ migration: ## Generate a new database migration file. Usage: make migration m="Y
 .PHONY: format
 format: ## Format code with black and ruff --fix
 	@echo "Formatting code with black and ruff..."
-	poetry run black .
-	poetry run ruff check . --fix
+	black .
+	ruff check . --fix
 
 .PHONY: lint
 lint: ## Lint code with black check and ruff
 	@echo "Linting code with black check and ruff..."
-	poetry run black --check .
-	poetry run ruff check .
+	black --check .
+	ruff check .
 
 # ==============================================================================
 # TESTING
@@ -152,32 +152,32 @@ test: unit-test build-test db-test e2e-test## Run the full test suite
 .PHONY: unit-test
 unit-test: ## Run the fast, database-independent unit tests locally
 	@echo "Running unit tests..."
-	@poetry run python -m pytest tests/unit -s
+	@python -m pytest tests/unit -s
 
 .PHONY: db-test
 db-test: ## Run the slower, database-dependent tests locally
 	@echo "Running database tests..."
-	@poetry run python -m pytest tests/db -s
+	@python -m pytest tests/db -s
 
 .PHONY: e2e-test
 e2e-test: ## Run end-to-end tests against a live application stack
 	@echo "Running end-to-end tests..."
-	@poetry run python -m pytest tests/e2e -s
+	@python -m pytest tests/e2e -s
 
 .PHONY: perf-test
 perf-test: ## Run all performance tests (both parallel and sequential)
 	@echo "Running all performance tests..."
-	@poetry run python -m pytest tests/perf -s
+	@python -m pytest tests/perf -s
 
 .PHONY: perf-parallel
 perf-parallel: ## Run parallel performance tests (simultaneous requests)
 	@echo "Running parallel performance tests..."
-	@poetry run python -m pytest tests/perf/test_parallel.py -s
+	@python -m pytest tests/perf/test_parallel.py -s
 
 .PHONY: perf-sequential
 perf-sequential: ## Run sequential performance tests (interval-based requests)
 	@echo "Running sequential performance tests..."
-	@poetry run python -m pytest tests/perf/test_sequential.py -s
+	@python -m pytest tests/perf/test_sequential.py -s
 
 .PHONY: build-test
 build-test: ## Build Docker image for testing without leaving artifacts
