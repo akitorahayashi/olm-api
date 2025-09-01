@@ -1,29 +1,18 @@
 # syntax=docker/dockerfile:1.7-labs
 # ==============================================================================
 # Stage 1: Base
-# - Base stage with Poetry setup and dependency files
+# - Base stage with uv setup and dependency files
 # ==============================================================================
 FROM python:3.12-slim as base
 
-# Argument for pinning the Poetry version
-ARG POETRY_VERSION=2.1.4
-
-# Set environment variables for Poetry
-ENV POETRY_NO_INTERACTION=1 \
-  POETRY_VIRTUALENVS_IN_PROJECT=true \
-  POETRY_CACHE_DIR=/tmp/poetry_cache \
-  PATH="/root/.local/bin:${PATH}"
-
 WORKDIR /app
 
-# Install Poetry
+# Install uv
 RUN --mount=type=cache,target=/root/.cache \
-  pip install pipx && \
-  pipx ensurepath && \
-  pipx install "poetry==${POETRY_VERSION}"
+  pip install uv
 
-# Copy dependency definition files
-COPY pyproject.toml poetry.lock ./
+# Copy dependency definition files  
+COPY pyproject.toml uv.lock README.md ./""
 
 
 # ==============================================================================
@@ -38,9 +27,8 @@ FROM base as dev-deps
 RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Install all dependencies, including development ones
-RUN --mount=type=cache,target=/tmp/poetry_cache \
-  poetry config virtualenvs.in-project true && \
-  poetry install --no-root
+RUN --mount=type=cache,target=/root/.cache \
+  uv sync --extra dev
 
 
 # ==============================================================================
@@ -50,9 +38,8 @@ RUN --mount=type=cache,target=/tmp/poetry_cache \
 FROM base as prod-deps
 
 # Install only production dependencies
-RUN --mount=type=cache,target=/tmp/poetry_cache \
-  poetry config virtualenvs.in-project true && \
-  poetry install --no-root --only main
+RUN --mount=type=cache,target=/root/.cache \
+  uv sync --no-dev
 
 
 
