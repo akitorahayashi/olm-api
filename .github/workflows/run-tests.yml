@@ -29,8 +29,5 @@ jobs:
       - name: Create .env file from example
         run: cp .env.example .env
 
-      - name: Activate virtual environment
-        run: source .venv/bin/activate
-
       - name: Run tests
-        run: make ${{ matrix.test_target }}
+        run: uv run make ${{ matrix.test_target }}

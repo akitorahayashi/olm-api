@@ -21,8 +21,5 @@ jobs:
       - name: Install dependencies
         run: uv sync --extra dev
 
-      - name: Activate virtual environment
-        run: source .venv/bin/activate
-
       - name: Run Linters
-        run: make lint
+        run: uv run make lint
