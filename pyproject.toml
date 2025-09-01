@@ -47,24 +47,35 @@ asyncio_mode = "auto"
 [tool.black]
 target-version = ['py312']
 exclude = '''
-/(\
+/(
     \.git
     | \.mypy_cache
     | \.venv
+    | venv
+    | env
     | build
     | dist
+    | .*/(bin|lib|share|etc)
+    | .*/pyvenv\.cfg
 )/
 '''
 
 [tool.ruff]
 target-version = "py312"
-extend-exclude = [
-    ".venv",
-    "__pycache__",
-    "migrations",
-    "alembic",
-    "db.sqlite3",
-    "*.pyc"
+
+exclude = [
+	"__pycache__",
+	"migrations",
+	"db.sqlite3",
+	"*.pyc",
+	".venv",
+	"venv",
+	"env",
+	"*/bin/**",
+	"*/lib/**",
+	"*/share/**",
+	"*/etc/**",
+	"*/pyvenv.cfg"
 ]
 
 [tool.ruff.lint]
