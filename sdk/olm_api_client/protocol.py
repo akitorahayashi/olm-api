@@ -1,12 +1,15 @@
-from typing import AsyncGenerator, Protocol
+from typing import AsyncGenerator, Protocol, runtime_checkable
 
 
+@runtime_checkable
 class OllamaClientProtocol(Protocol):
     """
     Protocol for Ollama API clients.
     """
 
-    def generate(self, prompt: str, model: str = None) -> AsyncGenerator[str, None]:
+    def generate(
+        self, prompt: str, model: str | None = None
+    ) -> AsyncGenerator[str, None]:
         """
         Generate text using the model with streaming.
 
