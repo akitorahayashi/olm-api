@@ -445,6 +445,7 @@ source = { editable = "." }
 dependencies = [
     { name = "alembic" },
     { name = "fastapi" },
+    { name = "httpx" },
     { name = "jinja2" },
     { name = "ollama" },
     { name = "psycopg", extra = ["binary"] },
@@ -457,7 +458,6 @@ dependencies = [
 dev = [
     { name = "black" },
     { name = "filelock" },
-    { name = "httpx" },
     { name = "ipython" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -474,7 +474,7 @@ requires-dist = [
     { name = "black", marker = "extra == 'dev'", specifier = ">=25.1.0" },
     { name = "fastapi", specifier = ">=0.116.1,<0.117.0" },
     { name = "filelock", marker = "extra == 'dev'", specifier = ">=3.12.2,<4.0.0" },
-    { name = "httpx", marker = "extra == 'dev'", specifier = ">=0.27.0,<0.28.0" },
+    { name = "httpx", specifier = ">=0.27.0,<0.28.0" },
     { name = "ipython", marker = "extra == 'dev'", specifier = ">=9.4.0" },
     { name = "jinja2", specifier = ">=3.1.4,<4.0.0" },
     { name = "ollama", specifier = ">=0.5.3,<0.6.0" },
