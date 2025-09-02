@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        test_target: [unit-test, db-test, build-test, e2e-test]
+        test_target: [unit-test, db-test, build-test, e2e-test, sdk-test]
       fail-fast: false
 
     steps:

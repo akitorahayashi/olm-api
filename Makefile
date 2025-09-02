@@ -149,6 +149,11 @@ lint: ## Lint code with black check and ruff
 .PHONY: test
 test: unit-test build-test db-test e2e-test## Run the full test suite
 
+.PHONY: sdk-test
+sdk-test: ## Run only the SDK client unit tests
+	@echo "Running SDK client tests..."
+	@python -m pytest tests/sdk -s
+
 .PHONY: unit-test
 unit-test: ## Run the fast, database-independent unit tests locally
 	@echo "Running unit tests..."
