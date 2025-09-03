@@ -4,7 +4,6 @@ import os
 from typing import AsyncGenerator
 
 import httpx
-import streamlit as st
 
 logger = logging.getLogger(__name__)
 
@@ -17,16 +16,10 @@ class OllamaApiClient:
     def __init__(self):
         self.api_url = os.getenv("OLLAMA_API_ENDPOINT")
         if not self.api_url:
-            # Fallback to Streamlit secrets if available
-            try:
-                self.api_url = st.secrets.get("OLLAMA_API_ENDPOINT")
-            except Exception:
-                pass
-
-        if not self.api_url:
             raise ValueError(
-                "OLLAMA_API_ENDPOINT is not configured in environment variables or Streamlit secrets."
+                "OLLAMA_API_ENDPOINT is not configured in environment variables"
             )
+        self.api_url = self.api_url.rstrip("/")
         self.generate_endpoint = f"{self.api_url}/api/v1/generate"
 
     async def _stream_response(
@@ -68,7 +61,9 @@ class OllamaApiClient:
             logger.error(f"Unexpected error in Ollama API streaming: {e}")
             raise
 
-    def generate(self, prompt: str, model: str = None) -> AsyncGenerator[str, None]:
+    def generate(
+        self, prompt: str, model: str | None = None
+    ) -> AsyncGenerator[str, None]:
         """
         Generates text using the Ollama API with streaming.
 

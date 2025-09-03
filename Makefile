@@ -51,7 +51,7 @@ help: ## Show this help message
 .PHONY: setup
 setup: ## Initialize project: install dependencies, create .env file and pull required Docker images.
 	@echo "Installing python dependencies with uv..."
-	@uv sync --extra dev
+	@uv sync
 	@echo "Creating environment file..."
 	@if [ ! -f .env ]; then \
 		echo "Creating .env from .env.example..." ; \

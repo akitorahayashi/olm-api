@@ -114,7 +114,9 @@ Ready to proceed.""",
 
             yield token
 
-    def generate(self, prompt: str, model: str = None) -> AsyncGenerator[str, None]:
+    def generate(
+        self, prompt: str, model: str | None = None
+    ) -> AsyncGenerator[str, None]:
         """
         Generates mock text responses with realistic streaming behavior.
 
