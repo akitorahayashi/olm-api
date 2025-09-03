@@ -61,7 +61,9 @@ class OllamaApiClient:
             logger.error(f"Unexpected error in Ollama API streaming: {e}")
             raise
 
-    def generate(self, prompt: str, model: str | None = None) -> AsyncGenerator[str, None]:
+    def generate(
+        self, prompt: str, model: str | None = None
+    ) -> AsyncGenerator[str, None]:
         """
         Generates text using the Ollama API with streaming.
 
