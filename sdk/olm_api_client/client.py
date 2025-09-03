@@ -19,6 +19,7 @@ class OllamaApiClient:
             raise ValueError(
                 "OLLAMA_API_ENDPOINT is not configured in environment variables"
             )
+        self.api_url = self.api_url.rstrip("/")
         self.generate_endpoint = f"{self.api_url}/api/v1/generate"
 
     async def _stream_response(
@@ -60,7 +61,7 @@ class OllamaApiClient:
             logger.error(f"Unexpected error in Ollama API streaming: {e}")
             raise
 
-    def generate(self, prompt: str, model: str = None) -> AsyncGenerator[str, None]:
+    def generate(self, prompt: str, model: str | None = None) -> AsyncGenerator[str, None]:
         """
         Generates text using the Ollama API with streaming.
 
