@@ -1,10 +1,8 @@
 [project]
 name = "olm-api"
 version = "0.1.0"
-description = "A local LLM wrapped as an API for reusable access."
-authors = [
-    { name = "akitorahayashi", email = "atora.has75@gmail.com" }
-]
+description = "A local LLM wrapped as an API."
+authors = [{ name = "akitorahayashi", email = "atora.has75@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.12,<4.0"
 dependencies = [
@@ -19,7 +17,7 @@ dependencies = [
     "uvicorn>=0.35.0,<0.36.0",
 ]
 
-[project.optional-dependencies]
+[dependency-groups]
 dev = [
     "black>=25.1.0",
     "filelock>=3.12.2,<4.0.0",
@@ -62,7 +60,6 @@ exclude = '''
 
 [tool.ruff]
 target-version = "py312"
-
 exclude = [
 	"__pycache__",
 	"migrations",

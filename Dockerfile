@@ -12,7 +12,7 @@ RUN --mount=type=cache,target=/root/.cache \
   pip install uv
 
 # Copy dependency definition files  
-COPY pyproject.toml uv.lock README.md ./""
+COPY pyproject.toml uv.lock README.md ./
 
 
 # ==============================================================================
@@ -28,7 +28,7 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Install all dependencies, including development ones
 RUN --mount=type=cache,target=/root/.cache \
-  uv sync --extra dev
+  uv sync
 
 
 # ==============================================================================
