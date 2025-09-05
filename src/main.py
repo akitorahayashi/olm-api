@@ -1,6 +1,6 @@
-from contextlib import asynccontextmanager
 import asyncio
 import logging
+from contextlib import asynccontextmanager
 
 import httpx
 from fastapi import FastAPI, Request
