@@ -147,7 +147,7 @@ lint: ## Lint code with black check and ruff
 # ==============================================================================
 
 .PHONY: test
-test: unit-test build-test db-test e2e-test## Run the full test suite
+test: unit-test sdk-test build-test db-test e2e-test ## Run the full test suite
 
 .PHONY: unit-test
 unit-test: ## Run the unit tests locally

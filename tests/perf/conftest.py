@@ -40,7 +40,6 @@ def perf_setup() -> Generator[None, None, None]:
         "olm-api-test",
         "up",
         "-d",
-        "--build",
     ]
     compose_down_command = docker_command + [
         "compose",
@@ -65,6 +64,7 @@ def perf_setup() -> Generator[None, None, None]:
                 timeout=300,
                 capture_output=True,
                 text=True,
+                env=os.environ,
             )  # 5 minutes timeout
         except subprocess.CalledProcessError as e:
             print("\n🛑 compose up failed; performing cleanup...")
@@ -115,6 +115,6 @@ def perf_setup() -> Generator[None, None, None]:
 
         # Stop services
         print("\n🛑 Stopping Performance Test services...")
-        subprocess.run(compose_down_command, check=True)
+        subprocess.run(compose_down_command, check=False)
     finally:
         pass
