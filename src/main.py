@@ -1,4 +1,6 @@
 from contextlib import asynccontextmanager
+import asyncio
+import logging
 
 import httpx
 from fastapi import FastAPI, Request
@@ -20,14 +22,21 @@ async def lifespan(app: FastAPI):
     settings = get_settings()
     ollama_service = get_ollama_service()
     model_name = settings.BUILT_IN_OLLAMA_MODEL
-    try:
-        print(f" warming up model: {model_name}...")
-        await ollama_service.generate_response(
-            prompt=".", model_name=model_name, stream=False
-        )
-        print(f"Model {model_name} is warmed up and ready.")
-    except Exception as e:
-        print(f"Failed to warm up model {model_name}: {e}")
+    if model_name:
+        try:
+            logging.info("Warming up model: %s ...", model_name)
+            # Add a timeout to prevent the application from hanging
+            await asyncio.wait_for(
+                ollama_service.generate_response(
+                    prompt=".", model_name=model_name, stream=False
+                ),
+                timeout=300,  # 5-minute timeout
+            )
+            logging.info("Model %s warmed up and ready.", model_name)
+        except Exception as e:
+            logging.warning("Model warm-up failed or timed out: %s", e)
+    else:
+        logging.info("No BUILT_IN_OLLAMA_MODEL specified, skipping warm-up.")
 
     yield
     # Shutdown logic (if any)

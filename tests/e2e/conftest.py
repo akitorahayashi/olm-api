@@ -23,7 +23,7 @@ def e2e_setup() -> Generator[None, None, None]:
     """
     # Determine if sudo should be used based on environment variable
     use_sudo = os.getenv("SUDO") == "true"
-    docker_command = ["sudo", "docker"] if use_sudo else ["docker"]
+    docker_command = ["sudo", "-E", "docker"] if use_sudo else ["docker"]
 
     host_bind_ip = os.getenv("HOST_BIND_IP", "127.0.0.1")
     test_port = os.getenv("TEST_PORT", "8002")
@@ -105,6 +105,23 @@ def e2e_setup() -> Generator[None, None, None]:
         subprocess.run(compose_down_command, check=False)
         raise
     finally:
+        # Dump logs for debugging
+        print("\n📄 Dumping logs for debugging...")
+        subprocess.run(
+            docker_command
+            + [
+                "compose",
+                "-f",
+                "docker-compose.yml",
+                "-f",
+                "docker-compose.test.override.yml",
+                "--project-name",
+                "olm-api-test",
+                "logs",
+                "api",
+                "ollama",
+            ]
+        )
         # Stop services
         print("\n🛑 Stopping E2E services...")
         subprocess.run(compose_down_command, check=False)

@@ -18,12 +18,16 @@ RUN apt-get clean && \
   rm -rf /var/lib/apt/lists/*
 
 # Pull the specified model into the image.
-RUN ollama serve > /dev/null 2>&1 & \
-  while ! curl -s -f http://127.0.0.1:11434 > /dev/null; do \
-  echo "Waiting for ollama server to start..."; \
-  sleep 1; \
+RUN set -eux; \
+  ollama serve > /dev/null 2>&1 & \
+  t=0; \
+  until curl -sSf --max-time 2 http://127.0.0.1:11434 > /dev/null; do \
+    if [ "$t" -ge 300 ]; then echo "Timeout waiting for ollama server"; exit 1; fi; \
+    echo "Waiting for ollama server to start..."; \
+    sleep 1; \
+    t=$((t+1)); \
   done; \
-  ollama pull ${BUILT_IN_OLLAMA_MODEL}
+  ollama pull "${BUILT_IN_OLLAMA_MODEL}"
 
 # Add a healthcheck to ensure the Ollama server is responsive
 HEALTHCHECK --interval=10s --timeout=5s --start-period=300s --retries=30 \
