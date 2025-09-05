@@ -10,8 +10,11 @@ ENV OLLAMA_HOST=0.0.0.0
 # Install curl, which is used for healthcheck polling.
 USER root
 RUN apt-get clean && \
-  apt-get update && \
-  apt-get install -y curl && \
+  for i in 1 2 3; do \
+  apt-get update && apt-get install -y curl && break; \
+  echo "apt-get failed, retrying in 5 seconds..."; \
+  sleep 5; \
+  done && \
   rm -rf /var/lib/apt/lists/*
 
 # Pull the specified model into the image.
