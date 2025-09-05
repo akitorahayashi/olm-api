@@ -127,6 +127,7 @@ Ready to proceed.""",
         self,
         prompt: str,
         model: str | None = None,
+        think: bool | None = None,
     ) -> AsyncGenerator[str, None]:
         """
         Generates mock text responses with realistic streaming behavior.
@@ -134,13 +135,11 @@ Ready to proceed.""",
         Args:
             prompt: The prompt to send to the model.
             model: The name of the model to use for generation.
+            think: Whether to enable thinking mode. If None, uses model default.
 
         Returns:
             AsyncGenerator yielding text chunks that match real API format.
         """
-        # Create thinking process
-        thinking = self._create_thinking_process(prompt)
-
         # Custom responses for specific inputs
         custom_responses = {
             "hello": "Hello! 😊 How are you today? I'm here to help with anything you need!",
@@ -164,21 +163,30 @@ Ready to proceed.""",
             ]
             self.response_index += 1
 
-        # Construct full response with thinking tags (similar to real API)
-        full_response = f"<think>\n{thinking}\n</think>\n\n{response_text}"
+        # If think is not explicitly False, include thinking process
+        if think is not False:
+            # Create thinking process
+            thinking = self._create_thinking_process(prompt)
+            # Construct full response with thinking tags (similar to real API)
+            full_response = f"<think>\n{thinking}\n</think>\n\n{response_text}"
+        else:
+            full_response = response_text
 
         return self._stream_response(full_response)
 
-    async def gen_batch(self, prompt: str, model: str | None = None) -> str:
+    async def gen_batch(
+        self, prompt: str, model: str | None = None, think: bool | None = None
+    ) -> str:
         """
         Generates complete mock response at once.
 
         Args:
             prompt: The prompt to send to the model.
             model: The name of the model to use for generation.
+            think: Whether to enable thinking mode. If None, uses model default.
 
         Returns:
             Complete text response.
         """
-        stream = self.gen_stream(prompt, model)
+        stream = self.gen_stream(prompt, model, think)
         return "".join([chunk async for chunk in stream])
