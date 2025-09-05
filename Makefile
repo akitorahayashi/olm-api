@@ -150,12 +150,17 @@ lint: ## Lint code with black check and ruff
 test: unit-test build-test db-test e2e-test## Run the full test suite
 
 .PHONY: unit-test
-unit-test: ## Run the fast, database-independent unit tests locally
+unit-test: ## Run the unit tests locally
 	@echo "Running unit tests..."
 	@python -m pytest tests/unit -s
 
+.PHONY: sdk-test
+sdk-test: ## Run SDK tests locally
+	@echo "Running SDK tests..."
+	@python -m pytest tests/sdk -s
+
 .PHONY: db-test
-db-test: ## Run the slower, database-dependent tests locally
+db-test: ## Run database tests locally
 	@echo "Running database tests..."
 	@python -m pytest tests/db -s
 

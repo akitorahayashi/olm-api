@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from sdk.olm_api_client.mock import MockOllamaApiClient
 from src.api.v1.services.ollama_service import get_ollama_service
 from src.main import app
 from src.middlewares import db_logging_middleware
@@ -57,3 +58,11 @@ async def unit_test_client(monkeypatch) -> AsyncGenerator[AsyncClient, None]:
         transport=ASGITransport(app=app), base_url="http://test"
     ) as c:
         yield c
+
+
+@pytest.fixture
+def fast_mock_client():
+    """
+    Provides a fast MockOllamaApiClient with zero delay for unit testing.
+    """
+    return MockOllamaApiClient(token_delay=0)
