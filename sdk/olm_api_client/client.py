@@ -14,10 +14,12 @@ class OllamaApiClient:
     """
 
     def __init__(self, api_url: str | None = None):
-        self.api_url = api_url or os.getenv("OLM_API_ENDPOINT")
+        self.api_url = (
+            api_url or os.getenv("OLM_API_ENDPOINT") or os.getenv("OLLAMA_API_ENDPOINT")
+        )
         if not self.api_url:
             raise ValueError(
-                "API URL must be provided either as parameter or OLM_API_ENDPOINT environment variable"
+                "API URL must be provided either as parameter or via OLM_API_ENDPOINT."
             )
         self.api_url = self.api_url.rstrip("/")
         self.generate_endpoint = f"{self.api_url}/api/v1/generate"
@@ -50,6 +52,8 @@ class OllamaApiClient:
 
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
+                            if line.strip() == "data: [DONE]":
+                                break
                             try:
                                 data = json.loads(line[6:])  # Remove "data: " prefix
                                 if "response" in data:

@@ -1,5 +1,5 @@
 import os
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, Mock, patch
 
 import httpx
 import pytest
@@ -162,7 +162,7 @@ class TestIntegrationWithMock:
         mock_response.aiter_lines.return_value = async_generator_mock(
             mock_response_data
         )
-        mock_response.raise_for_status = MagicMock()
+        mock_response.raise_for_status = Mock()
 
         # Create mock stream context
         mock_stream_context = AsyncMock()
@@ -179,7 +179,7 @@ class TestIntegrationWithMock:
         mock_async_client.__aexit__.return_value = None
 
         with patch("httpx.AsyncClient", return_value=mock_async_client):
-            result = client._stream_response("test prompt", "test-model")
+            result = client._stream_response("test prompt", "test-model", None)
             chunks = []
             async for chunk in result:
                 chunks.append(chunk)
@@ -194,7 +194,7 @@ class TestIntegrationWithMock:
         # Create mock response object
         mock_response = MagicMock()
         mock_response.json.return_value = {"response": "Complete response text"}
-        mock_response.raise_for_status = MagicMock()
+        mock_response.raise_for_status = Mock()
 
         # Create mock client
         mock_client = AsyncMock()
@@ -206,7 +206,9 @@ class TestIntegrationWithMock:
         mock_async_client.__aexit__.return_value = None
 
         with patch("httpx.AsyncClient", return_value=mock_async_client):
-            result = await client._non_stream_response("test prompt", "test-model")
+            result = await client._non_stream_response(
+                "test prompt", "test-model", None
+            )
 
             assert result == "Complete response text"
             mock_client.post.assert_called_once()
@@ -227,7 +229,7 @@ class TestIntegrationWithMock:
 
         with patch("httpx.AsyncClient", return_value=mock_async_client):
             with pytest.raises(httpx.RequestError):
-                result = client._stream_response("test prompt", "test-model")
+                result = client._stream_response("test prompt", "test-model", None)
                 async for _ in result:
                     pass
 
@@ -242,4 +244,4 @@ class TestIntegrationWithMock:
             mock_client.post.side_effect = httpx.RequestError("Connection failed")
 
             with pytest.raises(httpx.RequestError):
-                await client._non_stream_response("test prompt", "test-model")
+                await client._non_stream_response("test prompt", "test-model", None)

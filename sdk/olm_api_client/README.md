@@ -50,6 +50,7 @@ client = OllamaApiClient(api_url="http://localhost:8000")
 ### Usage
 
 Specify the model for each request. If `model` is `None`, it falls back to the `OLLAMA_MODEL` environment variable.
+Optionally, you can pass `think=True` (or `False`) to control thinking mode when supported by the server.
 
 #### Streaming (`gen_stream`)
 
@@ -62,7 +63,8 @@ client = OllamaApiClient(api_url="http://localhost:8000")
 async def stream_example():
     response_stream = client.gen_stream(
         prompt="Why is the sky blue?",
-        model="qwen3:0.6b"
+        model="qwen3:0.6b",
+        think=True,
     )
     async for chunk in response_stream:
         print(chunk, end="", flush=True)
@@ -81,7 +83,8 @@ client = OllamaApiClient(api_url="http://localhost:8000")
 async def batch_example():
     response = await client.gen_batch(
         prompt="Why is the sky blue?",
-        model="qwen3:0.6b"
+        model="qwen3:0.6b",
+        think=False,
     )
     print(response)
 

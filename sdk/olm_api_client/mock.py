@@ -13,14 +13,19 @@ class MockOllamaApiClient:
     """
 
     def __init__(self, api_url: str | None = None, token_delay: float | None = None):
+        self.api_url = api_url
         # Configure token delay from parameter, environment variable, or default
         if token_delay is not None:
+            if token_delay < 0:
+                raise ValueError("token_delay must be non-negative")
             self.token_delay = token_delay
         else:
             env_delay = os.getenv("MOCK_TOKEN_DELAY")
             self.token_delay = (
                 float(env_delay) if env_delay is not None else DEFAULT_TOKEN_DELAY
             )
+            if self.token_delay < 0:
+                raise ValueError("MOCK_TOKEN_DELAY must be non-negative")
         self.mock_responses = [
             "Hello! How can I help you today?",
             "That's an interesting question. Could you tell me more about it?",
@@ -59,7 +64,9 @@ class MockOllamaApiClient:
 
             for token in tokens:
                 if token.isspace():
-                    continue  # Skip pure whitespace tokens
+                    # Keep whitespace (including newlines) to preserve formatting
+                    result.append(token)
+                    continue
 
                 # For words longer than 4 characters, occasionally split into subwords
                 if len(token) > 8 and token.isalpha():
@@ -113,14 +120,8 @@ Ready to proceed.""",
         """
         tokens = self._tokenize_realistic(full_text)
 
-        for i, token in enumerate(tokens):
+        for token in tokens:
             await asyncio.sleep(self.token_delay)
-
-            # Add space before token (except first token) if it's a word
-            if i > 0 and token.isalnum() and not tokens[i - 1].endswith("\n"):
-                yield " "
-                await asyncio.sleep(self.token_delay * 0.3)  # Shorter delay for spaces
-
             yield token
 
     def gen_stream(

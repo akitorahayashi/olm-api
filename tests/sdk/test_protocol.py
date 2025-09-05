@@ -1,4 +1,4 @@
-from typing import get_type_hints
+from typing import AsyncGenerator, get_type_hints
 from unittest.mock import AsyncMock
 
 import pytest
@@ -56,13 +56,15 @@ class TestOllamaClientProtocol:
 
         # Create a mock that follows the protocol
         class ProtocolCompliantMock:
-            def gen_stream(self, prompt: str, model: str | None = None):
+            def gen_stream(
+                self, prompt: str, model: str | None = None
+            ) -> AsyncGenerator[str, None]:
                 return self._async_gen()
 
             async def gen_batch(self, prompt: str, model: str | None = None):
                 return "batch response"
 
-            async def _async_gen(self):
+            async def _async_gen(self) -> AsyncGenerator[str, None]:
                 yield "chunk1"
                 yield "chunk2"
 

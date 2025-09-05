@@ -61,7 +61,7 @@ async def unit_test_client(monkeypatch) -> AsyncGenerator[AsyncClient, None]:
 
 
 @pytest.fixture
-def fast_mock_client():
+def fast_mock_client() -> MockOllamaApiClient:
     """
     Provides a fast MockOllamaApiClient with zero delay for unit testing.
     """
