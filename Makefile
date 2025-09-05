@@ -174,16 +174,6 @@ perf-test: ## Run all performance tests (both parallel and sequential)
 	@echo "Running all performance tests..."
 	@python -m pytest tests/perf -s
 
-.PHONY: perf-parallel
-perf-parallel: ## Run parallel performance tests (simultaneous requests)
-	@echo "Running parallel performance tests..."
-	@python -m pytest tests/perf/test_parallel.py -s
-
-.PHONY: perf-sequential
-perf-sequential: ## Run sequential performance tests (interval-based requests)
-	@echo "Running sequential performance tests..."
-	@python -m pytest tests/perf/test_sequential.py -s
-
 .PHONY: build-test
 build-test: ## Build Docker image for testing without leaving artifacts
 	@echo "Building Docker image for testing (clean build)..."
