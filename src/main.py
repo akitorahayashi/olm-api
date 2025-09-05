@@ -1,3 +1,5 @@
+import asyncio
+import logging
 from contextlib import asynccontextmanager
 
 import httpx
@@ -6,15 +8,36 @@ from fastapi.responses import JSONResponse
 
 import ollama
 from src.api.v1.routers import generate, logs
+from src.api.v1.services.ollama_service import get_ollama_service
+from src.config.settings import get_settings
 from src.middlewares.db_logging_middleware import LoggingMiddleware
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    Application lifespan manager.
+    Application lifespan manager for model warm-up.
     """
-    # Startup logic (if any)
+    # Startup logic: warm up the built-in model
+    settings = get_settings()
+    ollama_service = get_ollama_service()
+    model_name = settings.BUILT_IN_OLLAMA_MODEL
+    if model_name:
+        try:
+            logging.info("Warming up model: %s ...", model_name)
+            # Add a timeout to prevent the application from hanging
+            await asyncio.wait_for(
+                ollama_service.generate_response(
+                    prompt=".", model_name=model_name, stream=False
+                ),
+                timeout=300,  # 5-minute timeout
+            )
+            logging.info("Model %s warmed up and ready.", model_name)
+        except Exception as e:
+            logging.warning("Model warm-up failed or timed out: %s", e)
+    else:
+        logging.info("No BUILT_IN_OLLAMA_MODEL specified, skipping warm-up.")
+
     yield
     # Shutdown logic (if any)
 

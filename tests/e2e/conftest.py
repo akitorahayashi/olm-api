@@ -23,11 +23,11 @@ def e2e_setup() -> Generator[None, None, None]:
     """
     # Determine if sudo should be used based on environment variable
     use_sudo = os.getenv("SUDO") == "true"
-    docker_command = ["sudo", "docker"] if use_sudo else ["docker"]
+    docker_command = ["sudo", "-E", "docker"] if use_sudo else ["docker"]
 
     host_bind_ip = os.getenv("HOST_BIND_IP", "127.0.0.1")
-    host_port = os.getenv("TEST_PORT", "8002")
-    health_url = f"http://{host_bind_ip}:{host_port}/health"
+    test_port = os.getenv("TEST_PORT", "8002")
+    health_url = f"http://{host_bind_ip}:{test_port}/health"
 
     # Define compose commands
     compose_up_command = docker_command + [
@@ -55,7 +55,7 @@ def e2e_setup() -> Generator[None, None, None]:
 
     try:
         subprocess.run(
-            compose_up_command, check=True, timeout=600
+            compose_up_command, check=True, timeout=600, env=os.environ
         )  # 10 minutes timeout
 
         # Health Check
@@ -105,6 +105,23 @@ def e2e_setup() -> Generator[None, None, None]:
         subprocess.run(compose_down_command, check=False)
         raise
     finally:
+        # Dump logs for debugging
+        print("\n📄 Dumping logs for debugging...")
+        subprocess.run(
+            docker_command
+            + [
+                "compose",
+                "-f",
+                "docker-compose.yml",
+                "-f",
+                "docker-compose.test.override.yml",
+                "--project-name",
+                "olm-api-test",
+                "logs",
+                "api",
+                "ollama",
+            ]
+        )
         # Stop services
         print("\n🛑 Stopping E2E services...")
         subprocess.run(compose_down_command, check=False)

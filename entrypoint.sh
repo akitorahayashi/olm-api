@@ -43,5 +43,7 @@ else
     exec uvicorn src.main:app \
         --host "0.0.0.0" \
         --port "8000" \
-        --workers "${WORKERS}"
+        --workers "${WORKERS}" \
+        --loop uvloop \
+        --limit-concurrency 40
 fi
