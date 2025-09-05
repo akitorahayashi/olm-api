@@ -18,7 +18,9 @@ class MockOllamaApiClient:
             self.token_delay = token_delay
         else:
             env_delay = os.getenv("MOCK_TOKEN_DELAY")
-            self.token_delay = float(env_delay) if env_delay is not None else DEFAULT_TOKEN_DELAY
+            self.token_delay = (
+                float(env_delay) if env_delay is not None else DEFAULT_TOKEN_DELAY
+            )
         self.mock_responses = [
             "Hello! How can I help you today?",
             "That's an interesting question. Could you tell me more about it?",
@@ -165,9 +167,7 @@ Ready to proceed.""",
 
         return self._stream_response(full_response)
 
-    async def gen_batch(
-        self, prompt: str, model: str | None = None
-    ) -> str:
+    async def gen_batch(self, prompt: str, model: str | None = None) -> str:
         """
         Generates complete mock response at once.
 

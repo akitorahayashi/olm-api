@@ -63,7 +63,9 @@ class OllamaApiClient:
             logger.error(f"Unexpected error in Ollama API streaming: {e}")
             raise
 
-    async def _non_stream_response(self, prompt: str, model: str, think: bool | None = None) -> str:
+    async def _non_stream_response(
+        self, prompt: str, model: str, think: bool | None = None
+    ) -> str:
         """
         Get non-streaming response from the Ollama API.
         """

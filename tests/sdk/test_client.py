@@ -1,7 +1,8 @@
 import os
-import pytest
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
+
 import httpx
+import pytest
 
 from sdk.olm_api_client.client import OllamaApiClient
 from sdk.olm_api_client.protocol import OllamaClientProtocol
@@ -54,20 +55,20 @@ class TestOllamaApiClient:
     async def test_gen_stream(self):
         """Test gen_stream method"""
         client = OllamaApiClient(api_url="http://localhost:11434")
-        
-        with patch.object(client, '_stream_response') as mock_stream:
+
+        with patch.object(client, "_stream_response") as mock_stream:
             mock_stream.return_value = async_generator_mock(["Hello", " world"])
-            
+
             result = client.gen_stream("test prompt", "test-model")
-            
+
             # Verify it returns an async generator
-            assert hasattr(result, '__aiter__')
-            
+            assert hasattr(result, "__aiter__")
+
             # Collect results
             chunks = []
             async for chunk in result:
                 chunks.append(chunk)
-            
+
             assert chunks == ["Hello", " world"]
             mock_stream.assert_called_once_with("test prompt", "test-model")
 
@@ -75,12 +76,12 @@ class TestOllamaApiClient:
     async def test_gen_batch(self):
         """Test gen_batch method"""
         client = OllamaApiClient(api_url="http://localhost:11434")
-        
-        with patch.object(client, '_non_stream_response') as mock_non_stream:
+
+        with patch.object(client, "_non_stream_response") as mock_non_stream:
             mock_non_stream.return_value = "Complete response"
-            
+
             result = await client.gen_batch("test prompt", "test-model")
-            
+
             assert result == "Complete response"
             mock_non_stream.assert_called_once_with("test prompt", "test-model")
 
@@ -88,38 +89,38 @@ class TestOllamaApiClient:
     async def test_gen_stream_uses_env_model_when_none(self):
         """Test that gen_stream uses environment variable model when model=None"""
         client = OllamaApiClient(api_url="http://localhost:11434")
-        
+
         with patch.dict(os.environ, {"OLLAMA_MODEL": "env-model"}):
-            with patch.object(client, '_stream_response') as mock_stream:
+            with patch.object(client, "_stream_response") as mock_stream:
                 mock_stream.return_value = async_generator_mock(["test"])
-                
+
                 result = client.gen_stream("test prompt", model=None)
-                
+
                 # Consume the generator
                 chunks = []
                 async for chunk in result:
                     chunks.append(chunk)
-                
+
                 mock_stream.assert_called_once_with("test prompt", "env-model")
 
     @pytest.mark.asyncio
     async def test_gen_batch_uses_env_model_when_none(self):
         """Test that gen_batch uses environment variable model when model=None"""
         client = OllamaApiClient(api_url="http://localhost:11434")
-        
+
         with patch.dict(os.environ, {"OLLAMA_MODEL": "env-model"}):
-            with patch.object(client, '_non_stream_response') as mock_non_stream:
+            with patch.object(client, "_non_stream_response") as mock_non_stream:
                 mock_non_stream.return_value = "test response"
-                
+
                 result = await client.gen_batch("test prompt", model=None)
-                
+
                 assert result == "test response"
                 mock_non_stream.assert_called_once_with("test prompt", "env-model")
 
     def test_gen_stream_raises_error_when_no_model(self):
         """Test that gen_stream raises error when no model is specified"""
         client = OllamaApiClient(api_url="http://localhost:11434")
-        
+
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="OLLAMA_MODEL is not configured"):
                 client.gen_stream("test prompt", model=None)
@@ -128,7 +129,7 @@ class TestOllamaApiClient:
     async def test_gen_batch_raises_error_when_no_model(self):
         """Test that gen_batch raises error when no model is specified"""
         client = OllamaApiClient(api_url="http://localhost:11434")
-        
+
         with patch.dict(os.environ, {}, clear=True):
             with pytest.raises(ValueError, match="OLLAMA_MODEL is not configured"):
                 await client.gen_batch("test prompt", model=None)
@@ -147,44 +148,46 @@ class TestIntegrationWithMock:
     async def test_stream_response_success(self):
         """Test successful streaming response"""
         client = OllamaApiClient(api_url="http://localhost:11434")
-        
+
         mock_response_data = [
             'data: {"response": "Hello"}\n',
             'data: {"response": " world"}\n',
             'data: {"response": "!"}\n',
         ]
-        
+
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
-            
+
             mock_response = AsyncMock()
-            mock_response.aiter_lines.return_value = async_generator_mock(mock_response_data)
+            mock_response.aiter_lines.return_value = async_generator_mock(
+                mock_response_data
+            )
             mock_client.stream.return_value.__aenter__.return_value = mock_response
-            
+
             result = client._stream_response("test prompt", "test-model")
-            
+
             chunks = []
             async for chunk in result:
                 chunks.append(chunk)
-            
+
             assert chunks == ["Hello", " world", "!"]
 
     @pytest.mark.asyncio
     async def test_non_stream_response_success(self):
         """Test successful non-streaming response"""
         client = OllamaApiClient(api_url="http://localhost:11434")
-        
+
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
-            
+
             mock_response = AsyncMock()
             mock_response.json.return_value = {"response": "Complete response text"}
             mock_client.post.return_value = mock_response
-            
+
             result = await client._non_stream_response("test prompt", "test-model")
-            
+
             assert result == "Complete response text"
             mock_client.post.assert_called_once()
 
@@ -192,12 +195,12 @@ class TestIntegrationWithMock:
     async def test_stream_response_handles_request_error(self):
         """Test that streaming handles httpx.RequestError"""
         client = OllamaApiClient(api_url="http://localhost:11434")
-        
+
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
             mock_client.stream.side_effect = httpx.RequestError("Connection failed")
-            
+
             with pytest.raises(httpx.RequestError):
                 result = client._stream_response("test prompt", "test-model")
                 async for _ in result:
@@ -207,11 +210,11 @@ class TestIntegrationWithMock:
     async def test_non_stream_response_handles_request_error(self):
         """Test that non-streaming handles httpx.RequestError"""
         client = OllamaApiClient(api_url="http://localhost:11434")
-        
+
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value.__aenter__.return_value = mock_client
             mock_client.post.side_effect = httpx.RequestError("Connection failed")
-            
+
             with pytest.raises(httpx.RequestError):
                 await client._non_stream_response("test prompt", "test-model")

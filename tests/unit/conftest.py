@@ -4,10 +4,10 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from httpx import ASGITransport, AsyncClient
 
+from sdk.olm_api_client.mock import MockOllamaApiClient
 from src.api.v1.services.ollama_service import get_ollama_service
 from src.main import app
 from src.middlewares import db_logging_middleware
-from sdk.olm_api_client.mock import MockOllamaApiClient
 
 
 @pytest.fixture

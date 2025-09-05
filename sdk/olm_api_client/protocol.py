@@ -1,4 +1,4 @@
-from typing import AsyncGenerator, Protocol, Union, runtime_checkable
+from typing import AsyncGenerator, Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -22,9 +22,7 @@ class OllamaClientProtocol(Protocol):
         """
         ...
 
-    async def gen_batch(
-        self, prompt: str, model: str | None = None
-    ) -> str:
+    async def gen_batch(self, prompt: str, model: str | None = None) -> str:
         """
         Generate complete text using the model without streaming.
 
