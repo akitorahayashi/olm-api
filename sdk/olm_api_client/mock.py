@@ -1,9 +1,10 @@
 import asyncio
+import os
 import re
 from typing import AsyncGenerator
 
-# Streaming configuration
-TOKEN_DELAY = 0.1  # Faster delay between tokens (seconds) - reduced from 0.07
+# Default streaming configuration
+DEFAULT_TOKEN_DELAY = 0.1  # Faster delay between tokens (seconds) - reduced from 0.07
 
 
 class MockOllamaApiClient:
@@ -11,7 +12,13 @@ class MockOllamaApiClient:
     A high-fidelity mock client that simulates real Ollama API behavior.
     """
 
-    def __init__(self):
+    def __init__(self, api_url: str | None = None, token_delay: float | None = None):
+        # Configure token delay from parameter, environment variable, or default
+        if token_delay is not None:
+            self.token_delay = token_delay
+        else:
+            env_delay = os.getenv("MOCK_TOKEN_DELAY")
+            self.token_delay = float(env_delay) if env_delay is not None else DEFAULT_TOKEN_DELAY
         self.mock_responses = [
             "Hello! How can I help you today?",
             "That's an interesting question. Could you tell me more about it?",
@@ -105,16 +112,16 @@ Ready to proceed.""",
         tokens = self._tokenize_realistic(full_text)
 
         for i, token in enumerate(tokens):
-            await asyncio.sleep(TOKEN_DELAY)
+            await asyncio.sleep(self.token_delay)
 
             # Add space before token (except first token) if it's a word
             if i > 0 and token.isalnum() and not tokens[i - 1].endswith("\n"):
                 yield " "
-                await asyncio.sleep(TOKEN_DELAY * 0.3)  # Shorter delay for spaces
+                await asyncio.sleep(self.token_delay * 0.3)  # Shorter delay for spaces
 
             yield token
 
-    def generate(
+    def gen_stream(
         self, prompt: str, model: str | None = None
     ) -> AsyncGenerator[str, None]:
         """
@@ -157,3 +164,19 @@ Ready to proceed.""",
         full_response = f"<think>\n{thinking}\n</think>\n\n{response_text}"
 
         return self._stream_response(full_response)
+
+    async def gen_batch(
+        self, prompt: str, model: str | None = None
+    ) -> str:
+        """
+        Generates complete mock response at once.
+
+        Args:
+            prompt: The prompt to send to the model.
+            model: The name of the model to use for generation.
+
+        Returns:
+            Complete text response.
+        """
+        stream = self.gen_stream(prompt, model)
+        return "".join([chunk async for chunk in stream])

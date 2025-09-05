@@ -1,4 +1,4 @@
-from typing import AsyncGenerator, Protocol, runtime_checkable
+from typing import AsyncGenerator, Protocol, Union, runtime_checkable
 
 
 @runtime_checkable
@@ -7,7 +7,7 @@ class OllamaClientProtocol(Protocol):
     Protocol for Ollama API clients.
     """
 
-    def generate(
+    def gen_stream(
         self, prompt: str, model: str | None = None
     ) -> AsyncGenerator[str, None]:
         """
@@ -19,5 +19,20 @@ class OllamaClientProtocol(Protocol):
 
         Returns:
             AsyncGenerator yielding text chunks.
+        """
+        ...
+
+    async def gen_batch(
+        self, prompt: str, model: str | None = None
+    ) -> str:
+        """
+        Generate complete text using the model without streaming.
+
+        Args:
+            prompt: The prompt to send to the model.
+            model: The name of the model to use for generation.
+
+        Returns:
+            Complete text response.
         """
         ...
