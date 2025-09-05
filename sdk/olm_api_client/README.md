@@ -150,7 +150,7 @@ import os
 
 def get_client() -> OllamaClientProtocol:
     """Factory function to get the appropriate client."""
-    if os.getenv("APP_ENV") == "testing":
+    if os.getenv("DEBUG") == "true":
         return MockOllamaApiClient(token_delay=0)
     else:
         api_url = os.getenv("OLM_API_ENDPOINT")
@@ -164,8 +164,8 @@ async def main():
     response = await my_client.gen_batch(prompt="Tell me a joke.")
     print(response)
 
-# To run in test mode:
-# APP_ENV=testing python your_app.py
+# To run in debug/test mode:
+# DEBUG=true python your_app.py
 
 # To run in production:
 # OLM_API_ENDPOINT="http://real-api-server" python your_app.py

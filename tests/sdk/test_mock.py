@@ -13,7 +13,7 @@ class TestMockOllamaApiClient:
     def test_init_with_default_delay(self):
         """Test initialization with default token delay"""
         client = MockOllamaApiClient()
-        assert client.token_delay == 0.1  # DEFAULT_TOKEN_DELAY
+        assert client.token_delay == 0.01  # DEFAULT_TOKEN_DELAY
 
     def test_init_with_custom_delay(self):
         """Test initialization with custom token delay"""

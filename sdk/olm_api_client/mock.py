@@ -4,7 +4,7 @@ import re
 from typing import AsyncGenerator
 
 # Default streaming configuration
-DEFAULT_TOKEN_DELAY = 0.1  # Faster delay between tokens (seconds) - reduced from 0.07
+DEFAULT_TOKEN_DELAY = 0.01  # Faster delay between tokens (seconds) - reduced from 0.07
 
 
 class MockOllamaApiClient:
@@ -62,9 +62,9 @@ class MockOllamaApiClient:
                     continue  # Skip pure whitespace tokens
 
                 # For words longer than 4 characters, occasionally split into subwords
-                if len(token) > 6 and token.isalpha():
-                    # 30% chance to split long words
-                    if hash(token) % 10 < 3:  # Deterministic pseudo-random
+                if len(token) > 8 and token.isalpha():
+                    # 20% chance to split long words
+                    if hash(token) % 10 < 2:  # Deterministic pseudo-random
                         mid = len(token) // 2
                         result.append(token[:mid])
                         result.append(token[mid:])
@@ -124,7 +124,9 @@ Ready to proceed.""",
             yield token
 
     def gen_stream(
-        self, prompt: str, model: str | None = None
+        self,
+        prompt: str,
+        model: str | None = None,
     ) -> AsyncGenerator[str, None]:
         """
         Generates mock text responses with realistic streaming behavior.

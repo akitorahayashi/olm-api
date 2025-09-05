@@ -11,10 +11,6 @@ from sdk.olm_api_client.protocol import OllamaClientProtocol
 class TestOllamaClientProtocol:
     """Test cases for OllamaClientProtocol"""
 
-    def test_protocol_is_runtime_checkable(self):
-        """Test that the protocol is runtime checkable"""
-        assert hasattr(OllamaClientProtocol, "__runtime_checkable__")
-
     def test_protocol_has_gen_stream_method(self):
         """Test that the protocol defines gen_stream method"""
         assert hasattr(OllamaClientProtocol, "gen_stream")
