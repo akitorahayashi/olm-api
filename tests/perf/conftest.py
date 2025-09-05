@@ -10,6 +10,16 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+
+def load_prompt() -> str:
+    """
+    Load prompt from the shared prompt.txt file.
+    """
+    prompt_path = os.path.join(os.path.dirname(__file__), "prompt.txt")
+    with open(prompt_path, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+
 # Set environment variables for Docker Compose
 os.environ["HOST_BIND_IP"] = os.getenv("HOST_BIND_IP", "127.0.0.1")
 os.environ["TEST_PORT"] = os.getenv("TEST_PORT", "8002")

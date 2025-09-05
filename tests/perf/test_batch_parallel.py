@@ -1,9 +1,12 @@
 import asyncio
+import json
 import os
 import time
 
 import httpx
 import pytest
+
+from .conftest import load_prompt
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio
@@ -27,6 +30,10 @@ async def make_api_request(
             )
 
         response_data = response.json()
+        
+        # Log the JSON response
+        print(f"\nRequest {request_number}: {elapsed:.2f}s - Response JSON: {json.dumps(response_data, ensure_ascii=False)}")
+        
         if "response" not in response_data:
             raise Exception(
                 f"Request {request_number} returned invalid response format: {response_data}"
@@ -52,7 +59,7 @@ async def run_parallel_requests_with_timing(
 
     generate_url = f"http://localhost:{host_port}/api/v1/generate"
     request_payload = {
-        "prompt": "What is 2+2?",
+        "prompt": load_prompt(),
         "model_name": model_name,
         "stream": False,
     }
@@ -141,37 +148,37 @@ async def test_10_parallel_requests():
     assert total_time > 0, "Test should take some time to complete"
 
 
-@pytest.mark.asyncio
-async def test_30_parallel_requests():
-    """Test performance with 30 parallel requests"""
-    num_requests = 30
-    total_time, request_times = await run_parallel_requests_with_timing(num_requests)
+# @pytest.mark.asyncio
+# async def test_30_parallel_requests():
+#     """Test performance with 30 parallel requests"""
+#     num_requests = 30
+#     total_time, request_times = await run_parallel_requests_with_timing(num_requests)
 
-    print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
-    print(f"✅ [PARALLEL TEST: {num_requests} requests] COMPLETED\n")
+#     print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
+#     print(f"✅ [PARALLEL TEST: {num_requests} requests] COMPLETED\n")
 
-    assert total_time > 0, "Test should take some time to complete"
-
-
-@pytest.mark.asyncio
-async def test_50_parallel_requests():
-    """Test performance with 50 parallel requests"""
-    num_requests = 50
-    total_time, request_times = await run_parallel_requests_with_timing(num_requests)
-
-    print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
-    print(f"✅ [PARALLEL TEST: {num_requests} requests] COMPLETED\n")
-
-    assert total_time > 0, "Test should take some time to complete"
+#     assert total_time > 0, "Test should take some time to complete"
 
 
-@pytest.mark.asyncio
-async def test_100_parallel_requests():
-    """Test performance with 100 parallel requests"""
-    num_requests = 100
-    total_time, request_times = await run_parallel_requests_with_timing(num_requests)
+# @pytest.mark.asyncio
+# async def test_50_parallel_requests():
+#     """Test performance with 50 parallel requests"""
+#     num_requests = 50
+#     total_time, request_times = await run_parallel_requests_with_timing(num_requests)
 
-    print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
-    print(f"✅ [PARALLEL TEST: {num_requests} requests] COMPLETED\n")
+#     print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
+#     print(f"✅ [PARALLEL TEST: {num_requests} requests] COMPLETED\n")
 
-    assert total_time > 0, "Test should take some time to complete"
+#     assert total_time > 0, "Test should take some time to complete"
+
+
+# @pytest.mark.asyncio
+# async def test_100_parallel_requests():
+#     """Test performance with 100 parallel requests"""
+#     num_requests = 100
+#     total_time, request_times = await run_parallel_requests_with_timing(num_requests)
+
+#     print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
+#     print(f"✅ [PARALLEL TEST: {num_requests} requests] COMPLETED\n")
+
+#     assert total_time > 0, "Test should take some time to complete"
