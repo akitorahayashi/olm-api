@@ -26,8 +26,8 @@ def e2e_setup() -> Generator[None, None, None]:
     docker_command = ["sudo", "docker"] if use_sudo else ["docker"]
 
     host_bind_ip = os.getenv("HOST_BIND_IP", "127.0.0.1")
-    host_port = os.getenv("TEST_PORT", "8002")
-    health_url = f"http://{host_bind_ip}:{host_port}/health"
+    test_port = os.getenv("TEST_PORT", "8002")
+    health_url = f"http://{host_bind_ip}:{test_port}/health"
 
     # Define compose commands
     compose_up_command = docker_command + [
@@ -55,7 +55,7 @@ def e2e_setup() -> Generator[None, None, None]:
 
     try:
         subprocess.run(
-            compose_up_command, check=True, timeout=600
+            compose_up_command, check=True, timeout=600, env=os.environ
         )  # 10 minutes timeout
 
         # Health Check
