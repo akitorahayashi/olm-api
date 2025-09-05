@@ -10,6 +10,25 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+
+def load_prompt() -> str:
+    """
+    Load prompt from the shared prompt.txt file.
+    """
+    prompt_path = os.path.join(os.path.dirname(__file__), "prompt.txt")
+    with open(prompt_path, "r", encoding="utf-8") as f:
+        return f.read().strip()
+
+
+def get_model_name() -> str:
+    """
+    Get the model name. Configure the model name here manually.
+    """
+    # Manually configure the model name here
+    model_name = "qwen3:0.6b"
+    return model_name
+
+
 # Set environment variables for Docker Compose
 os.environ["HOST_BIND_IP"] = os.getenv("HOST_BIND_IP", "127.0.0.1")
 os.environ["TEST_PORT"] = os.getenv("TEST_PORT", "8002")
@@ -40,7 +59,6 @@ def perf_setup() -> Generator[None, None, None]:
         "olm-api-test",
         "up",
         "-d",
-        "--build",
     ]
     compose_down_command = docker_command + [
         "compose",
@@ -65,6 +83,7 @@ def perf_setup() -> Generator[None, None, None]:
                 timeout=300,
                 capture_output=True,
                 text=True,
+                env=os.environ,
             )  # 5 minutes timeout
         except subprocess.CalledProcessError as e:
             print("\n🛑 compose up failed; performing cleanup...")
@@ -115,6 +134,6 @@ def perf_setup() -> Generator[None, None, None]:
 
         # Stop services
         print("\n🛑 Stopping Performance Test services...")
-        subprocess.run(compose_down_command, check=True)
+        subprocess.run(compose_down_command, check=False)
     finally:
         pass

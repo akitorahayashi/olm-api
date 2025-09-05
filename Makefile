@@ -147,7 +147,7 @@ lint: ## Lint code with black check and ruff
 # ==============================================================================
 
 .PHONY: test
-test: unit-test build-test db-test e2e-test## Run the full test suite
+test: unit-test sdk-test build-test db-test e2e-test ## Run the full test suite
 
 .PHONY: unit-test
 unit-test: ## Run the unit tests locally
@@ -173,16 +173,6 @@ e2e-test: ## Run end-to-end tests against a live application stack
 perf-test: ## Run all performance tests (both parallel and sequential)
 	@echo "Running all performance tests..."
 	@python -m pytest tests/perf -s
-
-.PHONY: perf-parallel
-perf-parallel: ## Run parallel performance tests (simultaneous requests)
-	@echo "Running parallel performance tests..."
-	@python -m pytest tests/perf/test_parallel.py -s
-
-.PHONY: perf-sequential
-perf-sequential: ## Run sequential performance tests (interval-based requests)
-	@echo "Running sequential performance tests..."
-	@python -m pytest tests/perf/test_sequential.py -s
 
 .PHONY: build-test
 build-test: ## Build Docker image for testing without leaving artifacts

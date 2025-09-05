@@ -1,9 +1,12 @@
 import asyncio
+import json
 import os
 import time
 
 import httpx
 import pytest
+
+from tests.perf.conftest import get_model_name, load_prompt
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio
@@ -27,6 +30,22 @@ async def make_api_request(
             )
 
         response_data = response.json()
+
+        # Log the JSON response with formatted think tags
+        if "response" in response_data:
+            formatted_response_text = response_data["response"].replace(
+                "</think>", "</think>\n\n"
+            )
+            formatted_response_data = response_data.copy()
+            formatted_response_data["response"] = formatted_response_text
+            print(
+                f"\nRequest {request_number}: {elapsed:.2f}s - Response JSON: {json.dumps(formatted_response_data, ensure_ascii=False)}"
+            )
+        else:
+            print(
+                f"\nRequest {request_number}: {elapsed:.2f}s - Response JSON: {json.dumps(response_data, ensure_ascii=False)}"
+            )
+
         if "response" not in response_data:
             raise Exception(
                 f"Request {request_number} returned invalid response format: {response_data}"
@@ -47,12 +66,11 @@ async def run_sequential_requests_with_interval(
     Run sequential requests with specified interval and return total elapsed time and individual request times.
     """
     host_port = os.getenv("HOST_PORT", "8000")
-    model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
-    assert model_name, "BUILT_IN_OLLAMA_MODEL environment variable must be set"
+    model_name = get_model_name()
 
     generate_url = f"http://localhost:{host_port}/api/v1/generate"
     request_payload = {
-        "prompt": "What is 2+2?",
+        "prompt": load_prompt(),
         "model_name": model_name,
         "stream": False,
     }
