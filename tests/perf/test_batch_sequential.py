@@ -6,7 +6,7 @@ import time
 import httpx
 import pytest
 
-from tests.perf.conftest import load_prompt
+from tests.perf.conftest import get_model_name, load_prompt
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio
@@ -66,8 +66,7 @@ async def run_sequential_requests_with_interval(
     Run sequential requests with specified interval and return total elapsed time and individual request times.
     """
     host_port = os.getenv("HOST_PORT", "8000")
-    model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
-    assert model_name, "BUILT_IN_OLLAMA_MODEL environment variable must be set"
+    model_name = get_model_name()
 
     generate_url = f"http://localhost:{host_port}/api/v1/generate"
     request_payload = {

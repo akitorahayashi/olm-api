@@ -20,6 +20,15 @@ def load_prompt() -> str:
         return f.read().strip()
 
 
+def get_model_name() -> str:
+    """
+    Get the model name. Configure the model name here manually.
+    """
+    # Manually configure the model name here
+    model_name = "qwen3:0.6b"
+    return model_name
+
+
 # Set environment variables for Docker Compose
 os.environ["HOST_BIND_IP"] = os.getenv("HOST_BIND_IP", "127.0.0.1")
 os.environ["TEST_PORT"] = os.getenv("TEST_PORT", "8002")
