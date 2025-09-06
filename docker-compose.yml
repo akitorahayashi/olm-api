@@ -23,6 +23,7 @@ services:
     volumes:
       - ollama_data:/root/.ollama
     environment:
+      - OLLAMA_CONTEXT_LENGTH=${OLLAMA_CONTEXT_LENGTH}
       - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}
       - OLLAMA_MAX_QUEUE=${OLLAMA_MAX_QUEUE}
       - OLLAMA_FLASH_ATTENTION=${OLLAMA_FLASH_ATTENTION}
