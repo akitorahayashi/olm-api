@@ -24,8 +24,9 @@ endif
 
 DOCKER_CMD := $(SUDO_PREFIX) docker
 
-# Define the project name based on the directory name for dynamic container naming
-PROJECT_NAME := $(shell basename $(CURDIR))
+# Load PROJECT_NAME from environment file
+include .env
+export
 
 # Define project names for different environments
 DEV_PROJECT_NAME := $(PROJECT_NAME)-dev
