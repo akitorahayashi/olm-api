@@ -4,7 +4,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ${PROJECT_NAME}-postgres-data:/var/lib/postgresql/data
+      - postgres-db:/var/lib/postgresql/data
     healthcheck:
       test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_HOST_DB_NAME}" ]
       interval: 10s
@@ -21,7 +21,7 @@ services:
     entrypoint: ollama
     command: serve
     volumes:
-      - ${PROJECT_NAME}-ollama-data:/root/.ollama
+      - ollama-data:/root/.ollama
     environment:
       - OLLAMA_CONTEXT_LENGTH=${OLLAMA_CONTEXT_LENGTH}
       - OLLAMA_NUM_PARALLEL=${OLLAMA_NUM_PARALLEL}
@@ -66,9 +66,11 @@ services:
     restart: unless-stopped
 
 volumes:
-  ${PROJECT_NAME}-postgres-data:
+  postgres-db:
     driver: local
+    name: ${PROJECT_NAME}-postgres-db-prod
     external: false
-  ${PROJECT_NAME}-ollama-data:
+  ollama-data:
     driver: local
+    name: ${PROJECT_NAME}-ollama-data
     external: false

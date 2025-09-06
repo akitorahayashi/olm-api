@@ -7,7 +7,7 @@ services:
 
   ollama:
     volumes:
-      - ollama_data:/root/.ollama
+      - ollama-data:/root/.ollama
 
   api:
     build:
