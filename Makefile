@@ -24,9 +24,11 @@ endif
 
 DOCKER_CMD := $(SUDO_PREFIX) docker
 
-# Load PROJECT_NAME from environment file
-include .env
-export
+# Load environment variables from .env file
+-include .env
+
+# Define the project name from environment variable
+PROJECT_NAME ?= olm-api
 
 # Define project names for different environments
 DEV_PROJECT_NAME := $(PROJECT_NAME)-dev
