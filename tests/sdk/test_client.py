@@ -245,3 +245,71 @@ class TestIntegrationWithMock:
 
             with pytest.raises(httpx.RequestError):
                 await client._non_stream_response("test prompt", "test-model", None)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("think_value", [True, False])
+    async def test_stream_response_sends_think_parameter(self, think_value):
+        """Test that _stream_response sends the think parameter correctly"""
+        client = OllamaApiClient(api_url="http://localhost:11434")
+
+        mock_response = MagicMock()
+        mock_response.aiter_lines.return_value = async_generator_mock([])
+        mock_response.raise_for_status = Mock()
+
+        mock_stream_context = AsyncMock()
+        mock_stream_context.__aenter__.return_value = mock_response
+
+        mock_client = MagicMock()
+        mock_client.stream.return_value = mock_stream_context
+
+        mock_async_client = AsyncMock()
+        mock_async_client.__aenter__.return_value = mock_client
+
+        with patch("httpx.AsyncClient", return_value=mock_async_client):
+            result = client._stream_response(
+                "test prompt", "test-model", think=think_value
+            )
+            # Consume the generator to trigger the call
+            async for _ in result:
+                pass
+
+            expected_payload = {
+                "prompt": "test prompt",
+                "model_name": "test-model",
+                "stream": True,
+                "think": think_value,
+            }
+            mock_client.stream.assert_called_once()
+            call_args = mock_client.stream.call_args
+            assert call_args.kwargs["json"] == expected_payload
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("think_value", [True, False])
+    async def test_non_stream_response_sends_think_parameter(self, think_value):
+        """Test that _non_stream_response sends the think parameter correctly"""
+        client = OllamaApiClient(api_url="http://localhost:11434")
+
+        mock_response = MagicMock()
+        mock_response.json.return_value = {"response": "some text"}
+        mock_response.raise_for_status = Mock()
+
+        mock_client = AsyncMock()
+        mock_client.post.return_value = mock_response
+
+        mock_async_client = AsyncMock()
+        mock_async_client.__aenter__.return_value = mock_client
+
+        with patch("httpx.AsyncClient", return_value=mock_async_client):
+            await client._non_stream_response(
+                "test prompt", "test-model", think=think_value
+            )
+
+            expected_payload = {
+                "prompt": "test prompt",
+                "model_name": "test-model",
+                "stream": False,
+                "think": think_value,
+            }
+            mock_client.post.assert_called_once()
+            call_args = mock_client.post.call_args
+            assert call_args.kwargs["json"] == expected_payload

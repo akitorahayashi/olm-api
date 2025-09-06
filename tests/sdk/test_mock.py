@@ -228,6 +228,40 @@ class TestMockOllamaApiClient:
         assert isinstance(result, str)
         assert len(result) > 0
 
+    @pytest.mark.asyncio
+    async def test_gen_stream_with_think_true(self):
+        """Test gen_stream includes think tags when think=True"""
+        client = MockOllamaApiClient(token_delay=0)
+        stream = client.gen_stream("prompt", "model", think=True)
+        result = "".join([chunk async for chunk in stream])
+        assert "<think>" in result
+        assert "</think>" in result
+
+    @pytest.mark.asyncio
+    async def test_gen_stream_with_think_false(self):
+        """Test gen_stream excludes think tags when think=False"""
+        client = MockOllamaApiClient(token_delay=0)
+        stream = client.gen_stream("prompt", "model", think=False)
+        result = "".join([chunk async for chunk in stream])
+        assert "<think>" not in result
+        assert "</think>" not in result
+
+    @pytest.mark.asyncio
+    async def test_gen_batch_with_think_true(self):
+        """Test gen_batch includes think tags when think=True"""
+        client = MockOllamaApiClient(token_delay=0)
+        result = await client.gen_batch("prompt", "model", think=True)
+        assert "<think>" in result
+        assert "</think>" in result
+
+    @pytest.mark.asyncio
+    async def test_gen_batch_with_think_false(self):
+        """Test gen_batch excludes think tags when think=False"""
+        client = MockOllamaApiClient(token_delay=0)
+        result = await client.gen_batch("prompt", "model", think=False)
+        assert "<think>" not in result
+        assert "</think>" not in result
+
 
 class TestMockEnvironmentVariable:
     """Test MockOllamaApiClient with environment variable configuration"""
