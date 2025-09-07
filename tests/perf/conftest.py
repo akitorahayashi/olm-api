@@ -25,7 +25,7 @@ def get_model_name() -> str:
     Get the model name. Configure the model name here manually.
     """
     # Manually configure the model name here
-    model_name = "qwen3:8b"
+    model_name = "qwen3:1.7b"
     return model_name
 
 

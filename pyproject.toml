@@ -1,6 +1,6 @@
 [project]
 name = "olm-api"
-version = "0.1.0"
+version = "1.2.0"
 description = "A local LLM wrapped as an API."
 authors = [{ name = "akitorahayashi", email = "atora.has75@gmail.com" }]
 readme = "README.md"
