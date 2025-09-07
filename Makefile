@@ -194,3 +194,16 @@ build-test: ## Build Docker image for testing without leaving artifacts
 	$(DOCKER_CMD) build --target production --tag temp-build-test:$$TEMP_IMAGE_TAG . && \
 	echo "Build successful. Cleaning up temporary image..." && \
 	$(DOCKER_CMD) rmi temp-build-test:$$TEMP_IMAGE_TAG || true
+
+# ==============================================================================
+# CLEANUP
+# ==============================================================================
+
+.PHONY: clean
+clean: ## Remove __pycache__ and .venv to make project lightweight
+	@echo "🧹 Cleaning up project..."
+	@find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+	@rm -rf .venv
+	@rm -rf .pytest_cache
+	@rm -rf .ruff_cache
+	@echo "✅ Cleanup completed"

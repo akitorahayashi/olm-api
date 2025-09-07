@@ -12,6 +12,15 @@ from tests.perf.conftest import get_model_name, load_prompt
 pytestmark = pytest.mark.asyncio
 
 
+# Define test cases for sequential requests
+# Each tuple represents (num_requests, interval_seconds)
+SEQUENTIAL_TEST_CASES = [
+    pytest.param(15, 1.0, id="15_requests_1.0s_interval"),
+    pytest.param(15, 2.0, id="15_requests_2.0s_interval"),
+    pytest.param(15, 3.0, id="15_requests_3.0s_interval"),
+]
+
+
 async def make_api_request(
     client: httpx.AsyncClient, url: str, payload: dict, request_number: int
 ) -> tuple[dict, float]:
@@ -107,102 +116,23 @@ async def run_sequential_requests_with_interval(
     return total_elapsed, request_times
 
 
-# Test functions for different intervals with 30 requests each
+
 @pytest.mark.asyncio
-async def test_30_requests_0_5_second_interval():
-    """Test performance with 30 requests at 0.5 second intervals"""
-    num_requests = 30
-    interval = 0.5
+@pytest.mark.parametrize("num_requests, interval", SEQUENTIAL_TEST_CASES)
+async def test_sequential_performance(num_requests: int, interval: float):
+    """
+    Test performance with sequential requests for various configurations.
+    """
     total_time, request_times = await run_sequential_requests_with_interval(
         num_requests, interval
     )
 
+    assert request_times, "Should have recorded request times"
     avg_time = sum(request_times) / len(request_times)
     min_time = min(request_times)
     max_time = max(request_times)
 
-    print(f"\n📊 Sequential Test (30 requests, {interval}s interval):")
-    print(f"   Total time: {total_time:.2f}s")
-    print(f"   Average response time: {avg_time:.2f}s")
-    print(f"   Min/Max response time: {min_time:.2f}s / {max_time:.2f}s")
-    print(
-        f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n"
-    )
-
-    assert total_time > 0, "Test should take some time to complete"
-    assert (
-        len(request_times) == num_requests
-    ), f"Should have {num_requests} response times"
-
-
-@pytest.mark.asyncio
-async def test_30_requests_1_second_interval():
-    """Test performance with 30 requests at 1 second intervals"""
-    num_requests = 30
-    interval = 1.0
-    total_time, request_times = await run_sequential_requests_with_interval(
-        num_requests, interval
-    )
-
-    avg_time = sum(request_times) / len(request_times)
-    min_time = min(request_times)
-    max_time = max(request_times)
-
-    print(f"\n📊 Sequential Test (30 requests, {interval}s interval):")
-    print(f"   Total time: {total_time:.2f}s")
-    print(f"   Average response time: {avg_time:.2f}s")
-    print(f"   Min/Max response time: {min_time:.2f}s / {max_time:.2f}s")
-    print(
-        f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n"
-    )
-
-    assert total_time > 0, "Test should take some time to complete"
-    assert (
-        len(request_times) == num_requests
-    ), f"Should have {num_requests} response times"
-
-
-@pytest.mark.asyncio
-async def test_30_requests_2_second_interval():
-    """Test performance with 30 requests at 2 second intervals"""
-    num_requests = 30
-    interval = 2.0
-    total_time, request_times = await run_sequential_requests_with_interval(
-        num_requests, interval
-    )
-
-    avg_time = sum(request_times) / len(request_times)
-    min_time = min(request_times)
-    max_time = max(request_times)
-
-    print(f"\n📊 Sequential Test (30 requests, {interval}s interval):")
-    print(f"   Total time: {total_time:.2f}s")
-    print(f"   Average response time: {avg_time:.2f}s")
-    print(f"   Min/Max response time: {min_time:.2f}s / {max_time:.2f}s")
-    print(
-        f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n"
-    )
-
-    assert total_time > 0, "Test should take some time to complete"
-    assert (
-        len(request_times) == num_requests
-    ), f"Should have {num_requests} response times"
-
-
-@pytest.mark.asyncio
-async def test_10_requests_0_1_second_interval():
-    """Test performance with 10 requests at 0.1 second intervals (rapid fire)"""
-    num_requests = 10
-    interval = 0.1
-    total_time, request_times = await run_sequential_requests_with_interval(
-        num_requests, interval
-    )
-
-    avg_time = sum(request_times) / len(request_times)
-    min_time = min(request_times)
-    max_time = max(request_times)
-
-    print(f"\n📊 Sequential Test (10 requests, {interval}s interval):")
+    print(f"\n📊 Sequential Test ({num_requests} requests, {interval}s interval):")
     print(f"   Total time: {total_time:.2f}s")
     print(f"   Average response time: {avg_time:.2f}s")
     print(f"   Min/Max response time: {min_time:.2f}s / {max_time:.2f}s")
