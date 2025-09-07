@@ -116,7 +116,6 @@ async def run_sequential_requests_with_interval(
     return total_elapsed, request_times
 
 
-
 @pytest.mark.asyncio
 @pytest.mark.parametrize("num_requests, interval", SEQUENTIAL_TEST_CASES)
 async def test_sequential_performance(num_requests: int, interval: float):
