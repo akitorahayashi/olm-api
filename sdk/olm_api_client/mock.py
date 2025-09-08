@@ -6,6 +6,14 @@ from typing import AsyncGenerator
 # Default streaming configuration
 DEFAULT_TOKEN_DELAY = 0.01  # Faster delay between tokens (seconds) - reduced from 0.07
 
+DEFAULT_RESPONSES = [
+    "Hello! How can I help you today?",
+    "That's an interesting question. Could you tell me more about it?",
+    "I understand. Is there anything else you'd like to know?",
+    "Yes, I think you're absolutely right about that.",
+    "I'm sorry, but could you be more specific about what you're looking for?",
+]
+
 
 class MockOllamaApiClient:
     """
@@ -29,15 +37,13 @@ class MockOllamaApiClient:
 
         # Use provided responses or default ones
         if responses is not None:
-            self.mock_responses = responses
+            if not responses:
+                raise ValueError("responses must be a non-empty list")
+            # Defensive copy to prevent side effects from external mutations
+            self.mock_responses = list(responses)
         else:
-            self.mock_responses = [
-                "Hello! How can I help you today?",
-                "That's an interesting question. Could you tell me more about it?",
-                "I understand. Is there anything else you'd like to know?",
-                "Yes, I think you're absolutely right about that.",
-                "I'm sorry, but could you be more specific about what you're looking for?",
-            ]
+            # Use a copy to prevent modifying the shared default list
+            self.mock_responses = DEFAULT_RESPONSES.copy()
         self.response_index = 0
 
     def _tokenize_realistic(self, text: str) -> list[str]:
