@@ -149,40 +149,80 @@ class TestMockOllamaApiClient:
         assert "</think>" in result
         assert len(result) > 0
 
-    @pytest.mark.asyncio
-    async def test_gen_batch_custom_responses(self):
-        """Test gen_batch with custom responses for specific prompts"""
-        client = MockOllamaApiClient(token_delay=0)
+    def test_init_with_custom_responses(self):
+        """Test initialization with custom responses parameter"""
+        custom_responses = ["Response A", "Response B", "Response C"]
+        client = MockOllamaApiClient(responses=custom_responses)
+        assert client.mock_responses == custom_responses
 
-        test_cases = [
-            ("hello there", "hello"),
-            ("hi friend", "hi"),
-            ("test input", "test"),
-            ("help me", "help"),
-            ("thanks a lot", "thanks"),
-        ]
-
-        for prompt, expected_keyword in test_cases:
-            result = await client.gen_batch(prompt)
-            assert isinstance(result, str)
-            # The response should contain thinking + custom response
-            assert "<think>" in result
-            assert len(result) > len(prompt)
+    def test_init_without_custom_responses(self):
+        """Test initialization without custom responses uses defaults"""
+        client = MockOllamaApiClient()
+        # Should have default responses
+        assert len(client.mock_responses) == 5
+        assert "Hello! How can I help you today?" in client.mock_responses
 
     @pytest.mark.asyncio
-    async def test_gen_batch_cycling_responses(self):
-        """Test that gen_batch cycles through mock responses"""
+    async def test_gen_batch_with_custom_responses(self):
+        """Test gen_batch uses custom responses array"""
+        custom_responses = ["カスタムレスポンス1", "Custom response 2", "Réponse 3"]
+        client = MockOllamaApiClient(responses=custom_responses, token_delay=0)
+
+        for i, expected_response in enumerate(custom_responses):
+            result = await client.gen_batch(f"test prompt {i}", think=False)
+            assert result == expected_response
+
+    @pytest.mark.asyncio
+    async def test_gen_stream_with_custom_responses(self):
+        """Test gen_stream uses custom responses array"""
+        custom_responses = ["Short response", "Longer custom response"]
+        client = MockOllamaApiClient(responses=custom_responses, token_delay=0)
+
+        # Test first response
+        chunks = []
+        async for chunk in client.gen_stream("test 1", think=False):
+            chunks.append(chunk)
+        result1 = "".join(chunks)
+        assert result1 == custom_responses[0]
+
+        # Test second response
+        chunks = []
+        async for chunk in client.gen_stream("test 2", think=False):
+            chunks.append(chunk)
+        result2 = "".join(chunks)
+        assert result2 == custom_responses[1]
+
+    @pytest.mark.asyncio
+    async def test_response_cycling_with_custom_responses(self):
+        """Test that custom responses cycle correctly"""
+        custom_responses = ["First", "Second", "Third"]
+        client = MockOllamaApiClient(responses=custom_responses, token_delay=0)
+
+        results = []
+        for i in range(6):  # Test two full cycles
+            result = await client.gen_batch(f"test {i}", think=False)
+            results.append(result)
+
+        # Should cycle through responses: First, Second, Third, First, Second, Third
+        expected = custom_responses * 2
+        assert results == expected
+
+    @pytest.mark.asyncio
+    async def test_response_cycling_with_default_responses(self):
+        """Test that default responses cycle correctly"""
         client = MockOllamaApiClient(token_delay=0)
 
-        responses = []
-        for i in range(7):  # More than the number of mock responses
-            result = await client.gen_batch(f"unique prompt {i}")
-            responses.append(result)
+        results = []
+        for i in range(7):  # More than the number of default responses (5)
+            result = await client.gen_batch(f"unique prompt {i}", think=False)
+            results.append(result)
 
-        # Should have different responses (due to cycling and thinking variation)
-        assert len(responses) == 7
-        assert all(isinstance(r, str) for r in responses)
-        assert all("<think>" in r for r in responses)
+        # Should have cycled through all 5 default responses and started again
+        assert len(results) == 7
+        assert all(isinstance(r, str) for r in results)
+        # First 5 should be the default responses, then it repeats
+        assert results[0] == client.mock_responses[0]
+        assert results[5] == client.mock_responses[0]  # Cycled back
 
     @pytest.mark.asyncio
     async def test_gen_stream_with_model_parameter(self):
@@ -227,6 +267,41 @@ class TestMockOllamaApiClient:
         result = await client.gen_batch("test", model=None)
         assert isinstance(result, str)
         assert len(result) > 0
+
+    @pytest.mark.asyncio
+    async def test_backward_compatibility_existing_api(self):
+        """Test that existing API usage still works without custom responses"""
+        # This tests that old code continues to work
+        client = MockOllamaApiClient(api_url="http://localhost:11434", token_delay=0.01)
+
+        # Should work exactly as before
+        result = await client.gen_batch("test prompt")
+        assert isinstance(result, str)
+        assert "<think>" in result
+        assert len(result) > 0
+
+        # Streaming should also work
+        chunks = []
+        async for chunk in client.gen_stream("test"):
+            chunks.append(chunk)
+        combined = "".join(chunks)
+        assert "<think>" in combined
+
+    @pytest.mark.asyncio
+    async def test_mixed_parameters(self):
+        """Test initialization with mixed custom and existing parameters"""
+        custom_responses = ["Test response 1", "Test response 2"]
+        client = MockOllamaApiClient(
+            api_url="http://localhost:11434",
+            token_delay=0.02,
+            responses=custom_responses,
+        )
+
+        assert client.token_delay == 0.02
+        assert client.mock_responses == custom_responses
+
+        result = await client.gen_batch("test", think=False)
+        assert result in custom_responses
 
 
 class TestMockEnvironmentVariable:

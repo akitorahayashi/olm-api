@@ -96,22 +96,30 @@ Use this for testing. It simulates API responses locally and deterministically.
 
 ### Initialization
 
-The `token_delay` parameter controls the simulated streaming speed. A delay of `0` is useful for fast-running tests.
-
 ```python
 from sdk.olm_api_client import MockOllamaApiClient
 
-# For fast tests, no delay
-fast_client = MockOllamaApiClient(token_delay=0)
+# Default responses with no delay
+client = MockOllamaApiClient(token_delay=0)
 
-# For realistic streaming simulation
+# Custom responses
+custom_responses = ["Response 1", "Response 2", "Response 3"]
+client = MockOllamaApiClient(responses=custom_responses, token_delay=0)
+
+# Realistic streaming delay
 realistic_client = MockOllamaApiClient(token_delay=0.01)
 ```
 
+### Parameters
+
+* **`responses`** : Optional list of strings to use as responses. If not provided, uses default responses.
+* **`token_delay`** : Delay between tokens during streaming (seconds). Use `0` for fast tests.
+* **`api_url`** : Accepted for compatibility but not used.
+
 ### Behavior
 
-* **Deterministic Responses** : The mock client returns consistent, predefined answers for common prompts (e.g., "hello", "test"). For other prompts, it cycles through a list of generic responses.
-* **Simulated Thinking** : Responses include `<think>` tags to mimic the behavior of a real model's thought process.
+* **Configurable Responses** : Cycles through provided responses array or defaults.
+* **Simulated Thinking** : Responses include `<think>` tags unless `think=False` is specified.
 * **No Network Required** : All operations are performed in-memory.
 
 ### Usage
@@ -122,18 +130,18 @@ The interface is identical to `OllamaApiClient`.
 import asyncio
 from sdk.olm_api_client import MockOllamaApiClient
 
-# Use the fast client for a quick test
-client = MockOllamaApiClient(token_delay=0)
+# Custom responses for testing
+test_responses = ["Test answer 1", "Test answer 2"]
+client = MockOllamaApiClient(responses=test_responses, token_delay=0)
 
 async def mock_example():
-    # Batch response is instant
-    response = await client.gen_batch(prompt="hello there")
-    print(response)
-    # Example Output: <think>...</think> Hello! 😊 How are you today?...
-
-    # Stream response is also instant with token_delay=0
-    async for chunk in client.gen_stream(prompt="some other prompt"):
-        print(chunk, end="")
+    # First call returns "Test answer 1"
+    response1 = await client.gen_batch("any prompt", think=False)
+    print(response1)  # Output: Test answer 1
+    
+    # Second call returns "Test answer 2"
+    response2 = await client.gen_batch("another prompt", think=False)
+    print(response2)  # Output: Test answer 2
 
 # asyncio.run(mock_example())
 ```
