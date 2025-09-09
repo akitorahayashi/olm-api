@@ -150,31 +150,84 @@ async def mock_example():
 
 ## Recommended Usage Pattern (Dependency Injection)
 
-For robust and testable code, use the `OllamaClientProtocol` for type hinting. This allows you to inject either the real or mock client depending on the environment.
+For building robust and testable applications, we recommend using a factory function to provide the appropriate API client. By type-hinting with `OllamaClientProtocol`, you can easily inject either the real client (`OllamaApiClient`) or a mock client (`MockOllamaApiClient`) depending on the environment.
+
+This approach supports two main development and testing patterns, which can be selected using environment variables without any code changes.
+
+### Pattern A: Local-Only Development (e.g., on a MacBook)
+
+This pattern is ideal for feature development and rapid iteration.
+
+-   **Setup**: Run `ollama serve` directly on your development machine.
+-   **Configuration**: The client application initializes `OllamaApiClient` with the `api_url` pointing to your local Ollama server (e.g., `http://localhost:11434`).
+-   **Benefits**:
+    -   **No Dependencies**: Eliminates reliance on the shared `olm-api` server on the Mac mini.
+    -   **High Speed**: Network latency is zero, providing extremely fast responses.
+    -   **Clean Logging**: The central API server's database remains free of development-related logs.
+
+### Pattern B: Integrated Testing (Connecting to Deployed API)
+
+This pattern is used to test your application in a state that closely mirrors the production environment.
+
+-   **Setup**: The client application connects to the `olm-api` service running on the Mac mini.
+-   **Configuration**: `OllamaApiClient` is initialized with the `api_url` pointing to the `olm-api` endpoint (e.g., `http://<mac-mini-ip>:8000`).
+-   **Use Case**: Essential for end-to-end testing before deployment to ensure the client interacts correctly with the deployed API server.
+
+### Practical Factory Function Example
+
+The following factory function, `get_olm_client`, demonstrates how to switch between the mock client, Pattern A, and Pattern B using environment variables.
 
 ```python
-from sdk.olm_api_client import OllamaApiClient, MockOllamaApiClient, OllamaClientProtocol
 import os
+from sdk.olm_api_client import (
+    OllamaApiClient,
+    MockOllamaApiClient,
+    OllamaClientProtocol,
+)
 
-def get_client() -> OllamaClientProtocol:
-    """Factory function to get the appropriate client."""
-    if os.getenv("DEBUG") == "true":
+# Default URL for a local Ollama instance (Pattern A)
+LOCAL_OLLAMA_URL = "http://localhost:11434"
+
+def get_olm_client() -> OllamaClientProtocol:
+    """
+    Factory function to get the appropriate Ollama client based on the environment.
+
+    - If `APP_ENV` is 'test', it returns a `MockOllamaApiClient` for unit testing.
+    - If `OLM_API_ENDPOINT` is set, it connects to the specified API server (Pattern B).
+    - Otherwise, it defaults to a local Ollama instance (Pattern A).
+    """
+    # Use mock client for unit tests
+    if os.getenv("APP_ENV") == "test":
+        print("INFO: Using MockOllamaApiClient for testing.")
         return MockOllamaApiClient(token_delay=0)
-    else:
-        api_url = os.getenv("OLM_API_ENDPOINT")
-        if not api_url:
-            raise ValueError("OLM_API_ENDPOINT is not set for production")
-        return OllamaApiClient(api_url=api_url)
 
-# In your application, use the factory
+    # Use real client for development and production
+    api_url = os.getenv("OLM_API_ENDPOINT")
+
+    if api_url:
+        # Pattern B: Connect to the remote olm-api server
+        print(f"INFO: Connecting to remote olm-api server: {api_url}")
+        return OllamaApiClient(api_url=api_url)
+    else:
+        # Pattern A: Connect to a local Ollama server by default
+        print(f"INFO: Connecting to local Ollama server: {LOCAL_OLLAMA_URL}")
+        return OllamaApiClient(api_url=LOCAL_OLLAMA_URL)
+
+# --- How to Use ---
+
+# In your application, call the factory to get the client
 async def main():
-    my_client: OllamaClientProtocol = get_client()
+    my_client: OllamaClientProtocol = get_olm_client()
     response = await my_client.gen_batch(prompt="Tell me a joke.")
     print(response)
 
-# To run in debug/test mode:
-# DEBUG=true python your_app.py
+# To run with Pattern A (Local Development):
+# (No environment variables needed, connects to http://localhost:11434)
+# > python your_app.py
 
-# To run in production:
-# OLM_API_ENDPOINT="http://real-api-server" python your_app.py
+# To run with Pattern B (Integrated Testing):
+# > OLM_API_ENDPOINT="http://<mac-mini-ip>:8000" python your_app.py
+
+# To run with Mock Client (Unit Testing):
+# > APP_ENV="test" python your_app.py
 ```
