@@ -7,32 +7,26 @@ class OllamaClientProtocol(Protocol):
     Protocol for Ollama API clients.
     """
 
-    def gen_stream(
-        self, prompt: str, model: str | None = None, think: bool | None = None
-    ) -> AsyncGenerator[str, None]:
+    def gen_stream(self, prompt: str, model_name: str) -> AsyncGenerator[str, None]:
         """
         Generate text using the model with streaming.
 
         Args:
             prompt: The prompt to send to the model.
-            model: The name of the model to use for generation.
-            think: Whether to enable thinking mode. If None, uses model default.
+            model_name: The name of the model to use for generation.
 
         Returns:
             AsyncGenerator yielding text chunks.
         """
         ...
 
-    async def gen_batch(
-        self, prompt: str, model: str | None = None, think: bool | None = None
-    ) -> str:
+    async def gen_batch(self, prompt: str, model_name: str) -> str:
         """
         Generate complete text using the model without streaming.
 
         Args:
             prompt: The prompt to send to the model.
-            model: The name of the model to use for generation.
-            think: Whether to enable thinking mode. If None, uses model default.
+            model_name: The name of the model to use for generation.
 
         Returns:
             Complete text response.

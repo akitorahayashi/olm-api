@@ -1,5 +1,6 @@
+import os
 from typing import get_type_hints
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 
@@ -56,10 +57,10 @@ class TestOllamaClientProtocol:
 
         # Create a mock that follows the protocol
         class ProtocolCompliantMock:
-            def gen_stream(self, prompt: str, model: str | None = None):
+            def gen_stream(self, prompt: str, model_name: str):
                 return self._async_gen()
 
-            async def gen_batch(self, prompt: str, model: str | None = None):
+            async def gen_batch(self, prompt: str, model_name: str):
                 return "batch response"
 
             async def _async_gen(self):
@@ -73,10 +74,10 @@ class TestOllamaClientProtocol:
         """Test protocol compatibility with non-streaming calls"""
 
         class ProtocolCompliantMock:
-            def gen_stream(self, prompt: str, model: str | None = None):
+            def gen_stream(self, prompt: str, model_name: str):
                 return self._async_gen()
 
-            async def gen_batch(self, prompt: str, model: str | None = None):
+            async def gen_batch(self, prompt: str, model_name: str):
                 return "complete response"
 
             async def _async_gen(self):
@@ -130,7 +131,7 @@ class TestProtocolUsage:
         assert not isinstance(incomplete, OllamaClientProtocol)
 
         class PartiallyCompleteClient:
-            def gen_stream(self, prompt: str, model: str | None = None):
+            def gen_stream(self, prompt: str, model_name: str):
                 pass
 
             # Missing gen_batch
@@ -142,10 +143,10 @@ class TestProtocolUsage:
         """Test that implementations can have additional methods"""
 
         class ExtendedClient:
-            def gen_stream(self, prompt: str, model: str | None = None):
+            def gen_stream(self, prompt: str, model_name: str):
                 return AsyncMock()
 
-            async def gen_batch(self, prompt: str, model: str | None = None):
+            async def gen_batch(self, prompt: str, model_name: str):
                 return "batch response"
 
             def additional_method(self):
@@ -162,7 +163,7 @@ class TestProtocolUsage:
         mock_client = MockOllamaApiClient(token_delay=0)
 
         # Both should accept the same parameters for gen_stream
-        test_params = {"prompt": "test prompt", "model": "test-model"}
+        test_params = {"prompt": "test prompt", "model_name": "test-model"}
 
         # Should not raise TypeError for parameter mismatch
         try:
@@ -182,9 +183,9 @@ class TestProtocolUsage:
         mock_client = MockOllamaApiClient(token_delay=0)
 
         # Test streaming mode
-        stream_result = mock_client.gen_stream("test")
+        stream_result = mock_client.gen_stream("test", "test-model")
         assert hasattr(stream_result, "__aiter__")  # Should be async generator
 
         # Test batch mode
-        batch_result = await mock_client.gen_batch("test")
+        batch_result = await mock_client.gen_batch("test", "test-model")
         assert isinstance(batch_result, str)  # Should be string

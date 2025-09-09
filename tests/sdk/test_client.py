@@ -1,4 +1,3 @@
-import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -11,34 +10,17 @@ from sdk.olm_api_client.protocol import OllamaClientProtocol
 class TestOllamaApiClient:
     """Test cases for OllamaApiClient"""
 
-    def test_init_with_api_url_parameter(self):
-        """Test initialization with API URL parameter"""
+    def test_init_success(self):
+        """Test successful initialization with API URL"""
         api_url = "http://localhost:11434"
         client = OllamaApiClient(api_url=api_url)
         assert client.api_url == api_url
         assert client.generate_endpoint == f"{api_url}/api/v1/generate"
 
-    def test_init_with_environment_variable(self):
-        """Test initialization with environment variable"""
-        api_url = "http://localhost:11435"
-        with patch.dict(os.environ, {"OLM_API_ENDPOINT": api_url}):
-            client = OllamaApiClient()
-            assert client.api_url == api_url
-            assert client.generate_endpoint == f"{api_url}/api/v1/generate"
-
-    def test_init_parameter_overrides_env_var(self):
-        """Test that parameter takes precedence over environment variable"""
-        param_url = "http://localhost:11434"
-        env_url = "http://localhost:11435"
-        with patch.dict(os.environ, {"OLM_API_ENDPOINT": env_url}):
-            client = OllamaApiClient(api_url=param_url)
-            assert client.api_url == param_url
-
     def test_init_without_api_url_raises_error(self):
-        """Test initialization without API URL raises ValueError"""
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="API URL must be provided"):
-                OllamaApiClient()
+        """Test initialization without required api_url raises TypeError"""
+        with pytest.raises(TypeError):
+            OllamaApiClient()
 
     def test_init_strips_trailing_slash(self):
         """Test that trailing slash is stripped from API URL"""
@@ -70,7 +52,7 @@ class TestOllamaApiClient:
                 chunks.append(chunk)
 
             assert chunks == ["Hello", " world"]
-            mock_stream.assert_called_once_with("test prompt", "test-model", None)
+            mock_stream.assert_called_once_with("test prompt", "test-model")
 
     @pytest.mark.asyncio
     async def test_gen_batch(self):
@@ -83,58 +65,7 @@ class TestOllamaApiClient:
             result = await client.gen_batch("test prompt", "test-model")
 
             assert result == "Complete response"
-            mock_non_stream.assert_called_once_with("test prompt", "test-model", None)
-
-    @pytest.mark.asyncio
-    async def test_gen_stream_uses_env_model_when_none(self):
-        """Test that gen_stream uses environment variable model when model=None"""
-        client = OllamaApiClient(api_url="http://localhost:11434")
-
-        with patch.dict(os.environ, {"OLLAMA_MODEL": "env-model"}):
-            with patch.object(client, "_stream_response") as mock_stream:
-                mock_stream.return_value = async_generator_mock(["test"])
-
-                result = client.gen_stream("test prompt", model=None)
-
-                # Consume the generator
-                chunks = []
-                async for chunk in result:
-                    chunks.append(chunk)
-
-                mock_stream.assert_called_once_with("test prompt", "env-model", None)
-
-    @pytest.mark.asyncio
-    async def test_gen_batch_uses_env_model_when_none(self):
-        """Test that gen_batch uses environment variable model when model=None"""
-        client = OllamaApiClient(api_url="http://localhost:11434")
-
-        with patch.dict(os.environ, {"OLLAMA_MODEL": "env-model"}):
-            with patch.object(client, "_non_stream_response") as mock_non_stream:
-                mock_non_stream.return_value = "test response"
-
-                result = await client.gen_batch("test prompt", model=None)
-
-                assert result == "test response"
-                mock_non_stream.assert_called_once_with(
-                    "test prompt", "env-model", None
-                )
-
-    def test_gen_stream_raises_error_when_no_model(self):
-        """Test that gen_stream raises error when no model is specified"""
-        client = OllamaApiClient(api_url="http://localhost:11434")
-
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="OLLAMA_MODEL is not configured"):
-                client.gen_stream("test prompt", model=None)
-
-    @pytest.mark.asyncio
-    async def test_gen_batch_raises_error_when_no_model(self):
-        """Test that gen_batch raises error when no model is specified"""
-        client = OllamaApiClient(api_url="http://localhost:11434")
-
-        with patch.dict(os.environ, {}, clear=True):
-            with pytest.raises(ValueError, match="OLLAMA_MODEL is not configured"):
-                await client.gen_batch("test prompt", model=None)
+            mock_non_stream.assert_called_once_with("test prompt", "test-model")
 
 
 async def async_generator_mock(items):
