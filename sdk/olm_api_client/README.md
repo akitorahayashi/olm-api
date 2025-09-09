@@ -6,8 +6,6 @@ This SDK provides a unified interface for interacting with Ollama, supporting bo
 
 The SDK is built around the `OllamaClientProtocol`, which defines a common set of methods (`gen_stream`, `gen_batch`). This allows your application to remain completely unaware of whether it's communicating with a local `ollama serve` instance or a remote `olm-api` server.
 
-A central factory function, `create_client()`, handles the logic of providing the correct client based on a single environment variable.
-
 ## Client Implementations
 
 1.  **`OllamaLocalClient`**:
@@ -27,74 +25,73 @@ A central factory function, `create_client()`, handles the logic of providing th
 
 ---
 
-## How to Use: The `create_client` Factory
+## How to Use
 
-The **recommended** way to use this SDK is through the `create_client()` factory. This function reads the `OLM_CLIENT_MODE` environment variable to determine which client to return.
-
-### Step 1: Using the Factory in Your Application
+### Direct Client Initialization
 
 ```python
-# In your application's main logic
-from sdk.olm_api_client import create_client, OllamaClientProtocol
+from sdk.olm_api_client import OllamaApiClient, OllamaLocalClient, MockOllamaApiClient
 
-async def run_my_app():
-    # The factory provides the correct client instance automatically.
-    client: OllamaClientProtocol = create_client()
+# Remote API client
+client = OllamaApiClient(api_url="http://<remote-ip>:8000")
 
-    # Your code always uses the same interface, regardless of the client.
+# Local client
+client = OllamaLocalClient(host="http://localhost:11434")  # host is optional
+
+# Mock client for testing
+client = MockOllamaApiClient()
+
+# Use the client
+response = await client.gen_batch(
+    prompt="Why is the sky blue?",
+    model_name="qwen3:0.6b"
+)
+print(response)
+```
+
+### Usage Examples
+
+**A) Local Development**
+
+```python
+from sdk.olm_api_client import OllamaLocalClient
+
+async def run_local():
+    client = OllamaLocalClient()  # Defaults to http://localhost:11434
+    
     response = await client.gen_batch(
-        prompt="Why is the sky blue?",
+        prompt="Explain Python asyncio",
         model_name="qwen3:0.6b"
     )
     print(response)
 ```
 
-### Step 2: Configuring the Client Mode
-
-You can switch between modes by setting environment variables before running your application.
-
-**A) Local Development Mode**
-
-Connects to a local `ollama serve` instance.
-
-```sh
-# No extra variables needed if ollama serve is at http://localhost:11434
-export OLM_CLIENT_MODE=local
-python your_app.py
-```
-
-**B) Remote API Mode**
-
-Connects to the deployed `olm-api` server.
-
-```sh
-export OLM_CLIENT_MODE=remote
-export OLM_API_ENDPOINT="http://<your-mac-mini-ip>:8000"
-python your_app.py
-```
-*Note: `remote` is the default mode if `OLM_CLIENT_MODE` is not set.*
-
-**C) Mock Mode (for Unit Tests)**
-
-Uses the in-memory mock client.
-
-```sh
-export OLM_CLIENT_MODE=mock
-python -m pytest
-```
-
----
-
-## Direct Initialization (Advanced)
-
-While the `create_client` factory is recommended, you can also initialize clients directly if you need more control.
+**B) Remote API**
 
 ```python
-from sdk.olm_api_client import OllamaApiClient, OllamaLocalClient
+from sdk.olm_api_client import OllamaApiClient
 
-# Explicitly create a remote client
-remote_client = OllamaApiClient(api_url="http://<remote-ip>:8000")
+async def run_remote():
+    client = OllamaApiClient(api_url="http://your-server:8000")
+    
+    response = await client.gen_batch(
+        prompt="What is machine learning?",
+        model_name="qwen3:0.6b"
+    )
+    print(response)
+```
 
-# Explicitly create a local client
-local_client = OllamaLocalClient(host="http://localhost:11434")
+**C) Mock Testing**
+
+```python
+from sdk.olm_api_client import MockOllamaApiClient
+
+async def test_function():
+    client = MockOllamaApiClient()
+    
+    response = await client.gen_batch(
+        prompt="Test prompt",
+        model_name="test-model"
+    )
+    assert "mock response" in response.lower()
 ```
