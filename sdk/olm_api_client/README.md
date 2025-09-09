@@ -1,180 +1,100 @@
 # Ollama API Client SDK
 
-This SDK provides a standardized way to interact with the Ollama API. It includes a real client for production use and a mock client for testing. Both clients adhere to a common `OllamaClientProtocol`.
+This SDK provides a unified interface for interacting with Ollama, supporting both local development and remote API communication.
 
-## Core Components
+## Core Idea: A Unified Interface
 
-* **`OllamaClientProtocol`** : An interface defining the common methods (`gen_stream`, `gen_batch`). Use this for type hinting to easily switch between real and mock clients.
-* **`OllamaApiClient`** : The primary client for making real HTTP requests to the Ollama API endpoint.
-* **`MockOllamaApiClient`** : A high-fidelity mock client that simulates API behavior for testing without making network requests.
+The SDK is built around the `OllamaClientProtocol`, which defines a common set of methods (`gen_stream`, `gen_batch`). This allows your application to remain completely unaware of whether it's communicating with a local `ollama serve` instance or a remote `olm-api` server.
 
-## `OllamaClientProtocol`
+A central factory function, `create_client()`, handles the logic of providing the correct client based on a single environment variable.
 
-This is the abstract interface for all clients. It guarantees two methods. Code that depends on this protocol can seamlessly use either the real or mock client.
+## Client Implementations
 
-**Methods:**
+1.  **`OllamaLocalClient`**:
+    *   **Purpose**: For local development.
+    *   **Mechanism**: Communicates directly with a local `ollama serve` instance using the official `ollama` Python library.
+    *   **Benefit**: Fast, no network dependency, and ideal for rapid iteration on your own machine.
 
-* `gen_stream(prompt: str, model: str | None = None) -> AsyncGenerator[str, None]`:
-  * Streams the response token by token.
-* `gen_batch(prompt: str, model: str | None = None) -> str`:
-  * Returns the complete response as a single string.
+2.  **`OllamaApiClient`**:
+    *   **Purpose**: For integrated testing or production use.
+    *   **Mechanism**: Communicates with a remote `olm-api` server endpoint.
+    *   **Benefit**: Allows you to test your application against the exact same API that will be used in production.
+
+3.  **`MockOllamaApiClient`**:
+    *   **Purpose**: For local unit testing.
+    *   **Mechanism**: Simulates API responses in-memory without any network requests.
+    *   **Benefit**: Fast, deterministic, and enables testing without a running backend.
 
 ---
 
-## `OllamaApiClient` (Real Client)
+## How to Use: The `create_client` Factory
 
-Use this client to connect to a running Ollama API service.
+The **recommended** way to use this SDK is through the `create_client()` factory. This function reads the `OLM_CLIENT_MODE` environment variable to determine which client to return.
 
-### Initialization
-
-The client must be initialized with the API endpoint URL.
-
-**Priority:**
-
-1. **`api_url` parameter** : Explicitly provided URL.
-2. **`OLM_API_ENDPOINT` environment variable** : URL from the environment.
-
-A `ValueError` is raised if neither is provided.
+### Step 1: Using the Factory in Your Application
 
 ```python
-from sdk.olm_api_client import OllamaApiClient
+# In your application's main logic
+from sdk.olm_api_client import create_client, OllamaClientProtocol
 
-# Recommended: Initialize with a URL
-client = OllamaApiClient(api_url="http://localhost:8000")
+async def run_my_app():
+    # The factory provides the correct client instance automatically.
+    client: OllamaClientProtocol = create_client()
 
-# Alternatively, using an environment variable
-# export OLM_API_ENDPOINT="http://localhost:8000"
-# client = OllamaApiClient()
-```
-
-### Usage
-
-Specify the model for each request. If `model` is `None`, it falls back to the `OLLAMA_MODEL` environment variable.
-
-#### Streaming (`gen_stream`)
-
-```python
-import asyncio
-from sdk.olm_api_client import OllamaApiClient
-
-client = OllamaApiClient(api_url="http://localhost:8000")
-
-async def stream_example():
-    response_stream = client.gen_stream(
-        prompt="Why is the sky blue?",
-        model="qwen3:0.6b"
-    )
-    async for chunk in response_stream:
-        print(chunk, end="", flush=True)
-
-# asyncio.run(stream_example())
-```
-
-#### Non-Streaming (`gen_batch`)
-
-```python
-import asyncio
-from sdk.olm_api_client import OllamaApiClient
-
-client = OllamaApiClient(api_url="http://localhost:8000")
-
-async def batch_example():
+    # Your code always uses the same interface, regardless of the client.
     response = await client.gen_batch(
         prompt="Why is the sky blue?",
-        model="qwen3:0.6b"
+        model_name="qwen3:0.6b"
     )
     print(response)
+```
 
-# asyncio.run(batch_example())
+### Step 2: Configuring the Client Mode
+
+You can switch between modes by setting environment variables before running your application.
+
+**A) Local Development Mode**
+
+Connects to a local `ollama serve` instance.
+
+```sh
+# No extra variables needed if ollama serve is at http://localhost:11434
+export OLM_CLIENT_MODE=local
+python your_app.py
+```
+
+**B) Remote API Mode**
+
+Connects to the deployed `olm-api` server.
+
+```sh
+export OLM_CLIENT_MODE=remote
+export OLM_API_ENDPOINT="http://<your-mac-mini-ip>:8000"
+python your_app.py
+```
+*Note: `remote` is the default mode if `OLM_CLIENT_MODE` is not set.*
+
+**C) Mock Mode (for Unit Tests)**
+
+Uses the in-memory mock client.
+
+```sh
+export OLM_CLIENT_MODE=mock
+python -m pytest
 ```
 
 ---
 
-## `MockOllamaApiClient` (Mock Client)
+## Direct Initialization (Advanced)
 
-Use this for testing. It simulates API responses locally and deterministically.
-
-### Initialization
+While the `create_client` factory is recommended, you can also initialize clients directly if you need more control.
 
 ```python
-from sdk.olm_api_client import MockOllamaApiClient
+from sdk.olm_api_client import OllamaApiClient, OllamaLocalClient
 
-# Default responses with no delay
-client = MockOllamaApiClient(token_delay=0)
+# Explicitly create a remote client
+remote_client = OllamaApiClient(api_url="http://<remote-ip>:8000")
 
-# Custom responses
-custom_responses = ["Response 1", "Response 2", "Response 3"]
-client = MockOllamaApiClient(responses=custom_responses, token_delay=0)
-
-# Realistic streaming delay
-realistic_client = MockOllamaApiClient(token_delay=0.01)
-```
-
-### Parameters
-
-* **`responses`** : Optional list of strings to use as responses. If not provided, uses default responses.
-* **`token_delay`** : Delay between tokens during streaming (seconds). Use `0` for fast tests.
-* **`api_url`** : Accepted for compatibility but not used.
-
-### Behavior
-
-* **Configurable Responses** : Cycles through provided responses array or defaults.
-* **Simulated Thinking** : Responses include `<think>` tags unless `think=False` is specified.
-* **No Network Required** : All operations are performed in-memory.
-
-### Usage
-
-The interface is identical to `OllamaApiClient`.
-
-```python
-import asyncio
-from sdk.olm_api_client import MockOllamaApiClient
-
-# Custom responses for testing
-test_responses = ["Test answer 1", "Test answer 2"]
-client = MockOllamaApiClient(responses=test_responses, token_delay=0)
-
-async def mock_example():
-    # First call returns "Test answer 1"
-    response1 = await client.gen_batch("any prompt", think=False)
-    print(response1)  # Output: Test answer 1
-    
-    # Second call returns "Test answer 2"
-    response2 = await client.gen_batch("another prompt", think=False)
-    print(response2)  # Output: Test answer 2
-
-# asyncio.run(mock_example())
-```
-
----
-
-## Recommended Usage Pattern (Dependency Injection)
-
-For robust and testable code, use the `OllamaClientProtocol` for type hinting. This allows you to inject either the real or mock client depending on the environment.
-
-```python
-from sdk.olm_api_client import OllamaApiClient, MockOllamaApiClient, OllamaClientProtocol
-import os
-
-def get_client() -> OllamaClientProtocol:
-    """Factory function to get the appropriate client."""
-    if os.getenv("DEBUG") == "true":
-        return MockOllamaApiClient(token_delay=0)
-    else:
-        api_url = os.getenv("OLM_API_ENDPOINT")
-        if not api_url:
-            raise ValueError("OLM_API_ENDPOINT is not set for production")
-        return OllamaApiClient(api_url=api_url)
-
-# In your application, use the factory
-async def main():
-    my_client: OllamaClientProtocol = get_client()
-    response = await my_client.gen_batch(prompt="Tell me a joke.")
-    print(response)
-
-# To run in debug/test mode:
-# DEBUG=true python your_app.py
-
-# To run in production:
-# OLM_API_ENDPOINT="http://real-api-server" python your_app.py
+# Explicitly create a local client
+local_client = OllamaLocalClient(host="http://localhost:11434")
 ```

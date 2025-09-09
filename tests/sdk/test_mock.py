@@ -43,17 +43,6 @@ class TestMockOllamaApiClient:
         assert "world" in tokens
         assert "!" in tokens
 
-    def test_tokenize_realistic_think_tags(self):
-        """Test tokenization preserves think tags"""
-        client = MockOllamaApiClient()
-        text = "<think>This is thinking</think> Response"
-        tokens = client._tokenize_realistic(text)
-
-        assert "<think>" in tokens
-        assert "</think>" in tokens
-        assert "This" in tokens
-        assert "Response" in tokens
-
     def test_tokenize_realistic_long_words(self):
         """Test tokenization splits long words occasionally"""
         client = MockOllamaApiClient()
@@ -64,28 +53,6 @@ class TestMockOllamaApiClient:
         assert len(tokens) >= 1
         combined = "".join(tokens)
         assert combined == text
-
-    def test_create_thinking_process(self):
-        """Test thinking process generation"""
-        client = MockOllamaApiClient()
-        prompt = "Test prompt"
-        thinking = client._create_thinking_process(prompt)
-
-        assert isinstance(thinking, str)
-        assert len(thinking) > 0
-        assert any(
-            keyword in thinking.lower() for keyword in ["analysis", "step", "process"]
-        )
-
-    def test_create_thinking_process_consistency(self):
-        """Test thinking process is consistent for same prompt"""
-        client = MockOllamaApiClient()
-        prompt = "Same prompt"
-
-        thinking1 = client._create_thinking_process(prompt)
-        thinking2 = client._create_thinking_process(prompt)
-
-        assert thinking1 == thinking2
 
     @pytest.mark.asyncio
     async def test_stream_response_basic(self):
@@ -132,9 +99,8 @@ class TestMockOllamaApiClient:
             chunks.append(chunk)
 
         combined = "".join(chunks)
-        assert "<think>" in combined
-        assert "</think>" in combined
         assert len(combined) > 0
+        assert "Hello" in combined  # Check for part of the default response
 
     @pytest.mark.asyncio
     async def test_gen_batch(self):
@@ -145,9 +111,8 @@ class TestMockOllamaApiClient:
 
         # Should return string
         assert isinstance(result, str)
-        assert "<think>" in result
-        assert "</think>" in result
         assert len(result) > 0
+        assert "Hello" in result  # Check for part of the default response
 
     def test_init_with_custom_responses(self):
         """Test initialization with custom responses parameter"""
@@ -169,7 +134,7 @@ class TestMockOllamaApiClient:
         client = MockOllamaApiClient(responses=custom_responses, token_delay=0)
 
         for i, expected_response in enumerate(custom_responses):
-            result = await client.gen_batch(f"test prompt {i}", think=False)
+            result = await client.gen_batch(f"test prompt {i}", "test-model")
             assert result == expected_response
 
     @pytest.mark.asyncio
@@ -180,14 +145,14 @@ class TestMockOllamaApiClient:
 
         # Test first response
         chunks = []
-        async for chunk in client.gen_stream("test 1", think=False):
+        async for chunk in client.gen_stream("test 1", "test-model"):
             chunks.append(chunk)
         result1 = "".join(chunks)
         assert result1 == custom_responses[0]
 
         # Test second response
         chunks = []
-        async for chunk in client.gen_stream("test 2", think=False):
+        async for chunk in client.gen_stream("test 2", "test-model"):
             chunks.append(chunk)
         result2 = "".join(chunks)
         assert result2 == custom_responses[1]
@@ -200,7 +165,7 @@ class TestMockOllamaApiClient:
 
         results = []
         for i in range(6):  # Test two full cycles
-            result = await client.gen_batch(f"test {i}", think=False)
+            result = await client.gen_batch(f"test {i}", "test-model")
             results.append(result)
 
         # Should cycle through responses: First, Second, Third, First, Second, Third
@@ -214,7 +179,7 @@ class TestMockOllamaApiClient:
 
         results = []
         for i in range(7):  # More than the number of default responses (5)
-            result = await client.gen_batch(f"unique prompt {i}", think=False)
+            result = await client.gen_batch(f"unique prompt {i}", "test-model")
             results.append(result)
 
         # Should have cycled through all 5 default responses and started again
@@ -225,67 +190,20 @@ class TestMockOllamaApiClient:
         assert results[5] == client.mock_responses[0]  # Cycled back
 
     @pytest.mark.asyncio
-    async def test_gen_stream_with_model_parameter(self):
-        """Test gen_stream accepts model parameter"""
-        client = MockOllamaApiClient(token_delay=0)
+    async def test_simplified_api_usage(self):
+        """Test that the simplified API usage works as expected"""
+        client = MockOllamaApiClient(api_url="http://localhost:11434", token_delay=0)
 
-        result = client.gen_stream("test", model="custom-model")
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
-
-        combined = "".join(chunks)
-        assert len(combined) > 0
-
-    @pytest.mark.asyncio
-    async def test_gen_batch_with_model_parameter(self):
-        """Test gen_batch accepts model parameter"""
-        client = MockOllamaApiClient(token_delay=0)
-
-        result = await client.gen_batch("test", model="custom-model")
+        result = await client.gen_batch("test prompt", "some-model")
         assert isinstance(result, str)
-        assert len(result) > 0
-
-    @pytest.mark.asyncio
-    async def test_gen_stream_with_none_model(self):
-        """Test gen_stream accepts None model parameter"""
-        client = MockOllamaApiClient(token_delay=0)
-
-        result = client.gen_stream("test", model=None)
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
-
-        combined = "".join(chunks)
-        assert len(combined) > 0
-
-    @pytest.mark.asyncio
-    async def test_gen_batch_with_none_model(self):
-        """Test gen_batch accepts None model parameter"""
-        client = MockOllamaApiClient(token_delay=0)
-
-        result = await client.gen_batch("test", model=None)
-        assert isinstance(result, str)
-        assert len(result) > 0
-
-    @pytest.mark.asyncio
-    async def test_backward_compatibility_existing_api(self):
-        """Test that existing API usage still works without custom responses"""
-        # This tests that old code continues to work
-        client = MockOllamaApiClient(api_url="http://localhost:11434", token_delay=0.01)
-
-        # Should work exactly as before
-        result = await client.gen_batch("test prompt")
-        assert isinstance(result, str)
-        assert "<think>" in result
         assert len(result) > 0
 
         # Streaming should also work
         chunks = []
-        async for chunk in client.gen_stream("test"):
+        async for chunk in client.gen_stream("test", "some-model"):
             chunks.append(chunk)
         combined = "".join(chunks)
-        assert "<think>" in combined
+        assert len(combined) > 0
 
     @pytest.mark.asyncio
     async def test_mixed_parameters(self):
@@ -300,7 +218,7 @@ class TestMockOllamaApiClient:
         assert client.token_delay == 0.02
         assert client.mock_responses == custom_responses
 
-        result = await client.gen_batch("test", think=False)
+        result = await client.gen_batch("test", "some-model")
         assert result in custom_responses
 
 

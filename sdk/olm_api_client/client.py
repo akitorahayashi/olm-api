@@ -1,6 +1,5 @@
 import json
 import logging
-import os
 from typing import AsyncGenerator
 
 import httpx
@@ -13,28 +12,21 @@ class OllamaApiClient:
     A client for interacting with the Ollama API.
     """
 
-    def __init__(self, api_url: str | None = None):
-        self.api_url = api_url or os.getenv("OLM_API_ENDPOINT")
-        if not self.api_url:
-            raise ValueError(
-                "API URL must be provided either as parameter or OLM_API_ENDPOINT environment variable"
-            )
-        self.api_url = self.api_url.rstrip("/")
+    def __init__(self, api_url: str):
+        self.api_url = api_url.rstrip("/")
         self.generate_endpoint = f"{self.api_url}/api/v1/generate"
 
     async def _stream_response(
-        self, prompt: str, model: str, think: bool | None = None
+        self, prompt: str, model_name: str
     ) -> AsyncGenerator[str, None]:
         """
         Stream response from the Ollama API.
         """
         payload = {
             "prompt": prompt,
-            "model_name": model,
+            "model_name": model_name,
             "stream": True,
         }
-        if think is not None:
-            payload["think"] = think
 
         try:
             async with httpx.AsyncClient(
@@ -63,19 +55,15 @@ class OllamaApiClient:
             logger.error(f"Unexpected error in Ollama API streaming: {e}")
             raise
 
-    async def _non_stream_response(
-        self, prompt: str, model: str, think: bool | None = None
-    ) -> str:
+    async def _non_stream_response(self, prompt: str, model_name: str) -> str:
         """
         Get non-streaming response from the Ollama API.
         """
         payload = {
             "prompt": prompt,
-            "model_name": model,
+            "model_name": model_name,
             "stream": False,
         }
-        if think is not None:
-            payload["think"] = think
 
         try:
             async with httpx.AsyncClient(
@@ -97,16 +85,13 @@ class OllamaApiClient:
             logger.error(f"Unexpected error in Ollama API non-streaming: {e}")
             raise
 
-    def gen_stream(
-        self, prompt: str, model: str | None = None, think: bool | None = None
-    ) -> AsyncGenerator[str, None]:
+    def gen_stream(self, prompt: str, model_name: str) -> AsyncGenerator[str, None]:
         """
         Generates text using the Ollama API with streaming.
 
         Args:
             prompt: The prompt to send to the model.
-            model: The name of the model to use for generation.
-            think: Whether to enable thinking mode. If None, uses model default.
+            model_name: The name of the model to use for generation.
 
         Returns:
             AsyncGenerator yielding text chunks.
@@ -114,26 +99,15 @@ class OllamaApiClient:
         Raises:
             httpx.RequestError: If a network error occurs.
         """
-        # Use environment variable model if not specified
-        if model is None:
-            model = os.getenv("OLLAMA_MODEL")
-            if not model:
-                raise ValueError(
-                    "OLLAMA_MODEL is not configured in environment variables."
-                )
+        return self._stream_response(prompt, model_name)
 
-        return self._stream_response(prompt, model, think)
-
-    async def gen_batch(
-        self, prompt: str, model: str | None = None, think: bool | None = None
-    ) -> str:
+    async def gen_batch(self, prompt: str, model_name: str) -> str:
         """
         Generates complete text using the Ollama API without streaming.
 
         Args:
             prompt: The prompt to send to the model.
-            model: The name of the model to use for generation.
-            think: Whether to enable thinking mode. If None, uses model default.
+            model_name: The name of the model to use for generation.
 
         Returns:
             Complete text response.
@@ -141,12 +115,4 @@ class OllamaApiClient:
         Raises:
             httpx.RequestError: If a network error occurs.
         """
-        # Use environment variable model if not specified
-        if model is None:
-            model = os.getenv("OLLAMA_MODEL")
-            if not model:
-                raise ValueError(
-                    "OLLAMA_MODEL is not configured in environment variables."
-                )
-
-        return await self._non_stream_response(prompt, model, think)
+        return await self._non_stream_response(prompt, model_name)

@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     BUILT_IN_OLLAMA_MODEL: str
     DATABASE_URL: str
     CONCURRENT_REQUEST_LIMIT: int = 2
+    API_LOGGING_ENABLED: bool = True
 
 
 @lru_cache

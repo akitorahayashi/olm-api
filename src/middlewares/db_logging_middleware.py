@@ -7,6 +7,7 @@ from fastapi import Request, Response
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
+from src.config.settings import get_settings
 from src.db.database import create_db_session
 from src.db.models.log import Log
 
@@ -19,6 +20,10 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> Response:
+        settings = get_settings()
+        if not settings.API_LOGGING_ENABLED:
+            return await call_next(request)
+
         if "/generate" not in request.url.path:
             return await call_next(request)
 

@@ -54,74 +54,32 @@ class MockOllamaApiClient:
         - Whole words
         - Punctuation as separate tokens
         - Partial words/subwords occasionally
-        - Keep think tags intact for proper processing
         """
-        # Special handling for think tags to keep them intact
-        think_pattern = r"(<think>|</think>)"
-        parts = re.split(think_pattern, text)
-
         result = []
-        for part in parts:
-            if part in ["<think>", "</think>"]:
-                # Keep think tags as single tokens
-                result.append(part)
-                continue
+        # First split by whitespace and punctuation, keeping separators
+        tokens = re.findall(r"\S+|\s+", text)
 
-            if not part.strip():
-                continue
+        for token in tokens:
+            if token.isspace():
+                continue  # Skip pure whitespace tokens
 
-            # First split by whitespace and punctuation, keeping separators
-            tokens = re.findall(r"\S+|\s+", part)
+            # For words longer than 8 characters, occasionally split into subwords
+            if len(token) > 8 and token.isalpha():
+                # 20% chance to split long words
+                if hash(token) % 10 < 2:  # Deterministic pseudo-random
+                    mid = len(token) // 2
+                    result.append(token[:mid])
+                    result.append(token[mid:])
+                    continue
 
-            for token in tokens:
-                if token.isspace():
-                    continue  # Skip pure whitespace tokens
-
-                # For words longer than 4 characters, occasionally split into subwords
-                if len(token) > 8 and token.isalpha():
-                    # 20% chance to split long words
-                    if hash(token) % 10 < 2:  # Deterministic pseudo-random
-                        mid = len(token) // 2
-                        result.append(token[:mid])
-                        result.append(token[mid:])
-                        continue
-
-                # Split punctuation from words (except for think tags)
-                if re.search(r"[^\w\s]", token) and token not in [
-                    "<think>",
-                    "</think>",
-                ]:
-                    parts_inner = re.findall(r"\w+|[^\w\s]", token)
-                    result.extend(parts_inner)
-                else:
-                    result.append(token)
+            # Split punctuation from words
+            if re.search(r"[^\w\s]", token):
+                parts_inner = re.findall(r"\w+|[^\w\s]", token)
+                result.extend(parts_inner)
+            else:
+                result.append(token)
 
         return result
-
-    def _create_thinking_process(self, prompt: str) -> str:
-        """
-        Generate a realistic thinking process based on the prompt.
-        """
-        # Shorter thinking templates for faster testing
-        thinking_templates = [
-            """Starting analysis.
-First, I need to identify the main points of the provided content.
-Next, I'll organize and structure the important information.
-Finally, I'll create a concise and understandable summary.
-Thinking process complete.""",
-            """Breaking down the task.
-Step 1: Understand the content overview
-Step 2: Extract key points
-Step 3: Organize in logical flow
-Step 4: Generate clear summary
-Ready to proceed.""",
-        ]
-
-        # Choose template based on prompt hash for consistency
-        template_idx = abs(hash(prompt[:100])) % len(
-            thinking_templates
-        )  # Use only first 100 chars of prompt
-        return thinking_templates[template_idx]
 
     async def _stream_response(self, full_text: str) -> AsyncGenerator[str, None]:
         """
@@ -142,16 +100,14 @@ Ready to proceed.""",
     def gen_stream(
         self,
         prompt: str,
-        model: str | None = None,
-        think: bool | None = None,
+        model_name: str,
     ) -> AsyncGenerator[str, None]:
         """
         Generates mock text responses with realistic streaming behavior.
 
         Args:
             prompt: The prompt to send to the model.
-            model: The name of the model to use for generation.
-            think: Whether to enable thinking mode. If None, uses model default.
+            model_name: The name of the model to use (for protocol compatibility).
 
         Returns:
             AsyncGenerator yielding text chunks that match real API format.
@@ -162,30 +118,18 @@ Ready to proceed.""",
         ]
         self.response_index += 1
 
-        # If think is not explicitly False, include thinking process
-        if think is not False:
-            # Create thinking process
-            thinking = self._create_thinking_process(prompt)
-            # Construct full response with thinking tags (similar to real API)
-            full_response = f"<think>\n{thinking}\n</think>\n\n{response_text}"
-        else:
-            full_response = response_text
+        return self._stream_response(response_text)
 
-        return self._stream_response(full_response)
-
-    async def gen_batch(
-        self, prompt: str, model: str | None = None, think: bool | None = None
-    ) -> str:
+    async def gen_batch(self, prompt: str, model_name: str) -> str:
         """
         Generates complete mock response at once.
 
         Args:
             prompt: The prompt to send to the model.
-            model: The name of the model to use for generation.
-            think: Whether to enable thinking mode. If None, uses model default.
+            model_name: The name of the model to use (for protocol compatibility).
 
         Returns:
             Complete text response.
         """
-        stream = self.gen_stream(prompt, model, think)
+        stream = self.gen_stream(prompt, model_name)
         return "".join([chunk async for chunk in stream])
