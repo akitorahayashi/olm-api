@@ -6,13 +6,26 @@ from typing import AsyncGenerator
 # Default streaming configuration
 DEFAULT_TOKEN_DELAY = 0.01  # Faster delay between tokens (seconds) - reduced from 0.07
 
+DEFAULT_RESPONSES = [
+    "Hello! How can I help you today?",
+    "That's an interesting question. Could you tell me more about it?",
+    "I understand. Is there anything else you'd like to know?",
+    "Yes, I think you're absolutely right about that.",
+    "I'm sorry, but could you be more specific about what you're looking for?",
+]
+
 
 class MockOllamaApiClient:
     """
     A high-fidelity mock client that simulates real Ollama API behavior.
     """
 
-    def __init__(self, api_url: str | None = None, token_delay: float | None = None):
+    def __init__(
+        self,
+        api_url: str | None = None,
+        token_delay: float | None = None,
+        responses: list[str] | None = None,
+    ):
         # Configure token delay from parameter, environment variable, or default
         if token_delay is not None:
             self.token_delay = token_delay
@@ -21,13 +34,16 @@ class MockOllamaApiClient:
             self.token_delay = (
                 float(env_delay) if env_delay is not None else DEFAULT_TOKEN_DELAY
             )
-        self.mock_responses = [
-            "Hello! How can I help you today?",
-            "That's an interesting question. Could you tell me more about it?",
-            "I understand. Is there anything else you'd like to know?",
-            "Yes, I think you're absolutely right about that.",
-            "I'm sorry, but could you be more specific about what you're looking for?",
-        ]
+
+        # Use provided responses or default ones
+        if responses is not None:
+            if not responses:
+                raise ValueError("responses must be a non-empty list")
+            # Defensive copy to prevent side effects from external mutations
+            self.mock_responses = list(responses)
+        else:
+            # Use a copy to prevent modifying the shared default list
+            self.mock_responses = DEFAULT_RESPONSES.copy()
         self.response_index = 0
 
     def _tokenize_realistic(self, text: str) -> list[str]:
@@ -140,28 +156,11 @@ Ready to proceed.""",
         Returns:
             AsyncGenerator yielding text chunks that match real API format.
         """
-        # Custom responses for specific inputs
-        custom_responses = {
-            "hello": "Hello! 😊 How are you today? I'm here to help with anything you need!",
-            "hi": "Hi there! How are you doing? What can I assist you with?",
-            "test": "This is a test response from the mock client. Everything is working correctly!",
-            "help": "I'm here to help! What would you like to know? Feel free to ask me anything.",
-            "thanks": "You're very welcome! Happy to help anytime. Is there anything else you need?",
-        }
-
-        # Check for custom responses first
-        response_text = None
-        for key, response in custom_responses.items():
-            if key in prompt.lower():
-                response_text = response
-                break
-
-        # If no custom response, use cycling responses
-        if not response_text:
-            response_text = self.mock_responses[
-                self.response_index % len(self.mock_responses)
-            ]
-            self.response_index += 1
+        # Use cycling responses from the configured array
+        response_text = self.mock_responses[
+            self.response_index % len(self.mock_responses)
+        ]
+        self.response_index += 1
 
         # If think is not explicitly False, include thinking process
         if think is not False:
