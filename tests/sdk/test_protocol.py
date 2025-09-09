@@ -1,6 +1,5 @@
-import os
 from typing import get_type_hints
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
