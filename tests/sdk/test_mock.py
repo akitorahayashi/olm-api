@@ -221,6 +221,56 @@ class TestMockOllamaApiClient:
         result = await client.gen_batch("test", "some-model")
         assert result in custom_responses
 
+    @pytest.mark.asyncio
+    async def test_gen_batch_with_dict_responses(self):
+        """Test gen_batch uses dictionary to map prompts to responses."""
+        prompt_map = {
+            "Hello": "Hi there!",
+            "question": "This is the answer.",
+        }
+        client = MockOllamaApiClient(responses=prompt_map, token_delay=0)
+
+        # Test exact match
+        response1 = await client.gen_batch("Hello", "test-model")
+        assert response1 == "Hi there!"
+
+        # Test partial match
+        response2 = await client.gen_batch("I have a question for you.", "test-model")
+        assert response2 == "This is the answer."
+
+        # Test no match - should use default response
+        response3 = await client.gen_batch("Some other prompt", "test-model")
+        assert response3 == "Hello! How can I help you today?"
+
+        # Test another no match - should cycle default responses
+        response4 = await client.gen_batch("Another prompt", "test-model")
+        assert (
+            response4
+            == "That's an interesting question. Could you tell me more about it?"
+        )
+
+    @pytest.mark.asyncio
+    async def test_gen_batch_with_callable_response(self):
+        """Test gen_batch uses a callable to generate responses."""
+
+        def response_generator(prompt: str, model_name: str) -> str:
+            if "hello" in prompt.lower():
+                return f"Response for hello from {model_name}"
+            return "Default callable response"
+
+        client = MockOllamaApiClient(responses=response_generator, token_delay=0)
+
+        response1 = await client.gen_batch("Hello there", "model-1")
+        assert response1 == "Response for hello from model-1"
+
+        response2 = await client.gen_batch("Some other prompt", "model-2")
+        assert response2 == "Default callable response"
+
+    def test_init_with_empty_list_raises_error(self):
+        """Test that initializing with an empty list still raises ValueError."""
+        with pytest.raises(ValueError, match="responses must be a non-empty list"):
+            MockOllamaApiClient(responses=[])
+
 
 class TestMockEnvironmentVariable:
     """Test MockOllamaApiClient with environment variable configuration"""

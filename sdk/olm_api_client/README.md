@@ -23,6 +23,41 @@ The SDK is built around the `OllamaClientProtocol`, which defines a common set o
     *   **Mechanism**: Simulates API responses in-memory without any network requests.
     *   **Benefit**: Fast, deterministic, and enables testing without a running backend.
 
+    The `MockOllamaApiClient` is highly configurable for testing. You can specify responses in three ways:
+
+    1.  **List of Strings (Default)**: Cycles through a list of predefined responses.
+        ```python
+        responses = ["Hello", "How are you?"]
+        client = MockOllamaApiClient(responses=responses)
+        ```
+
+    2.  **Dictionary Mapping**: Maps specific prompts (or partial prompts) to responses. This is useful for testing specific conversational flows.
+        ```python
+        prompt_map = {
+            "What is your name?": "I am a mock client.",
+            "weather": "The weather is always sunny in mock-land."
+        }
+        client = MockOllamaApiClient(responses=prompt_map)
+
+        # Exact match
+        await client.gen_batch("What is your name?", "test-model")
+        # -> "I am a mock client."
+
+        # Partial match
+        await client.gen_batch("How is the weather?", "test-model")
+        # -> "The weather is always sunny in mock-land."
+        ```
+
+    3.  **Callable Function**: For the most complex scenarios, you can provide a function that generates a response dynamically based on the prompt and model name.
+        ```python
+        def my_response_generator(prompt: str, model_name: str) -> str:
+            if "error" in prompt:
+                return "An error occurred."
+            return f"Response from {model_name} for '{prompt}'"
+
+        client = MockOllamaApiClient(responses=my_response_generator)
+        ```
+
 ---
 
 ## How to Use

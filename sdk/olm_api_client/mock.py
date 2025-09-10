@@ -1,7 +1,7 @@
 import asyncio
 import os
 import re
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Callable
 
 # Default streaming configuration
 DEFAULT_TOKEN_DELAY = 0.01  # Faster delay between tokens (seconds) - reduced from 0.07
@@ -24,7 +24,7 @@ class MockOllamaApiClient:
         self,
         api_url: str | None = None,
         token_delay: float | None = None,
-        responses: list[str] | None = None,
+        responses: dict[str, str] | list[str] | Callable | None = None,
     ):
         # Configure token delay from parameter, environment variable, or default
         if token_delay is not None:
@@ -35,16 +35,22 @@ class MockOllamaApiClient:
                 float(env_delay) if env_delay is not None else DEFAULT_TOKEN_DELAY
             )
 
-        # Use provided responses or default ones
-        if responses is not None:
-            if not responses:
-                raise ValueError("responses must be a non-empty list")
-            # Defensive copy to prevent side effects from external mutations
-            self.mock_responses = list(responses)
+        # Handle different types of responses
+        if isinstance(responses, dict):
+            self.responses_map = responses
+            self.default_responses = DEFAULT_RESPONSES.copy()
+            self.default_response_index = 0
+        elif callable(responses):
+            self.response_generator = responses
         else:
-            # Use a copy to prevent modifying the shared default list
-            self.mock_responses = DEFAULT_RESPONSES.copy()
-        self.response_index = 0
+            # Handle list or None, maintaining original behavior
+            if responses is not None:
+                if not responses:  # Check for empty list
+                    raise ValueError("responses must be a non-empty list")
+                self.mock_responses = list(responses)
+            else:  # responses is None
+                self.mock_responses = DEFAULT_RESPONSES.copy()
+            self.response_index = 0
 
     def _tokenize_realistic(self, text: str) -> list[str]:
         """
@@ -72,9 +78,9 @@ class MockOllamaApiClient:
                     result.append(token[mid:])
                     continue
 
-            # Split punctuation from words
+            # Split punctuation from words, keeping apostrophes and hyphens
             if re.search(r"[^\w\s]", token):
-                parts_inner = re.findall(r"\w+|[^\w\s]", token)
+                parts_inner = re.findall(r"[\w'-]+|[^\w\s]", token)
                 result.extend(parts_inner)
             else:
                 result.append(token)
@@ -90,8 +96,8 @@ class MockOllamaApiClient:
         for i, token in enumerate(tokens):
             await asyncio.sleep(self.token_delay)
 
-            # Add space before token (except first token) if it's a word
-            if i > 0 and token.isalnum() and not tokens[i - 1].endswith("\n"):
+            # Add space before token if it's a word-like token (not punctuation)
+            if i > 0 and token[0].isalnum() and not tokens[i - 1].endswith("\n"):
                 yield " "
                 await asyncio.sleep(self.token_delay * 0.3)  # Shorter delay for spaces
 
@@ -105,6 +111,12 @@ class MockOllamaApiClient:
         """
         Generates mock text responses with realistic streaming behavior.
 
+        The response generation is determined by the `responses` argument
+        provided during initialization:
+        - If `responses` was a dictionary, it matches the prompt against the keys.
+        - If `responses` was a callable, it calls the function to get the response.
+        - If `responses` was a list, it cycles through the list.
+
         Args:
             prompt: The prompt to send to the model.
             model_name: The name of the model to use (for protocol compatibility).
@@ -112,11 +124,34 @@ class MockOllamaApiClient:
         Returns:
             AsyncGenerator yielding text chunks that match real API format.
         """
-        # Use cycling responses from the configured array
-        response_text = self.mock_responses[
-            self.response_index % len(self.mock_responses)
-        ]
-        self.response_index += 1
+        response_text = ""
+
+        # If a response map is set, find a response matching the prompt.
+        if hasattr(self, "responses_map"):
+            # Check for an exact match first, then a partial match.
+            response_text = self.responses_map.get(prompt)
+            if not response_text:
+                for key, value in self.responses_map.items():
+                    if key in prompt:
+                        response_text = value
+                        break
+            # If no match is found, use a default cycling response.
+            if not response_text:
+                response_text = self.default_responses[
+                    self.default_response_index % len(self.default_responses)
+                ]
+                self.default_response_index += 1
+
+        # If a response generator function is set, use it.
+        elif hasattr(self, "response_generator"):
+            response_text = self.response_generator(prompt, model_name)
+
+        # Otherwise, use the original list-based cycling behavior.
+        else:
+            response_text = self.mock_responses[
+                self.response_index % len(self.mock_responses)
+            ]
+            self.response_index += 1
 
         return self._stream_response(response_text)
 
