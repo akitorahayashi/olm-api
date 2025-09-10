@@ -1,7 +1,7 @@
 import asyncio
 import os
 import re
-from typing import AsyncGenerator, Callable
+from typing import AsyncGenerator, Callable, Mapping, Sequence
 
 # Default streaming configuration
 DEFAULT_TOKEN_DELAY = 0.01  # Faster delay between tokens (seconds) - reduced from 0.07
@@ -24,7 +24,7 @@ class MockOllamaApiClient:
         self,
         api_url: str | None = None,
         token_delay: float | None = None,
-        responses: dict[str, str] | list[str] | Callable | None = None,
+        responses: Mapping[str, str] | Sequence[str] | Callable | None = None,
     ):
         # Configure token delay from parameter, environment variable, or default
         if token_delay is not None:
@@ -36,17 +36,19 @@ class MockOllamaApiClient:
             )
 
         # Handle different types of responses
-        if isinstance(responses, dict):
+        if isinstance(responses, Mapping):
             self.responses_map = responses
             self.default_responses = DEFAULT_RESPONSES.copy()
             self.default_response_index = 0
         elif callable(responses):
             self.response_generator = responses
         else:
-            # Handle list or None, maintaining original behavior
+            # Handle sequence or None, maintaining original behavior
             if responses is not None:
-                if not responses:  # Check for empty list
+                if not responses:
                     raise ValueError("responses must be a non-empty list")
+                if not all(isinstance(x, str) for x in responses):
+                    raise TypeError("all responses must be str")
                 self.mock_responses = list(responses)
             else:  # responses is None
                 self.mock_responses = DEFAULT_RESPONSES.copy()
@@ -57,17 +59,18 @@ class MockOllamaApiClient:
         Tokenize text in a way that resembles real LLM tokenization.
 
         This splits text into tokens that include:
-        - Whole words
+        - Whole words with proper spacing
         - Punctuation as separate tokens
         - Partial words/subwords occasionally
         """
         result = []
         # First split by whitespace and punctuation, keeping separators
-        tokens = re.findall(r"\S+|\s+", text)
+        tokens = re.findall(r"\S+", text)
 
-        for token in tokens:
-            if token.isspace():
-                continue  # Skip pure whitespace tokens
+        for i, token in enumerate(tokens):
+            # Add space before token (except first token)
+            if i > 0:
+                result.append(" ")
 
             # For words longer than 8 characters, occasionally split into subwords
             if len(token) > 8 and token.isalpha():
@@ -78,9 +81,9 @@ class MockOllamaApiClient:
                     result.append(token[mid:])
                     continue
 
-            # Split punctuation from words, keeping apostrophes and hyphens
+            # Split punctuation from words, keeping ASCII/Unicode apostrophes and hyphens
             if re.search(r"[^\w\s]", token):
-                parts_inner = re.findall(r"[\w'-]+|[^\w\s]", token)
+                parts_inner = re.findall(r"[\w''\u2010-\u2015-]+|[^\w\s]", token)
                 result.extend(parts_inner)
             else:
                 result.append(token)
@@ -93,14 +96,18 @@ class MockOllamaApiClient:
         """
         tokens = self._tokenize_realistic(full_text)
 
+        for token in tokens:
+            await asyncio.sleep(self.token_delay)
+            yield token
+
+    async def _stream_response(self, full_text: str) -> AsyncGenerator[str, None]:
+        """
+        Stream response token by token, simulating real Ollama API behavior.
+        """
+        tokens = self._tokenize_realistic(full_text)
+
         for i, token in enumerate(tokens):
             await asyncio.sleep(self.token_delay)
-
-            # Add space before token if it's a word-like token (not punctuation)
-            if i > 0 and token[0].isalnum() and not tokens[i - 1].endswith("\n"):
-                yield " "
-                await asyncio.sleep(self.token_delay * 0.3)  # Shorter delay for spaces
-
             yield token
 
     def gen_stream(
@@ -113,7 +120,7 @@ class MockOllamaApiClient:
 
         The response generation is determined by the `responses` argument
         provided during initialization:
-        - If `responses` was a dictionary, it matches the prompt against the keys.
+        - If `responses` was a dictionary, it matches the prompt against the keys (exact match first, then the first substring match by insertion order; falls back to cycling default responses).
         - If `responses` was a callable, it calls the function to get the response.
         - If `responses` was a list, it cycles through the list.
 
@@ -128,13 +135,16 @@ class MockOllamaApiClient:
 
         # If a response map is set, find a response matching the prompt.
         if hasattr(self, "responses_map"):
-            # Check for an exact match first, then a partial match.
+            # Exact match
             response_text = self.responses_map.get(prompt)
             if not response_text:
-                for key, value in self.responses_map.items():
-                    if key in prompt:
-                        response_text = value
-                        break
+                # Longest substring match (case-sensitive)
+                candidates = [
+                    (k, v) for k, v in self.responses_map.items() if k in prompt
+                ]
+                if candidates:
+                    key, value = max(candidates, key=lambda kv: len(kv[0]))
+                    response_text = value
             # If no match is found, use a default cycling response.
             if not response_text:
                 response_text = self.default_responses[
@@ -145,6 +155,8 @@ class MockOllamaApiClient:
         # If a response generator function is set, use it.
         elif hasattr(self, "response_generator"):
             response_text = self.response_generator(prompt, model_name)
+            if not isinstance(response_text, str):
+                response_text = str(response_text)
 
         # Otherwise, use the original list-based cycling behavior.
         else:

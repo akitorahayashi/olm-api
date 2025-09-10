@@ -240,14 +240,11 @@ class TestMockOllamaApiClient:
 
         # Test no match - should use default response
         response3 = await client.gen_batch("Some other prompt", "test-model")
-        assert response3 == "Hello! How can I help you today?"
+        assert response3 == client.default_responses[0]
 
         # Test another no match - should cycle default responses
         response4 = await client.gen_batch("Another prompt", "test-model")
-        assert (
-            response4
-            == "That's an interesting question. Could you tell me more about it?"
-        )
+        assert response4 == client.default_responses[1]
 
     @pytest.mark.asyncio
     async def test_gen_batch_with_callable_response(self):
@@ -271,6 +268,11 @@ class TestMockOllamaApiClient:
         with pytest.raises(ValueError, match="responses must be a non-empty list"):
             MockOllamaApiClient(responses=[])
 
+    def test_init_with_non_string_list_raises_error(self):
+        """Test that initializing with non-string list raises TypeError."""
+        with pytest.raises(TypeError, match="all responses must be str"):
+            MockOllamaApiClient(responses=["valid", 123, "also valid"])
+
 
 class TestMockEnvironmentVariable:
     """Test MockOllamaApiClient with environment variable configuration"""
@@ -292,3 +294,51 @@ class TestMockEnvironmentVariable:
         monkeypatch.setenv("MOCK_TOKEN_DELAY", "invalid")
         with pytest.raises(ValueError):  # float() conversion should fail
             MockOllamaApiClient()
+
+
+class TestMockStreamingWithDifferentResponseTypes:
+    """Test streaming behavior with dictionary and callable responses"""
+
+    @pytest.mark.asyncio
+    async def test_gen_stream_with_dictionary_response(self):
+        """Test gen_stream with dictionary mapping responses."""
+        responses_map = {"hello": "Hi there!", "test": "Test response"}
+        client = MockOllamaApiClient(responses=responses_map, token_delay=0)
+
+        # Test exact match
+        chunks = []
+        async for chunk in client.gen_stream("hello", "test-model"):
+            chunks.append(chunk)
+        assert "".join(chunks) == "Hi there!"
+
+        # Test partial match
+        chunks = []
+        async for chunk in client.gen_stream("testing something", "test-model"):
+            chunks.append(chunk)
+        assert "".join(chunks) == "Test response"
+
+    @pytest.mark.asyncio
+    async def test_gen_stream_with_callable_response(self):
+        """Test gen_stream with callable response generator."""
+
+        def response_generator(prompt: str, model_name: str) -> str:
+            return f"Generated-{model_name}-{len(prompt)}"
+
+        client = MockOllamaApiClient(responses=response_generator, token_delay=0)
+        chunks = []
+        async for chunk in client.gen_stream("test", "model1"):
+            chunks.append(chunk)
+        assert "".join(chunks) == "Generated-model1-4"
+
+    @pytest.mark.asyncio
+    async def test_gen_stream_with_non_string_callable_response(self):
+        """Test gen_stream handles non-string callable responses."""
+
+        def response_generator(prompt: str, model_name: str) -> int:
+            return 42  # Return non-string
+
+        client = MockOllamaApiClient(responses=response_generator, token_delay=0)
+        chunks = []
+        async for chunk in client.gen_stream("test", "model1"):
+            chunks.append(chunk)
+        assert "".join(chunks) == "42"  # Should be converted to string

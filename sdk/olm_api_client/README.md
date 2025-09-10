@@ -32,6 +32,7 @@ The SDK is built around the `OllamaClientProtocol`, which defines a common set o
         ```
 
     2.  **Dictionary Mapping**: Maps specific prompts (or partial prompts) to responses. This is useful for testing specific conversational flows.
+        Note: Matching tries exact match first, then the first substring match by insertion order. Matching is case-sensitive by default.
         ```python
         prompt_map = {
             "What is your name?": "I am a mock client.",
@@ -77,11 +78,16 @@ client = OllamaLocalClient(host="http://localhost:11434")  # host is optional
 client = MockOllamaApiClient()
 
 # Use the client
-response = await client.gen_batch(
-    prompt="Why is the sky blue?",
-    model_name="qwen3:0.6b"
-)
-print(response)
+import asyncio
+
+async def main():
+    response = await client.gen_batch(
+        prompt="Why is the sky blue?",
+        model_name="qwen3:0.6b"
+    )
+    print(response)
+
+asyncio.run(main())
 ```
 
 ### Usage Examples
@@ -122,11 +128,13 @@ async def run_remote():
 from sdk.olm_api_client import MockOllamaApiClient
 
 async def test_function():
+    # Option A: Use specific responses
+    client = MockOllamaApiClient(responses=["mock response"])
+    response = await client.gen_batch(prompt="Test prompt", model_name="test-model")
+    assert response == "mock response"
+
+    # Option B: Test with default responses
     client = MockOllamaApiClient()
-    
-    response = await client.gen_batch(
-        prompt="Test prompt",
-        model_name="test-model"
-    )
-    assert "mock response" in response.lower()
+    response = await client.gen_batch(prompt="Test prompt", model_name="test-model")
+    assert isinstance(response, str) and len(response) > 0
 ```
