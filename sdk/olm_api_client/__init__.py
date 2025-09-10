@@ -3,10 +3,9 @@ from .local_client import OllamaLocalClient
 from .mock import MockOllamaApiClient
 from .protocol import OllamaClientProtocol
 
-
 __all__ = [
     "OllamaApiClient",
-    "OllamaLocalClient", 
+    "OllamaLocalClient",
     "MockOllamaApiClient",
     "OllamaClientProtocol",
 ]
