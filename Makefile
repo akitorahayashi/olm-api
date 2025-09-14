@@ -116,8 +116,6 @@ migrate: ## Run database migrations against the development database
 	@echo "Running database migrations for dev environment..."
 	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
 
-
-
 .PHONY: migration
 migration: ## Generate a new database migration file. Usage: make migration m="Your migration message"
 	@if [ -z "$(m)" ]; then \
