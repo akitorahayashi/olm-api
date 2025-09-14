@@ -6,7 +6,7 @@ import time
 import httpx
 import pytest
 
-from tests.perf.conftest import get_model_name, load_prompt
+from tests.conftest import get_model_name, load_prompt
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio
@@ -40,13 +40,14 @@ async def make_api_request(
 
         response_data = response.json()
 
-        # Log the JSON response with formatted think tags
-        if "response" in response_data:
-            formatted_response_text = response_data["response"].replace(
-                "</think>", "</think>\n\n"
-            )
+        # Log the JSON response with formatted content
+        if "choices" in response_data and response_data["choices"]:
+            content = response_data["choices"][0]["message"]["content"]
+            formatted_content = content.replace("</think>", "</think>\n\n")
             formatted_response_data = response_data.copy()
-            formatted_response_data["response"] = formatted_response_text
+            formatted_response_data["choices"][0]["message"][
+                "content"
+            ] = formatted_content
             print(
                 f"\nRequest {request_number}: {elapsed:.2f}s - Response JSON: {json.dumps(formatted_response_data, ensure_ascii=False)}"
             )
@@ -55,7 +56,7 @@ async def make_api_request(
                 f"\nRequest {request_number}: {elapsed:.2f}s - Response JSON: {json.dumps(response_data, ensure_ascii=False)}"
             )
 
-        if "response" not in response_data:
+        if "choices" not in response_data or not response_data["choices"]:
             raise Exception(
                 f"Request {request_number} returned invalid response format: {response_data}"
             )
@@ -74,13 +75,13 @@ async def run_sequential_requests_with_interval(
     """
     Run sequential requests with specified interval and return total elapsed time and individual request times.
     """
-    host_port = os.getenv("HOST_PORT", "8000")
+    host_port = os.getenv("TEST_PORT", "8002")
     model_name = get_model_name()
 
-    generate_url = f"http://localhost:{host_port}/api/v1/generate"
+    chat_url = f"http://localhost:{host_port}/api/v2/chat/completions"
     request_payload = {
-        "prompt": load_prompt(),
-        "model_name": model_name,
+        "model": model_name,
+        "messages": [{"role": "user", "content": load_prompt()}],
         "stream": False,
     }
 
@@ -91,15 +92,18 @@ async def run_sequential_requests_with_interval(
         for i in range(num_requests):
             try:
                 result, individual_time = await make_api_request(
-                    client, generate_url, request_payload, i + 1
+                    client, chat_url, request_payload, i + 1
                 )
 
                 request_times.append(individual_time)
 
                 # Validate response
                 if (
-                    not isinstance(result.get("response"), str)
-                    or len(result.get("response", "")) == 0
+                    not result.get("choices")
+                    or not isinstance(
+                        result["choices"][0].get("message", {}).get("content"), str
+                    )
+                    or len(result["choices"][0]["message"]["content"]) == 0
                 ):
                     raise Exception(
                         f"Request {i + 1} returned invalid response content: {result}"
@@ -118,9 +122,9 @@ async def run_sequential_requests_with_interval(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("num_requests, interval", SEQUENTIAL_TEST_CASES)
-async def test_sequential_performance(num_requests: int, interval: float):
+async def test_sequential_performance_v2(num_requests: int, interval: float):
     """
-    Test performance with sequential requests for various configurations.
+    Test V2 performance with sequential requests for various configurations.
     """
     total_time, request_times = await run_sequential_requests_with_interval(
         num_requests, interval
@@ -131,12 +135,12 @@ async def test_sequential_performance(num_requests: int, interval: float):
     min_time = min(request_times)
     max_time = max(request_times)
 
-    print(f"\n📊 Sequential Test ({num_requests} requests, {interval}s interval):")
+    print(f"\n📊 V2 Sequential Test ({num_requests} requests, {interval}s interval):")
     print(f"   Total time: {total_time:.2f}s")
     print(f"   Average response time: {avg_time:.2f}s")
     print(f"   Min/Max response time: {min_time:.2f}s / {max_time:.2f}s")
     print(
-        f"✅ [SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n"
+        f"✅ [V2 SEQUENTIAL TEST: {num_requests} requests @ {interval}s intervals] COMPLETED\n"
     )
 
     assert total_time > 0, "Test should take some time to complete"

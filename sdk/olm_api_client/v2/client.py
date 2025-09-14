@@ -30,7 +30,7 @@ class OlmApiClientV2:
         tools: Optional[List[Dict[str, Any]]] = None,
         stream: bool = False,
         **kwargs,
-    ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
+    ) -> Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]:
         """
         Generate chat completion using the v2 API with OpenAI-compatible format.
 
@@ -107,9 +107,13 @@ class OlmApiClientV2:
 
     async def _chat_stream_response(
         self, payload: Dict[str, Any]
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Stream response from the v2 chat completions API.
+
+        Returns complete JSON chunks to enable thought/answer distinction:
+        - When delta.tool_calls exists: thought mode (save_thought function)
+        - When delta.content exists: answer mode (direct response)
         """
         try:
             async with httpx.AsyncClient(
@@ -130,12 +134,8 @@ class OlmApiClientV2:
                                 break
                             try:
                                 data = json.loads(data_str)
-                                choices = data.get("choices", [])
-                                if choices and len(choices) > 0:
-                                    delta = choices[0].get("delta", {})
-                                    content = delta.get("content")
-                                    if content:
-                                        yield content
+                                # Return the complete JSON chunk for proper thought/answer handling
+                                yield data
                             except json.JSONDecodeError:
                                 continue
         except httpx.RequestError as e:

@@ -1,3 +1,8 @@
+"""
+Performance test specific fixtures.
+Common fixtures including e2e_setup, load_prompt, and get_model_name are now in tests/conftest.py
+"""
+
 import os
 import subprocess
 import time
@@ -5,28 +10,9 @@ from typing import Generator
 
 import httpx
 import pytest
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
-
-def load_prompt() -> str:
-    """
-    Load prompt from the shared prompt.txt file.
-    """
-    prompt_path = os.path.join(os.path.dirname(__file__), "prompt.txt")
-    with open(prompt_path, "r", encoding="utf-8") as f:
-        return f.read().strip()
-
-
-def get_model_name() -> str:
-    """
-    Get the model name. Configure the model name here manually.
-    """
-    # Manually configure the model name here
-    model_name = "qwen3:1.7b"
-    return model_name
+# Performance tests can use all fixtures from tests/conftest.py
+# Add any performance-specific fixtures here if needed
 
 
 # Set environment variables for Docker Compose

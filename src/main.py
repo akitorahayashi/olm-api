@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from contextlib import asynccontextmanager
 
@@ -7,10 +6,9 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 import ollama
-from src.api.v1.routers import generate, logs
-from src.api.v1.services.ollama_service import get_ollama_service
-from src.api.v2.routers import chat
-from src.config.settings import get_settings
+from src.api.v1.routers import chat as v1_chat
+from src.api.v1.routers import logs
+from src.api.v2.routers import chat as v2_chat
 from src.middlewares.db_logging_middleware import LoggingMiddleware
 
 
@@ -20,24 +18,8 @@ async def lifespan(app: FastAPI):
     Application lifespan manager for model warm-up.
     """
     # Startup logic: warm up the built-in model
-    settings = get_settings()
-    ollama_service = get_ollama_service()
-    model_name = settings.BUILT_IN_OLLAMA_MODEL
-    if model_name:
-        try:
-            logging.info("Warming up model: %s ...", model_name)
-            # Add a timeout to prevent the application from hanging
-            await asyncio.wait_for(
-                ollama_service.generate_response(
-                    prompt=".", model_name=model_name, stream=False
-                ),
-                timeout=300,  # 5-minute timeout
-            )
-            logging.info("Model %s warmed up and ready.", model_name)
-        except Exception as e:
-            logging.warning("Model warm-up failed or timed out: %s", e)
-    else:
-        logging.info("No BUILT_IN_OLLAMA_MODEL specified, skipping warm-up.")
+    # Temporarily disabled to debug E2E test issues
+    logging.info("Model warm-up temporarily disabled for debugging")
 
     yield
     # Shutdown logic (if any)
@@ -58,11 +40,11 @@ app.add_middleware(LoggingMiddleware)
 
 
 # Include the routers from the v1 API
-app.include_router(generate.router)
+app.include_router(v1_chat.router)
 app.include_router(logs.router)
 
 # Include the routers from the v2 API
-app.include_router(chat.router)
+app.include_router(v2_chat.router)
 
 
 # ==============================================================================
@@ -104,9 +86,13 @@ async def general_exception_handler(request: Request, exc: Exception):
     Handles all unhandled exceptions, returning a 500 Internal Server Error.
     This prevents sensitive server information from being exposed to clients.
     """
+    import traceback
+
+    logging.error(f"Unhandled exception at {request.url}: {exc}")
+    logging.error(traceback.format_exc())
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"},
+        content={"detail": f"Internal server error: {str(exc)}"},
     )
 
 

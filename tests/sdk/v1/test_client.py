@@ -3,45 +3,45 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import httpx
 import pytest
 
-from sdk.olm_api_client.client import OllamaApiClient
-from sdk.olm_api_client.protocol import OllamaClientProtocol
+from sdk.olm_api_client.v1.client import OlmApiClientV1
+from sdk.olm_api_client.v1.protocol import OlmClientV1Protocol
 
 
-class TestOllamaApiClient:
-    """Test cases for OllamaApiClient"""
+class TestOlmApiClientV1:
+    """Test cases for OlmApiClientV1"""
 
     def test_init_success(self):
         """Test successful initialization with API URL"""
         api_url = "http://localhost:11434"
-        client = OllamaApiClient(api_url=api_url)
+        client = OlmApiClientV1(api_url=api_url)
         assert client.api_url == api_url
         assert client.generate_endpoint == f"{api_url}/api/v1/generate"
 
     def test_init_without_api_url_raises_error(self):
         """Test initialization without required api_url raises TypeError"""
         with pytest.raises(TypeError):
-            OllamaApiClient()
+            OlmApiClientV1()
 
     def test_init_strips_trailing_slash(self):
         """Test that trailing slash is stripped from API URL"""
         api_url = "http://localhost:11434/"
-        client = OllamaApiClient(api_url=api_url)
+        client = OlmApiClientV1(api_url=api_url)
         assert client.api_url == "http://localhost:11434"
 
     def test_implements_protocol(self):
-        """Test that OllamaApiClient implements OllamaClientProtocol"""
-        client = OllamaApiClient(api_url="http://localhost:11434")
-        assert isinstance(client, OllamaClientProtocol)
+        """Test that OlmApiClientV1 implements OlmClientV1Protocol"""
+        client = OlmApiClientV1(api_url="http://localhost:11434")
+        assert isinstance(client, OlmClientV1Protocol)
 
     @pytest.mark.asyncio
-    async def test_gen_stream(self):
-        """Test gen_stream method"""
-        client = OllamaApiClient(api_url="http://localhost:11434")
+    async def test_generate_streaming(self):
+        """Test generate method with streaming"""
+        client = OlmApiClientV1(api_url="http://localhost:11434")
 
         with patch.object(client, "_stream_response") as mock_stream:
             mock_stream.return_value = async_generator_mock(["Hello", " world"])
 
-            result = client.gen_stream("test prompt", "test-model")
+            result = await client.generate("test prompt", "test-model", stream=True)
 
             # Verify it returns an async generator
             assert hasattr(result, "__aiter__")
@@ -55,14 +55,14 @@ class TestOllamaApiClient:
             mock_stream.assert_called_once_with("test prompt", "test-model")
 
     @pytest.mark.asyncio
-    async def test_gen_batch(self):
-        """Test gen_batch method"""
-        client = OllamaApiClient(api_url="http://localhost:11434")
+    async def test_generate_non_streaming(self):
+        """Test generate method without streaming"""
+        client = OlmApiClientV1(api_url="http://localhost:11434")
 
         with patch.object(client, "_non_stream_response") as mock_non_stream:
             mock_non_stream.return_value = "Complete response"
 
-            result = await client.gen_batch("test prompt", "test-model")
+            result = await client.generate("test prompt", "test-model", stream=False)
 
             assert result == "Complete response"
             mock_non_stream.assert_called_once_with("test prompt", "test-model")
@@ -80,7 +80,7 @@ class TestIntegrationWithMock:
     @pytest.mark.asyncio
     async def test_stream_response_success(self):
         """Test successful streaming response"""
-        client = OllamaApiClient(api_url="http://localhost:11434")
+        client = OlmApiClientV1(api_url="http://localhost:11434")
 
         mock_response_data = [
             'data: {"response": "Hello"}\n',
@@ -120,7 +120,7 @@ class TestIntegrationWithMock:
     @pytest.mark.asyncio
     async def test_non_stream_response_success(self):
         """Test successful non-streaming response"""
-        client = OllamaApiClient(api_url="http://localhost:11434")
+        client = OlmApiClientV1(api_url="http://localhost:11434")
 
         # Create mock response object
         mock_response = MagicMock()
@@ -145,7 +145,7 @@ class TestIntegrationWithMock:
     @pytest.mark.asyncio
     async def test_stream_response_handles_request_error(self):
         """Test that streaming handles httpx.RequestError"""
-        client = OllamaApiClient(api_url="http://localhost:11434")
+        client = OlmApiClientV1(api_url="http://localhost:11434")
 
         # Create mock client that raises an exception
         mock_client = MagicMock()
@@ -165,7 +165,7 @@ class TestIntegrationWithMock:
     @pytest.mark.asyncio
     async def test_non_stream_response_handles_request_error(self):
         """Test that non-streaming handles httpx.RequestError"""
-        client = OllamaApiClient(api_url="http://localhost:11434")
+        client = OlmApiClientV1(api_url="http://localhost:11434")
 
         with patch("httpx.AsyncClient") as mock_client_class:
             mock_client = AsyncMock()

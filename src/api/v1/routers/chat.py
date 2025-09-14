@@ -2,24 +2,16 @@ from typing import Union
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
 
+from src.api.v1.schemas.generate import GenerateRequest, GenerateResponse
 from src.api.v1.services.ollama_service import (
-    GenerateResponse,
     OllamaService,
     get_ollama_service,
 )
 
-
-class GenerateRequest(BaseModel):
-    prompt: str
-    model_name: str
-    stream: bool = False
-
-
 router = APIRouter(
     prefix="/api/v1",
-    tags=["generate"],
+    tags=["chat"],
 )
 
 
@@ -42,3 +34,10 @@ async def generate(
         )
     except ValueError as e:
         raise HTTPException(status_code=502, detail=str(e))
+    except Exception as e:
+        import logging
+        import traceback
+
+        logging.error(f"Unexpected error in generate endpoint: {e}")
+        logging.error(traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")

@@ -4,7 +4,7 @@ import pytest
 from httpx import AsyncClient
 from starlette import status
 
-from src.api.v1.services.ollama_service import GenerateResponse
+from src.api.v1.schemas.generate import GenerateResponse
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio
@@ -16,11 +16,9 @@ async def test_generate_with_model_name(
     """
     Test that the /generate endpoint uses the model specified in the request.
     """
-    import os
-
     # Arrange
     prompt = "Test prompt"
-    model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
+    model_name = "test-model"
     mock_ollama_service.generate_response.return_value = GenerateResponse(
         response="test response"
     )

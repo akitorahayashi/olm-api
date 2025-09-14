@@ -1,5 +1,4 @@
 import asyncio
-import json
 import os
 import time
 from typing import Any, AsyncGenerator, Dict, List, Optional, Sequence, Union
@@ -80,7 +79,7 @@ class MockOlmClientV2:
         tools: Optional[List[Dict[str, Any]]] = None,
         stream: bool = False,
         **kwargs,
-    ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
+    ) -> Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]:
         """
         Mock chat completion using v2 API format.
 
@@ -145,7 +144,7 @@ class MockOlmClientV2:
                 {"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}
             ],
         }
-        yield json.dumps(first_chunk)
+        yield first_chunk
 
         # Send content chunks
         for token in tokens:
@@ -158,7 +157,7 @@ class MockOlmClientV2:
                     {"index": 0, "delta": {"content": token}, "finish_reason": None}
                 ],
             }
-            yield json.dumps(chunk)
+            yield chunk
             await asyncio.sleep(self.token_delay)
 
         # Send final chunk
@@ -169,4 +168,4 @@ class MockOlmClientV2:
             "model": model,
             "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
         }
-        yield json.dumps(final_chunk)
+        yield final_chunk

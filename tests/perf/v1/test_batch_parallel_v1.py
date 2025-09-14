@@ -6,8 +6,6 @@ import time
 import httpx
 import pytest
 
-from tests.perf.conftest import get_model_name, load_prompt
-
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio
 
@@ -55,7 +53,7 @@ async def run_parallel_requests_with_timing(
     """
     Run parallel requests and return total elapsed time and individual request times.
     """
-    host_port = os.getenv("HOST_PORT", "8000")
+    host_port = os.getenv("TEST_PORT", "8002")
     model_name = get_model_name()
 
     generate_url = f"http://localhost:{host_port}/api/v1/generate"

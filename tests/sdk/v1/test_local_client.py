@@ -2,8 +2,8 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from sdk.olm_api_client.local_client import OllamaLocalClient
-from sdk.olm_api_client.protocol import OllamaClientProtocol
+from sdk.olm_api_client.v1.local_client import OlmLocalClientV1
+from sdk.olm_api_client.v1.protocol import OlmClientV1Protocol
 
 
 @pytest.fixture
@@ -19,23 +19,23 @@ def mock_ollama_client_instance():
         yield mock_instance
 
 
-class TestOllamaLocalClient:
-    """Test cases for OllamaLocalClient"""
+class TestOlmLocalClientV1:
+    """Test cases for OlmLocalClientV1"""
 
     def test_implements_protocol(self):
-        """Test that OllamaLocalClient implements OllamaClientProtocol"""
-        client = OllamaLocalClient()
-        assert isinstance(client, OllamaClientProtocol)
+        """Test that OlmLocalClientV1 implements OlmClientV1Protocol"""
+        client = OlmLocalClientV1()
+        assert isinstance(client, OlmClientV1Protocol)
 
     @pytest.mark.asyncio
-    async def test_gen_batch_success(self, mock_ollama_client_instance):
+    async def test_generate_batch_success(self, mock_ollama_client_instance):
         """Test successful batch generation"""
-        client = OllamaLocalClient()
+        client = OlmLocalClientV1()
         mock_ollama_client_instance.chat.return_value = {
             "message": {"content": "Test response"}
         }
 
-        response = await client.gen_batch("test prompt", "test-model")
+        response = await client.generate("test prompt", "test-model", stream=False)
         assert response == "Test response"
         mock_ollama_client_instance.chat.assert_called_once_with(
             model="test-model",
@@ -44,7 +44,7 @@ class TestOllamaLocalClient:
         )
 
     @pytest.mark.asyncio
-    async def test_gen_stream_success(self, mock_ollama_client_instance):
+    async def test_generate_stream_success(self, mock_ollama_client_instance):
         """Test successful stream generation"""
 
         async def mock_stream():
@@ -52,12 +52,11 @@ class TestOllamaLocalClient:
             yield {"message": {"content": " "}}
             yield {"message": {"content": "World"}}
 
-        client = OllamaLocalClient()
+        client = OlmLocalClientV1()
         mock_ollama_client_instance.chat.return_value = mock_stream()
 
-        chunks = [
-            chunk async for chunk in client.gen_stream("test prompt", "test-model")
-        ]
+        result = await client.generate("test prompt", "test-model", stream=True)
+        chunks = [chunk async for chunk in result]
         assert "".join(chunks) == "Hello World"
         mock_ollama_client_instance.chat.assert_called_once_with(
             model="test-model",
@@ -66,7 +65,7 @@ class TestOllamaLocalClient:
         )
 
     @pytest.mark.asyncio
-    async def test_gen_stream_handles_empty_content(self, mock_ollama_client_instance):
+    async def test_generate_handles_empty_content(self, mock_ollama_client_instance):
         """Test that streaming handles chunks with no content"""
 
         async def mock_stream_with_empty():
@@ -74,8 +73,9 @@ class TestOllamaLocalClient:
             yield {"message": {"content": ""}}  # Empty content
             yield {"message": {"content": "Last"}}
 
-        client = OllamaLocalClient()
+        client = OlmLocalClientV1()
         mock_ollama_client_instance.chat.return_value = mock_stream_with_empty()
 
-        chunks = [chunk async for chunk in client.gen_stream("prompt", "model")]
+        result = await client.generate("prompt", "model", stream=True)
+        chunks = [chunk async for chunk in result]
         assert chunks == ["First", "Last"]

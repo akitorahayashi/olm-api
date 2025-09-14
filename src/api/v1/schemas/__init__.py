@@ -1,0 +1,3 @@
+"""
+Schemas for v1 API endpoints.
+"""

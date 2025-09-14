@@ -102,10 +102,9 @@ async def main():
         {"role": "user", "content": "Write a short poem about Python programming"}
     ]
 
-    async for chunk_json in await client.generate(
+    async for chunk in await client.generate(
         messages, "llama3.2", stream=True
     ):
-        chunk = json.loads(chunk_json)
         if "choices" in chunk and chunk["choices"]:
             delta = chunk["choices"][0].get("delta", {})
             if "content" in delta:
@@ -199,7 +198,7 @@ async def generate(
     tools: Optional[List[Dict[str, Any]]] = None,
     stream: bool = False,
     **kwargs
-) -> Union[Dict[str, Any], AsyncGenerator[str, None]]
+) -> Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]
 ```
 
 Generate chat completion with OpenAI-compatible format.
@@ -253,7 +252,7 @@ Generate chat completion with OpenAI-compatible format.
 
 **Returns:**
 - Non-streaming: `Dict[str, Any]` - OpenAI-compatible response object
-- Streaming: `AsyncGenerator[str, None]` - Async generator yielding JSON chunk strings
+- Streaming: `AsyncGenerator[Dict[str, Any], None]` - Async generator yielding JSON objects (dictionaries).
 
 ## Response Format
 
@@ -286,7 +285,7 @@ Generate chat completion with OpenAI-compatible format.
 
 ### Streaming Response
 
-Returns an async generator that yields text chunks as they are generated.
+Returns an async generator that yields JSON objects (dictionaries) as they are generated.
 
 ## Protocol Support
 

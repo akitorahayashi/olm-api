@@ -3,12 +3,12 @@ from typing import Union
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
-from src.api.v1.services.ollama_service import (
-    OllamaService,
-    get_ollama_service,
-)
 from src.api.v2.schemas.request import ChatRequest
 from src.api.v2.schemas.response import ChatResponse
+from src.api.v2.services.ollama_service import (
+    OllamaServiceV2,
+    get_ollama_service_v2,
+)
 
 router = APIRouter(
     prefix="/api/v2",
@@ -19,7 +19,7 @@ router = APIRouter(
 @router.post("/chat/completions", response_model=ChatResponse)
 async def chat_completions(
     request: ChatRequest,
-    ollama_service: OllamaService = Depends(get_ollama_service),
+    ollama_service: OllamaServiceV2 = Depends(get_ollama_service_v2),
 ) -> Union[ChatResponse, StreamingResponse]:
     """
     Chat completions endpoint compatible with OpenAI API.
@@ -32,8 +32,8 @@ async def chat_completions(
     """
     try:
         # Convert Pydantic models to dict for service layer
-        messages = [message.dict() for message in request.messages]
-        tools = [tool.dict() for tool in request.tools] if request.tools else None
+        messages = [message.model_dump() for message in request.messages]
+        tools = [tool.model_dump() for tool in request.tools] if request.tools else None
 
         # Build options dict from request parameters
         options = request.options or {}

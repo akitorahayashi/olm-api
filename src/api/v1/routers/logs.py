@@ -1,29 +1,13 @@
-from datetime import datetime
-from typing import List, Optional
+from typing import List
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
-from pydantic import BaseModel, ConfigDict
 from sqlalchemy.orm import Session
 
+from src.api.v1.schemas.logs import LogRead
 from src.db.database import get_db
 from src.db.models.log import Log
-
-
-class LogRead(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
-
-    id: int
-    timestamp: datetime
-    client_host: Optional[str] = None
-    request_method: Optional[str] = None
-    request_path: Optional[str] = None
-    response_status_code: Optional[int] = None
-    prompt: Optional[str] = None
-    generated_response: Optional[str] = None
-    error_details: Optional[str] = None
-
 
 router = APIRouter()
 templates = Jinja2Templates(directory="src/templates")

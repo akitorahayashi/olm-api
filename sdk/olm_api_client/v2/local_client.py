@@ -56,11 +56,30 @@ class OlmLocalClientV2:
             return await self._batch_generate(**chat_params)
 
     async def _stream_generate(self, **chat_params) -> AsyncGenerator[str, None]:
-        """Generate text with streaming from local Ollama."""
+        """Generate OpenAI-compatible JSON chunks from local Ollama streaming."""
+        import json
+        import time
+
         stream = await self.client.chat(**chat_params)
+        model = chat_params.get("model", "unknown")
+
         async for chunk in stream:
             if content := chunk["message"]["content"]:
-                yield content
+                # Convert to OpenAI-compatible streaming format
+                openai_chunk = {
+                    "id": f"chatcmpl-local-{int(time.time())}",
+                    "object": "chat.completion.chunk",
+                    "created": int(time.time()),
+                    "model": model,
+                    "choices": [
+                        {
+                            "index": 0,
+                            "delta": {"content": content},
+                            "finish_reason": None,
+                        }
+                    ],
+                }
+                yield json.dumps(openai_chunk)
 
     async def _batch_generate(self, **chat_params) -> Dict[str, Any]:
         """Generate complete response from local Ollama and convert to OpenAI format."""
