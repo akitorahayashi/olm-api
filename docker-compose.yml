@@ -17,7 +17,7 @@ services:
     build:
       context: ./ollama
       args:
-        - BUILT_IN_OLLAMA_MODEL=${BUILT_IN_OLLAMA_MODEL}
+        - BUILT_IN_OLLAMA_MODELS=${BUILT_IN_OLLAMA_MODELS}
     entrypoint: ollama
     command: serve
     volumes:

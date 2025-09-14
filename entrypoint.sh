@@ -22,11 +22,11 @@ if [ "$#" -eq 0 ] || [ "$1" = "uvicorn" ]; then
     
     while ! alembic upgrade head; do
         count=$((count + 1))
-        if [ ${count} -ge 30 ]; then
-            echo "Failed to connect to database after 30 attempts. Exiting."
+        if [ ${count} -ge 20 ]; then
+            echo "Failed to connect to database after 20 attempts. Exiting."
             exit 1
         fi
-        echo "Migration failed, retrying in 2 seconds... (${count}/30)"
+        echo "Migration failed, retrying in 2 seconds... (${count}/20)"
         sleep 2
     done
     echo "Database migrations completed successfully."

@@ -1,28 +1,58 @@
+"""
+E2E test specific fixtures.
+This file contains the e2e_setup fixture that manages the Docker Compose environment for E2E tests.
+"""
+
 import os
 import subprocess
 import time
-from typing import Generator
+from typing import AsyncGenerator, Generator
 
 import httpx
 import pytest
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
 
-# Set environment variables for Docker Compose
-os.environ["HOST_BIND_IP"] = os.getenv("HOST_BIND_IP", "127.0.0.1")
-os.environ["TEST_PORT"] = os.getenv("TEST_PORT", "8002")
-os.environ["BUILT_IN_OLLAMA_MODEL"] = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
+@pytest.fixture
+async def http_client(api_config) -> AsyncGenerator[httpx.AsyncClient, None]:
+    """
+    Fixture to provide an async HTTP client for making requests to the API.
+
+    This fixture creates an httpx.AsyncClient with appropriate timeout settings
+    for testing against the running Docker Compose services.
+    """
+    async with httpx.AsyncClient(
+        base_url=api_config["base_url"], timeout=60.0
+    ) as client:
+        yield client
+
+
+@pytest.fixture
+def api_config():
+    """
+    Fixture to provide consistent API configuration for E2E tests.
+
+    Returns configuration with fixed endpoint URLs and model name
+    to ensure consistent testing across all E2E tests.
+    """
+    host_port = os.getenv("TEST_PORT", "8002")
+    model_name = os.getenv("BUILT_IN_OLLAMA_MODELS", "qwen3:0.6b").split(",")[0]
+
+    return {
+        "base_url": f"http://localhost:{host_port}",
+        "v1_generate_url": f"http://localhost:{host_port}/api/v1/chat",
+        "v2_chat_completions_url": f"http://localhost:{host_port}/api/v2/chat",
+        "model_name": model_name,
+    }
 
 
 @pytest.fixture(scope="session", autouse=True)
 def e2e_setup() -> Generator[None, None, None]:
     """
     Manages the lifecycle of the application for end-to-end testing.
+    This fixture is automatically invoked for all tests in the 'e2e' directory.
     """
     # Determine if sudo should be used based on environment variable
-    use_sudo = os.getenv("SUDO") == "true"
+    use_sudo = os.getenv("SUDO", "").lower() in ("1", "true", "yes")
     docker_command = ["sudo", "-E", "docker"] if use_sudo else ["docker"]
 
     host_bind_ip = os.getenv("HOST_BIND_IP", "127.0.0.1")
@@ -50,78 +80,42 @@ def e2e_setup() -> Generator[None, None, None]:
         "--project-name",
         "olm-api-test",
         "down",
-        "--remove-orphans",
+        "-v",
     ]
 
-    try:
-        subprocess.run(
-            compose_up_command, check=True, timeout=600, env=os.environ
-        )  # 10 minutes timeout
-
-        # Health Check
+    def wait_for_health_check(url: str, timeout: int = 120) -> bool:
+        """Wait for the application to be healthy."""
         start_time = time.time()
-        timeout = 600  # 10 minutes for qwen3:0.6b model download
-        is_healthy = False
         while time.time() - start_time < timeout:
             try:
-                response = httpx.get(health_url, timeout=5)
-                if response.status_code == 200:
-                    print("✅ API is healthy!")
-                    is_healthy = True
-                    break
-            except httpx.RequestError as e:
-                print(f"⏳ API not yet healthy, retrying... Error: {e}")
-            time.sleep(5)
+                response = httpx.get(url, timeout=5.0)
+                if 200 <= response.status_code < 300:
+                    return True
+            except httpx.RequestError:
+                pass
+            time.sleep(2)
+        return False
 
-        if not is_healthy:
-            subprocess.run(
-                docker_command
-                + [
-                    "compose",
-                    "-f",
-                    "docker-compose.yml",
-                    "-f",
-                    "docker-compose.test.override.yml",
-                    "--project-name",
-                    "olm-api-test",
-                    "logs",
-                    "api",
-                    "ollama",
-                ]
+    try:
+        print("\nStarting Docker Compose services for E2E testing...")
+        result = subprocess.run(compose_up_command, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(
+                f"Failed to start services.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
             )
-            # Ensure teardown on health check failure
-            print("\n🛑 Stopping E2E services due to health check failure...")
-            subprocess.run(compose_down_command, check=False)
-            pytest.fail(f"API did not become healthy within {timeout} seconds.")
 
+        print(f"Waiting for application to be healthy at {health_url}...")
+        if not wait_for_health_check(health_url):
+            raise RuntimeError("Application failed to become healthy within timeout")
+
+        print("✅ E2E test environment is ready.")
         yield
 
-    except subprocess.CalledProcessError as e:
-        print("\n🛑 compose up failed; performing cleanup...")
-        if hasattr(e, "stdout") and hasattr(e, "stderr"):
-            print(f"Exit code: {e.returncode}")
-            print(f"STDOUT: {e.stdout}")
-            print(f"STDERR: {e.stderr}")
-        subprocess.run(compose_down_command, check=False)
-        raise
     finally:
-        # Dump logs for debugging
-        print("\n📄 Dumping logs for debugging...")
-        subprocess.run(
-            docker_command
-            + [
-                "compose",
-                "-f",
-                "docker-compose.yml",
-                "-f",
-                "docker-compose.test.override.yml",
-                "--project-name",
-                "olm-api-test",
-                "logs",
-                "api",
-                "ollama",
-            ]
+        print("\nStopping Docker Compose services...")
+        cleanup_result = subprocess.run(
+            compose_down_command, capture_output=True, text=True
         )
-        # Stop services
-        print("\n🛑 Stopping E2E services...")
-        subprocess.run(compose_down_command, check=False)
+        if cleanup_result.returncode != 0:
+            print(f"Warning: Failed during cleanup: {cleanup_result.stderr}")
+        print("E2E test cleanup completed.")

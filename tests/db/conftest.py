@@ -15,7 +15,7 @@ from alembic import command
 from alembic.config import Config
 from src.api.v1.services.ollama_service import get_ollama_service
 from src.db.database import create_db_session
-from src.db.models.log import Log
+from src.logs.models import Log
 from src.main import app
 from src.middlewares import db_logging_middleware
 
@@ -45,7 +45,9 @@ def db_setup(
     if is_master:
         # Set a dummy model for DB tests, which don't need a real one.
         # This is required for Alembic's env.py to validate settings.
-        os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-db-model"
+        os.environ["BUILT_IN_OLLAMA_MODELS"] = "test-db-model"
+        # Enable API logging for DB middleware tests
+        os.environ["API_LOGGING_ENABLED"] = "true"
 
         # Enable testcontainers logging to show container startup progress
         logging.getLogger("testcontainers").setLevel(logging.INFO)

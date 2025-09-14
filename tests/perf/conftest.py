@@ -1,3 +1,8 @@
+"""
+Performance test specific fixtures.
+Common fixtures including e2e_setup, load_prompt, and get_model_name are now in tests/conftest.py
+"""
+
 import os
 import subprocess
 import time
@@ -5,34 +10,15 @@ from typing import Generator
 
 import httpx
 import pytest
-from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
-
-
-def load_prompt() -> str:
-    """
-    Load prompt from the shared prompt.txt file.
-    """
-    prompt_path = os.path.join(os.path.dirname(__file__), "prompt.txt")
-    with open(prompt_path, "r", encoding="utf-8") as f:
-        return f.read().strip()
-
-
-def get_model_name() -> str:
-    """
-    Get the model name. Configure the model name here manually.
-    """
-    # Manually configure the model name here
-    model_name = "qwen3:1.7b"
-    return model_name
+# Performance tests can use all fixtures from tests/conftest.py
+# Add any performance-specific fixtures here if needed
 
 
 # Set environment variables for Docker Compose
 os.environ["HOST_BIND_IP"] = os.getenv("HOST_BIND_IP", "127.0.0.1")
 os.environ["TEST_PORT"] = os.getenv("TEST_PORT", "8002")
-os.environ["BUILT_IN_OLLAMA_MODEL"] = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
+os.environ["BUILT_IN_OLLAMA_MODELS"] = os.getenv("BUILT_IN_OLLAMA_MODELS", "qwen3:0.6b")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -41,7 +27,7 @@ def perf_setup() -> Generator[None, None, None]:
     Manages the lifecycle of the application for performance testing.
     """
     # Determine if sudo should be used based on environment variable
-    use_sudo = os.getenv("SUDO") == "true"
+    use_sudo = os.getenv("SUDO", "").lower() in ("1", "true", "yes")
     docker_command = ["sudo", "-E", "docker"] if use_sudo else ["docker"]
 
     host_bind_ip = os.getenv("HOST_BIND_IP", "127.0.0.1")
