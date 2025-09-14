@@ -2,7 +2,9 @@ import asyncio
 import json
 import logging
 import os
+import time
 from functools import lru_cache
+from typing import Any, Dict, List, Optional, Union
 
 import httpx
 from fastapi.responses import StreamingResponse
@@ -115,6 +117,203 @@ class OllamaService:
                         f"Invalid response structure from Ollama: {chat_response}"
                     )
                     raise ValueError("Invalid response structure from Ollama.")
+
+    async def chat_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        stream: bool = False,
+        **options,
+    ) -> Union[Dict[str, Any], StreamingResponse]:
+        """
+        Chat completion method for v2 API.
+        Provides safe passthrough to ollama.chat with v2 contract.
+        """
+        if stream:
+            return StreamingResponse(
+                self._chat_completion_stream_generator(
+                    messages, model, tools, **options
+                ),
+                media_type="text/event-stream; charset=utf-8",
+                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            )
+        else:
+            async with self.semaphore:
+                try:
+                    # Build parameters for ollama.chat call
+                    chat_params = {
+                        "model": model,
+                        "messages": messages,
+                        "stream": False,
+                    }
+
+                    # Add tools if provided
+                    if tools:
+                        chat_params["tools"] = tools
+
+                    # Add additional options
+                    if options:
+                        chat_params["options"] = options
+
+                    chat_response = await run_in_threadpool(
+                        self.client.chat, **chat_params
+                    )
+
+                    # Transform to OpenAI-compatible format
+                    return self._transform_ollama_response_to_openai(
+                        chat_response, model
+                    )
+
+                except ollama.ResponseError as e:
+                    error_message = e.args[0] if e.args else "Unknown error"
+                    status_code = e.args[1] if len(e.args) > 1 else "N/A"
+                    logging.error(
+                        f"Ollama API request failed in chat_completion. Status: {status_code}, "
+                        f"Response: {error_message}"
+                    )
+                    raise
+                except httpx.RequestError as e:
+                    logging.error(
+                        f"Unable to connect to Ollama API in chat_completion: {e}"
+                    )
+                    raise
+                except Exception:
+                    logging.exception("An unexpected error occurred in chat_completion")
+                    raise
+
+    async def _chat_completion_stream_generator(
+        self,
+        messages: List[Dict[str, Any]],
+        model: str,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        **options,
+    ):
+        """
+        Streaming generator for v2 chat completion API.
+        """
+        async with self.semaphore:
+            try:
+                # Build parameters for ollama.chat call
+                chat_params = {
+                    "model": model,
+                    "messages": messages,
+                    "stream": True,
+                }
+
+                # Add tools if provided
+                if tools:
+                    chat_params["tools"] = tools
+
+                # Add additional options
+                if options:
+                    chat_params["options"] = options
+
+                chat_response = await run_in_threadpool(self.client.chat, **chat_params)
+
+                iterator = await run_in_threadpool(iter, chat_response)
+
+                while True:
+                    try:
+                        chunk = await run_in_threadpool(next, iterator)
+                        # Transform chunk to OpenAI-compatible streaming format
+                        stream_chunk = self._transform_ollama_chunk_to_openai(
+                            chunk, model
+                        )
+                        yield f"data: {json.dumps(stream_chunk)}\n\n"
+                    except StopIteration:
+                        # Send final chunk
+                        final_chunk = {
+                            "id": f"chatcmpl-{int(time.time())}",
+                            "object": "chat.completion.chunk",
+                            "created": int(time.time()),
+                            "model": model,
+                            "choices": [
+                                {"index": 0, "delta": {}, "finish_reason": "stop"}
+                            ],
+                        }
+                        yield f"data: {json.dumps(final_chunk)}\n\n"
+                        yield "data: [DONE]\n\n"
+                        break
+
+            except asyncio.CancelledError:
+                return
+            except ollama.ResponseError as e:
+                error_message = e.args[0] if e.args else "Unknown error"
+                status_code = e.args[1] if len(e.args) > 1 else "N/A"
+                logging.error(
+                    f"Ollama API request failed during chat completion streaming. Status: {status_code}, "
+                    f"Response: {error_message}"
+                )
+                raise
+            except httpx.RequestError as e:
+                logging.error(
+                    f"Unable to connect to Ollama API during chat completion streaming: {e}"
+                )
+                raise
+            except Exception:
+                logging.exception(
+                    "An unexpected error occurred during Ollama chat completion streaming."
+                )
+                raise
+
+    def _transform_ollama_response_to_openai(
+        self, ollama_response: Dict[str, Any], model: str
+    ) -> Dict[str, Any]:
+        """Transform Ollama response to OpenAI-compatible format."""
+        message = ollama_response.get("message", {})
+
+        # Handle tool calls if present
+        tool_calls = None
+        if "tool_calls" in message and message["tool_calls"]:
+            tool_calls = message["tool_calls"]
+
+        return {
+            "id": f"chatcmpl-{int(time.time())}",
+            "object": "chat.completion",
+            "created": int(time.time()),
+            "model": model,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {
+                        "role": message.get("role", "assistant"),
+                        "content": message.get("content"),
+                        "tool_calls": tool_calls,
+                    },
+                    "finish_reason": "stop",
+                }
+            ],
+            "usage": {
+                "prompt_tokens": ollama_response.get("prompt_eval_count", 0),
+                "completion_tokens": ollama_response.get("eval_count", 0),
+                "total_tokens": ollama_response.get("prompt_eval_count", 0)
+                + ollama_response.get("eval_count", 0),
+            },
+        }
+
+    def _transform_ollama_chunk_to_openai(
+        self, ollama_chunk: Dict[str, Any], model: str
+    ) -> Dict[str, Any]:
+        """Transform Ollama streaming chunk to OpenAI-compatible format."""
+        message = ollama_chunk.get("message", {})
+
+        return {
+            "id": f"chatcmpl-{int(time.time())}",
+            "object": "chat.completion.chunk",
+            "created": int(time.time()),
+            "model": model,
+            "choices": [
+                {
+                    "index": 0,
+                    "delta": {
+                        "role": message.get("role") if message.get("role") else None,
+                        "content": message.get("content"),
+                    },
+                    "finish_reason": None,
+                }
+            ],
+        }
 
     async def list_models(self):
         """

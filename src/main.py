@@ -9,6 +9,7 @@ from fastapi.responses import JSONResponse
 import ollama
 from src.api.v1.routers import generate, logs
 from src.api.v1.services.ollama_service import get_ollama_service
+from src.api.v2.routers import chat
 from src.config.settings import get_settings
 from src.middlewares.db_logging_middleware import LoggingMiddleware
 
@@ -59,6 +60,9 @@ app.add_middleware(LoggingMiddleware)
 # Include the routers from the v1 API
 app.include_router(generate.router)
 app.include_router(logs.router)
+
+# Include the routers from the v2 API
+app.include_router(chat.router)
 
 
 # ==============================================================================

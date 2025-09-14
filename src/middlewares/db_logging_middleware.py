@@ -24,11 +24,15 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         if not settings.API_LOGGING_ENABLED:
             return await call_next(request)
 
-        if "/generate" not in request.url.path:
+        # Only log generate (v1) and chat completions (v2) endpoints
+        should_log = (
+            "/generate" in request.url.path or "/chat/completions" in request.url.path
+        )
+        if not should_log:
             return await call_next(request)
 
         request_body = await request.body()
-        prompt = self._extract_prompt_from_body(request_body)
+        prompt = self._extract_prompt_from_body(request_body, request.url.path)
 
         async def receive() -> dict:
             return {"type": "http.request", "body": request_body}
@@ -52,10 +56,12 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 response_body_bytes += chunk
 
             if is_streaming:
-                generated_response = self._decode_sse_body(response_body_bytes)
+                generated_response = self._decode_sse_body(
+                    response_body_bytes, request.url.path
+                )
             else:
                 generated_response = self._extract_text_from_json_body(
-                    response_body_bytes
+                    response_body_bytes, request.url.path
                 )
 
             # Re-create the response since we've consumed the iterator
@@ -90,32 +96,89 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
         return response
 
-    def _extract_prompt_from_body(self, body: bytes) -> Optional[str]:
+    def _extract_prompt_from_body(self, body: bytes, path: str) -> Optional[str]:
         try:
             data = json.loads(body)
-            return data.get("prompt")
+
+            # v1 API: extract from "prompt" field
+            if "/api/v1/" in path:
+                return data.get("prompt")
+
+            # v2 API: extract from last message in "messages" array
+            elif "/api/v2/" in path:
+                messages = data.get("messages", [])
+                if messages:
+                    # Get the last user message content
+                    for message in reversed(messages):
+                        if message.get("role") == "user" and message.get("content"):
+                            return message["content"]
+                return None
+
+            return data.get("prompt")  # fallback
         except (json.JSONDecodeError, TypeError):
             return None
 
-    def _extract_text_from_json_body(self, body: bytes) -> Optional[str]:
+    def _extract_text_from_json_body(self, body: bytes, path: str) -> Optional[str]:
         try:
             data = json.loads(body)
+
+            # v1 API: extract from "response" field
+            if "/api/v1/" in path:
+                return data.get("response")
+
+            # v2 API: extract from OpenAI-compatible response structure
+            elif "/api/v2/" in path:
+                choices = data.get("choices", [])
+                if choices and len(choices) > 0:
+                    message = choices[0].get("message", {})
+                    content = message.get("content")
+                    tool_calls = message.get("tool_calls")
+
+                    if content:
+                        return content
+                    elif tool_calls:
+                        # Log tool calls as summary
+                        tool_names = [
+                            tc.get("function", {}).get("name", "unknown")
+                            for tc in tool_calls
+                        ]
+                        return f"[Tool Call: {', '.join(tool_names)}]"
+
+                return None
+
+            # Fallback for unknown paths
             return data.get("response")
         except (json.JSONDecodeError, TypeError):
             return body.decode("utf-8", errors="ignore")
 
-    def _decode_sse_body(self, body_bytes: bytes) -> str:
+    def _decode_sse_body(self, body_bytes: bytes, path: str) -> str:
         """
         Decodes a response body in Server-Sent Events (SSE) format.
+        Supports both v1 and v2 API formats.
         """
         full_text = []
         for line in body_bytes.decode("utf-8").splitlines():
             if line.startswith("data:"):
                 json_str = line[len("data:") :].strip()
+                if json_str == "[DONE]":  # v2 completion indicator
+                    break
                 if json_str:
                     try:
                         data = json.loads(json_str)
-                        full_text.append(data.get("response", ""))
+
+                        # v1 API: extract from "response" field
+                        if "/api/v1/" in path:
+                            full_text.append(data.get("response", ""))
+
+                        # v2 API: extract from OpenAI-compatible streaming format
+                        elif "/api/v2/" in path:
+                            choices = data.get("choices", [])
+                            if choices and len(choices) > 0:
+                                delta = choices[0].get("delta", {})
+                                content = delta.get("content")
+                                if content:
+                                    full_text.append(content)
+
                     except json.JSONDecodeError:
                         continue
         return "".join(full_text)

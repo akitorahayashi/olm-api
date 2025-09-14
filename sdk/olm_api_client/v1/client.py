@@ -1,15 +1,18 @@
 import json
 import logging
-from typing import AsyncGenerator
+from typing import AsyncGenerator, Union
 
 import httpx
 
 logger = logging.getLogger(__name__)
 
 
-class OllamaApiClient:
+class OlmApiClientV1:
     """
-    A client for interacting with the Ollama API.
+    A client for interacting with the Olm API v1.
+
+    Provides simple prompt-based text generation using the legacy v1 API.
+    Supports both streaming and non-streaming responses.
     """
 
     def __init__(self, api_url: str):
@@ -20,7 +23,7 @@ class OllamaApiClient:
         self, prompt: str, model_name: str
     ) -> AsyncGenerator[str, None]:
         """
-        Stream response from the Ollama API.
+        Stream response from the Olm API v1.
         """
         payload = {
             "prompt": prompt,
@@ -49,15 +52,15 @@ class OllamaApiClient:
                             except json.JSONDecodeError:
                                 continue
         except httpx.RequestError as e:
-            logger.error(f"Ollama API streaming request failed: {e}")
+            logger.error(f"Olm API v1 streaming request failed: {e}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error in Ollama API streaming: {e}")
+            logger.error(f"Unexpected error in Olm API v1 streaming: {e}")
             raise
 
     async def _non_stream_response(self, prompt: str, model_name: str) -> str:
         """
-        Get non-streaming response from the Ollama API.
+        Get non-streaming response from the Olm API v1.
         """
         payload = {
             "prompt": prompt,
@@ -79,40 +82,41 @@ class OllamaApiClient:
                 data = response.json()
                 return data.get("response", "")
         except httpx.RequestError as e:
-            logger.error(f"Ollama API non-streaming request failed: {e}")
+            logger.error(f"Olm API v1 non-streaming request failed: {e}")
             raise
         except Exception as e:
-            logger.error(f"Unexpected error in Ollama API non-streaming: {e}")
+            logger.error(f"Unexpected error in Olm API v1 non-streaming: {e}")
             raise
 
-    def gen_stream(self, prompt: str, model_name: str) -> AsyncGenerator[str, None]:
+    async def generate(
+        self, prompt: str, model_name: str, stream: bool = False
+    ) -> Union[str, AsyncGenerator[str, None]]:
         """
-        Generates text using the Ollama API with streaming.
+        Generates text using the Olm API v1.
 
         Args:
             prompt: The prompt to send to the model.
             model_name: The name of the model to use for generation.
+            stream: Whether to stream the response.
 
         Returns:
-            AsyncGenerator yielding text chunks.
+            Complete text response (if stream=False) or AsyncGenerator (if stream=True).
 
         Raises:
             httpx.RequestError: If a network error occurs.
+
+        Examples:
+            Non-streaming:
+                >>> client = OlmApiClientV1("http://localhost:8000")
+                >>> response = await client.generate("Hello", "llama3.2")
+                >>> print(response)
+
+            Streaming:
+                >>> response = await client.generate("Hello", "llama3.2", stream=True)
+                >>> async for chunk in response:
+                ...     print(chunk, end="")
         """
-        return self._stream_response(prompt, model_name)
-
-    async def gen_batch(self, prompt: str, model_name: str) -> str:
-        """
-        Generates complete text using the Ollama API without streaming.
-
-        Args:
-            prompt: The prompt to send to the model.
-            model_name: The name of the model to use for generation.
-
-        Returns:
-            Complete text response.
-
-        Raises:
-            httpx.RequestError: If a network error occurs.
-        """
-        return await self._non_stream_response(prompt, model_name)
+        if stream:
+            return self._stream_response(prompt, model_name)
+        else:
+            return await self._non_stream_response(prompt, model_name)

@@ -1,0 +1,172 @@
+import json
+import logging
+from typing import Any, AsyncGenerator, Dict, List, Optional, Union
+
+import httpx
+
+logger = logging.getLogger(__name__)
+
+
+class OlmApiClientV2:
+    """
+    A client for interacting with the Olm API v2.
+
+    Provides OpenAI-compatible chat completion functionality with support for:
+    - Conversation history via messages array
+    - System prompts and multi-role conversations
+    - Tool calling and function execution
+    - Fine-grained generation parameters
+    - Streaming and non-streaming responses
+    """
+
+    def __init__(self, api_url: str):
+        self.api_url = api_url.rstrip("/")
+        self.chat_endpoint = f"{self.api_url}/api/v2/chat/completions"
+
+    async def generate(
+        self,
+        messages: List[Dict[str, Any]],
+        model_name: str,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        stream: bool = False,
+        **kwargs,
+    ) -> Union[Dict[str, Any], AsyncGenerator[str, None]]:
+        """
+        Generate chat completion using the v2 API with OpenAI-compatible format.
+
+        Args:
+            messages: List of message dictionaries with role and content.
+            model_name: The name of the model to use for generation.
+            tools: Optional list of tool definitions for function calling.
+            stream: Whether to stream the response.
+            **kwargs: Additional generation parameters (temperature, top_p, etc.).
+
+        Returns:
+            Complete response dict (if stream=False) or AsyncGenerator (if stream=True).
+
+        Examples:
+            Basic usage:
+                >>> client = OlmApiClientV2("http://localhost:8000")
+                >>> messages = [{"role": "user", "content": "Hello!"}]
+                >>> response = await client.generate(messages, "llama3.2")
+                >>> print(response["choices"][0]["message"]["content"])
+
+            With conversation history:
+                >>> messages = [
+                ...     {"role": "system", "content": "You are a helpful assistant."},
+                ...     {"role": "user", "content": "What is Python?"},
+                ...     {"role": "assistant", "content": "Python is a programming language."},
+                ...     {"role": "user", "content": "What are its advantages?"}
+                ... ]
+                >>> response = await client.generate(messages, "llama3.2")
+
+            With streaming:
+                >>> stream = await client.generate(
+                ...     messages, "llama3.2", stream=True
+                ... )
+                >>> async for chunk in stream:
+                ...     print(chunk, end="")
+
+            With tools:
+                >>> tools = [{
+                ...     "type": "function",
+                ...     "function": {
+                ...         "name": "get_weather",
+                ...         "description": "Get weather information",
+                ...         "parameters": {
+                ...             "type": "object",
+                ...             "properties": {
+                ...                 "location": {"type": "string"}
+                ...             }
+                ...         }
+                ...     }
+                ... }]
+                >>> response = await client.generate(
+                ...     messages, "llama3.2", tools=tools
+                ... )
+        """
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "stream": stream,
+        }
+
+        # Add optional parameters
+        if tools:
+            payload["tools"] = tools
+
+        # Add generation parameters
+        for key, value in kwargs.items():
+            if value is not None:
+                payload[key] = value
+
+        if stream:
+            return self._chat_stream_response(payload)
+        else:
+            return await self._chat_non_stream_response(payload)
+
+    async def _chat_stream_response(
+        self, payload: Dict[str, Any]
+    ) -> AsyncGenerator[str, None]:
+        """
+        Stream response from the v2 chat completions API.
+        """
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(10.0, read=120.0)
+            ) as client:
+                async with client.stream(
+                    "POST",
+                    self.chat_endpoint,
+                    json=payload,
+                    headers={"Accept": "text/event-stream"},
+                ) as response:
+                    response.raise_for_status()
+
+                    async for line in response.aiter_lines():
+                        if line.startswith("data: "):
+                            data_str = line[6:]  # Remove "data: " prefix
+                            if data_str.strip() == "[DONE]":
+                                break
+                            try:
+                                data = json.loads(data_str)
+                                choices = data.get("choices", [])
+                                if choices and len(choices) > 0:
+                                    delta = choices[0].get("delta", {})
+                                    content = delta.get("content")
+                                    if content:
+                                        yield content
+                            except json.JSONDecodeError:
+                                continue
+        except httpx.RequestError as e:
+            logger.error(f"Chat completions API v2 streaming request failed: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error in chat completions API v2 streaming: {e}")
+            raise
+
+    async def _chat_non_stream_response(
+        self, payload: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Get non-streaming response from the v2 chat completions API.
+        """
+        try:
+            async with httpx.AsyncClient(
+                timeout=httpx.Timeout(10.0, read=120.0)
+            ) as client:
+                response = await client.post(
+                    self.chat_endpoint,
+                    json=payload,
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                return response.json()
+        except httpx.RequestError as e:
+            logger.error(f"Chat completions API v2 non-streaming request failed: {e}")
+            raise
+        except Exception as e:
+            logger.error(
+                f"Unexpected error in chat completions API v2 non-streaming: {e}"
+            )
+            raise
