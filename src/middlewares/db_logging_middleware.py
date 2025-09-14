@@ -1,6 +1,5 @@
 import json
 import logging
-import traceback
 from typing import Optional
 
 from fastapi import Request, Response
@@ -73,10 +72,17 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             )
 
             if response.status_code >= 400:
-                error_details = generated_response or "[No error details in body]"
+                # For error responses, try to extract error details from the response body
+                try:
+                    response_data = json.loads(response_body_bytes)
+                    error_details = response_data.get(
+                        "detail", "[No error details in body]"
+                    )
+                except (json.JSONDecodeError, TypeError):
+                    error_details = "[No error details in body]"
 
-        except Exception:
-            error_details = traceback.format_exc()
+        except Exception as e:
+            error_details = f"Exception: {str(e)}"
             # Return a 500 response instead of re-raising
             response = Response(
                 content=json.dumps({"detail": "Internal server error"}),

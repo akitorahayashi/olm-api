@@ -49,16 +49,17 @@ async def make_api_request(
 
 async def run_parallel_requests_with_timing(
     num_requests: int,
+    prompt: str,
+    model_name: str,
 ) -> tuple[float, list[float]]:
     """
     Run parallel requests and return total elapsed time and individual request times.
     """
     host_port = os.getenv("TEST_PORT", "8002")
-    model_name = get_model_name()
 
     generate_url = f"http://localhost:{host_port}/api/v1/generate"
     request_payload = {
-        "prompt": load_prompt(),
+        "prompt": prompt,
         "model_name": model_name,
         "stream": False,
     }
@@ -100,10 +101,12 @@ async def run_parallel_requests_with_timing(
 
 # Individual test functions for each concurrency level
 @pytest.mark.asyncio
-async def test_1_parallel_request():
+async def test_1_parallel_request(load_prompt, get_model_name):
     """Test performance with 1 concurrent request"""
     num_requests = 1
-    total_time, request_times = await run_parallel_requests_with_timing(num_requests)
+    total_time, request_times = await run_parallel_requests_with_timing(
+        num_requests, load_prompt, get_model_name
+    )
 
     print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
     print(f"✅ [PARALLEL TEST: {num_requests} request] COMPLETED\n")
@@ -112,10 +115,12 @@ async def test_1_parallel_request():
 
 
 @pytest.mark.asyncio
-async def test_3_parallel_requests():
+async def test_3_parallel_requests(load_prompt, get_model_name):
     """Test performance with 3 parallel requests"""
     num_requests = 3
-    total_time, request_times = await run_parallel_requests_with_timing(num_requests)
+    total_time, request_times = await run_parallel_requests_with_timing(
+        num_requests, load_prompt, get_model_name
+    )
 
     print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
     print(f"✅ [PARALLEL TEST: {num_requests} requests] COMPLETED\n")
@@ -124,10 +129,12 @@ async def test_3_parallel_requests():
 
 
 @pytest.mark.asyncio
-async def test_5_parallel_requests():
+async def test_5_parallel_requests(load_prompt, get_model_name):
     """Test performance with 5 parallel requests"""
     num_requests = 5
-    total_time, request_times = await run_parallel_requests_with_timing(num_requests)
+    total_time, request_times = await run_parallel_requests_with_timing(
+        num_requests, load_prompt, get_model_name
+    )
 
     print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
     print(f"✅ [PARALLEL TEST: {num_requests} requests] COMPLETED\n")
@@ -136,10 +143,12 @@ async def test_5_parallel_requests():
 
 
 @pytest.mark.asyncio
-async def test_10_parallel_requests():
+async def test_10_parallel_requests(load_prompt, get_model_name):
     """Test performance with 10 parallel requests"""
     num_requests = 10
-    total_time, request_times = await run_parallel_requests_with_timing(num_requests)
+    total_time, request_times = await run_parallel_requests_with_timing(
+        num_requests, load_prompt, get_model_name
+    )
 
     print(f"\n📊 Request times: {[f'{t:.2f}s' for t in request_times]}")
     print(f"✅ [PARALLEL TEST: {num_requests} requests] COMPLETED\n")

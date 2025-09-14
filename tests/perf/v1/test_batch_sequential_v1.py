@@ -67,7 +67,7 @@ async def make_api_request(
 
 
 async def run_sequential_requests_with_interval(
-    num_requests: int, interval_seconds: float, get_model_name: str, load_prompt: str
+    num_requests: int, interval_seconds: float, prompt: str, model_name: str
 ) -> tuple[float, list[float]]:
     """
     Run sequential requests with specified interval and return total elapsed time and individual request times.
@@ -76,8 +76,8 @@ async def run_sequential_requests_with_interval(
 
     generate_url = f"http://localhost:{host_port}/api/v1/generate"
     request_payload = {
-        "prompt": load_prompt,
-        "model_name": get_model_name,
+        "prompt": prompt,
+        "model_name": model_name,
         "stream": False,
     }
 
@@ -118,14 +118,14 @@ async def run_sequential_requests_with_interval(
 async def test_sequential_performance(
     num_requests: int,
     interval: float,
-    get_model_name,
     load_prompt,
+    get_model_name,
 ):
     """
     Test performance with sequential requests for various configurations.
     """
     total_time, request_times = await run_sequential_requests_with_interval(
-        num_requests, interval, get_model_name, load_prompt
+        num_requests, interval, load_prompt, get_model_name
     )
 
     assert request_times, "Should have recorded request times"

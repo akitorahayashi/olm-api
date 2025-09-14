@@ -129,4 +129,5 @@ async def test_generate_api_error_is_logged(
     )  # Default code for unhandled exceptions
     assert log_entry.prompt == prompt
     assert log_entry.generated_response is None
+    assert log_entry.error_details is not None
     assert error_message in log_entry.error_details

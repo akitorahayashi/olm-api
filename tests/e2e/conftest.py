@@ -95,7 +95,7 @@ def e2e_setup() -> Generator[None, None, None]:
         return False
 
     try:
-        print("Starting Docker Compose services for E2E testing...")
+        print("\nStarting Docker Compose services for E2E testing...")
         result = subprocess.run(compose_up_command, capture_output=True, text=True)
         if result.returncode != 0:
             raise RuntimeError(f"Failed to start services: {result.stderr}")
@@ -104,7 +104,7 @@ def e2e_setup() -> Generator[None, None, None]:
         if not wait_for_health_check(health_url):
             raise RuntimeError("Application failed to become healthy within timeout")
 
-        print("E2E test environment is ready.")
+        print("✅ E2E test environment is ready.")
         yield
 
     finally:
