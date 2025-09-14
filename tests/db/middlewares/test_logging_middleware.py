@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from starlette.responses import StreamingResponse
 
 from src.api.v1.services.ollama_service import GenerateResponse
-from src.db.models.log import Log
+from src.logs.models import Log
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio

@@ -15,7 +15,7 @@ from alembic import command
 from alembic.config import Config
 from src.api.v1.services.ollama_service import get_ollama_service
 from src.db.database import create_db_session
-from src.db.models.log import Log
+from src.logs.models import Log
 from src.main import app
 from src.middlewares import db_logging_middleware
 

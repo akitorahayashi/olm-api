@@ -1,18 +1,43 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Request Logs</title>
     <style>
-        body { font-family: sans-serif; margin: 2em; }
-        table { border-collapse: collapse; width: 100%; }
-        th, td { border: 1px solid #dddddd; text-align: left; padding: 8px; }
-        th { background-color: #f2f2f2; }
-        tr:nth-child(even) { background-color: #f9f9f9; }
-        pre { white-space: pre-wrap; word-wrap: break-word; }
+        body {
+            font-family: sans-serif;
+            margin: 2em;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+
+        th,
+        td {
+            border: 1px solid #dddddd;
+            text-align: left;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
     </style>
 </head>
+
 <body>
     <h1>Request Logs</h1>
     <table id="log-table">
@@ -36,7 +61,7 @@
     <script>
         async function fetchLogs() {
             try {
-                const response = await fetch('/api/v1/logs');
+                const response = await fetch('/logs/data');
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -84,4 +109,5 @@
         setInterval(fetchLogs, 5000);
     </script>
 </body>
+
 </html>

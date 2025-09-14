@@ -8,7 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 
 from src.config.settings import get_settings
 from src.db.database import create_db_session
-from src.db.models.log import Log
+from src.logs.models import Log
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
