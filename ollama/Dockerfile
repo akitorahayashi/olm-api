@@ -2,7 +2,7 @@
 FROM ollama/ollama
 
 # Argument to specify the models to be pulled during the build (comma-separated)
-ARG BUILT_IN_OLLAMA_MODELS
+ARG BUILT_IN_OLLAMA_MODELS=""
 
 # Set the host to 0.0.0.0 to allow connections from other containers
 ENV OLLAMA_HOST=0.0.0.0
@@ -34,7 +34,10 @@ RUN set -eux; \
     model=$(echo "$model" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//'); \
     if [ -n "$model" ]; then \
       echo "Pulling model: $model"; \
-      ollama pull "$model"; \
+      if ! ollama pull "$model"; then \
+        echo "ERROR: Failed to pull model: $model" >&2; \
+        exit 1; \
+      fi; \
     fi; \
   done
 

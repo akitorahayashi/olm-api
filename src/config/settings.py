@@ -12,7 +12,7 @@ class Settings(BaseSettings):
     it is not necessary to explicitly specify the file path.
     """
 
-    BUILT_IN_OLLAMA_MODEL: str
+    BUILT_IN_OLLAMA_MODELS: str
     DATABASE_URL: str
     CONCURRENT_REQUEST_LIMIT: int = 2
     API_LOGGING_ENABLED: bool = True

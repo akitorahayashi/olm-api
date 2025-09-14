@@ -15,7 +15,7 @@ router = APIRouter(
 )
 
 
-@router.post("/generate", response_model=GenerateResponse)
+@router.post("/chat", response_model=GenerateResponse)
 async def generate(
     request: GenerateRequest,
     ollama_service: OllamaService = Depends(get_ollama_service),

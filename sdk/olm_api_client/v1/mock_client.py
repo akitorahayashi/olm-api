@@ -29,9 +29,12 @@ class MockOlmClientV1:
             self.token_delay = token_delay
         else:
             env_delay = os.getenv("MOCK_TOKEN_DELAY")
-            self.token_delay = (
-                float(env_delay) if env_delay is not None else DEFAULT_TOKEN_DELAY
-            )
+            try:
+                self.token_delay = (
+                    float(env_delay) if env_delay is not None else DEFAULT_TOKEN_DELAY
+                )
+            except ValueError:
+                self.token_delay = DEFAULT_TOKEN_DELAY
 
         # Handle responses
         if responses is not None:
@@ -57,7 +60,14 @@ class MockOlmClientV1:
                 result.append(" ")
 
             if len(token) > 8 and token.isalpha():
-                if hash(token) % 10 < 2:  # 20% chance to split long words
+                import hashlib
+
+                # 安定ハッシュ（先頭2バイト）で 20% 判定
+                h = int(
+                    hashlib.blake2s(token.encode("utf-8"), digest_size=2).hexdigest(),
+                    16,
+                )
+                if h % 10 < 2:
                     mid = len(token) // 2
                     result.append(token[:mid])
                     result.append(token[mid:])
@@ -93,6 +103,9 @@ class MockOlmClientV1:
         Returns:
             Complete text response (if stream=False) or AsyncGenerator (if stream=True).
         """
+        # Unused args kept for protocol compatibility
+        del prompt, model_name
+
         # Cycle through mock responses
         response_text = self.mock_responses[
             self.response_index % len(self.mock_responses)

@@ -134,14 +134,14 @@ migration: ## Generate a new database migration file. Usage: make migration m="Y
 .PHONY: format
 format: ## Format code with black and ruff --fix
 	@echo "Formatting code with black and ruff..."
-	black .
-	ruff check . --fix
+	uv run black .
+	uv run ruff check . --fix
 
 .PHONY: lint
 lint: ## Lint code with black check and ruff
 	@echo "Linting code with black check and ruff..."
-	black --check .
-	ruff check .
+	uv run black --check .
+	uv run ruff check .
 
 # ==============================================================================
 # TESTING
@@ -153,37 +153,37 @@ test: unit-test sdk-test build-test db-test e2e-test ## Run the full test suite
 .PHONY: unit-test
 unit-test: ## Run the unit tests locally
 	@echo "Running unit tests..."
-	@source .venv/bin/activate && python -m pytest tests/unit -s
+	@uv run pytest tests/unit -s
 
 .PHONY: sdk-test
 sdk-test: ## Run SDK tests locally
 	@echo "Running SDK tests..."
-	@source .venv/bin/activate && python -m pytest tests/sdk -s
+	@uv run pytest tests/sdk -s
 
 .PHONY: db-test
 db-test: ## Run database tests locally
 	@echo "Running database tests..."
-	@source .venv/bin/activate && python -m pytest tests/db -s
+	@uv run pytest tests/db -s
 
 .PHONY: e2e-test
 e2e-test: ## Run end-to-end tests against a live application stack
 	@echo "Running end-to-end tests..."
-	@source .venv/bin/activate && python -m pytest tests/e2e -s
+	@uv run pytest tests/e2e -s
 
 .PHONY: perf-test
 perf-test: ## Run all performance tests (both parallel and sequential)
 	@echo "Running all performance tests..."
-	@source .venv/bin/activate && python -m pytest tests/perf -s
+	@uv run pytest tests/perf -s
 
 .PHONY: perf-test-parallel
 perf-test-parallel: ## Run only the batch parallel performance test
 	@echo "Running batch parallel performance test..."
-	@source .venv/bin/activate && python -m pytest tests/perf/test_batch_parallel.py -s
+	@uv run pytest tests/perf/test_batch_parallel.py -s
 
 .PHONY: perf-test-sequential
 perf-test-sequential: ## Run only the batch sequential performance test
 	@echo "Running batch sequential performance test..."
-	@source .venv/bin/activate && python -m pytest tests/perf/test_batch_sequential.py -s
+	@uv run pytest tests/perf/test_batch_sequential.py -s
 
 .PHONY: build-test
 build-test: ## Build Docker image for testing without leaving artifacts

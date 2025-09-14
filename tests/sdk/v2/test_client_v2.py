@@ -15,7 +15,7 @@ class TestOlmApiClientV2:
         client = OlmApiClientV2(api_url)
 
         assert client.api_url == api_url
-        assert client.chat_endpoint == f"{api_url}/api/v2/chat/completions"
+        assert client.chat_endpoint == f"{api_url}/api/v2/chat"
 
     def test_init_without_api_url_raises_error(self):
         """Test initialization without required api_url raises TypeError"""
@@ -33,7 +33,7 @@ class TestOlmApiClientV2:
         client = OlmApiClientV2(api_url)
 
         assert client.api_url == "http://localhost:8000"
-        assert client.chat_endpoint == "http://localhost:8000/api/v2/chat/completions"
+        assert client.chat_endpoint == "http://localhost:8000/api/v2/chat"
 
     @pytest.mark.asyncio
     async def test_generate_streaming(self):

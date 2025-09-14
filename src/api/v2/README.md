@@ -131,11 +131,15 @@ OpenAI Chat Completions API compatible endpoint. Supports conversation based on 
 Server-Sent Events (SSE) format:
 
 ```
+Server-Sent Events (SSE) format:
+
+```text
 data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1699000000,"model":"llama3.2","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
 
 data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1699000000,"model":"llama3.2","choices":[{"index":0,"delta":{"content":"I'm"},"finish_reason":null}]}
 
 data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1699000000,"model":"llama3.2","choices":[{"index":0,"delta":{"content":" doing"},"finish_reason":null}]}
+```
 
 data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1699000000,"model":"llama3.2","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
 

@@ -15,7 +15,7 @@ class TestOlmApiClientV1:
         api_url = "http://localhost:11434"
         client = OlmApiClientV1(api_url=api_url)
         assert client.api_url == api_url
-        assert client.generate_endpoint == f"{api_url}/api/v1/generate"
+        assert client.generate_endpoint == f"{api_url}/api/v1/chat"
 
     def test_init_without_api_url_raises_error(self):
         """Test initialization without required api_url raises TypeError"""

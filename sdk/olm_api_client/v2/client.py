@@ -21,7 +21,7 @@ class OlmApiClientV2:
 
     def __init__(self, api_url: str):
         self.api_url = api_url.rstrip("/")
-        self.chat_endpoint = f"{self.api_url}/api/v2/chat/completions"
+        self.chat_endpoint = f"{self.api_url}/api/v2/chat"
 
     async def generate(
         self,
@@ -137,12 +137,15 @@ class OlmApiClientV2:
                                 # Return the complete JSON chunk for proper thought/answer handling
                                 yield data
                             except json.JSONDecodeError:
+                                logger.debug(
+                                    f"Failed to decode JSON from SSE line: {data_str}"
+                                )
                                 continue
-        except httpx.RequestError as e:
-            logger.error(f"Chat completions API v2 streaming request failed: {e}")
+        except httpx.RequestError:
+            logger.exception("Chat completions API v2 streaming request failed")
             raise
-        except Exception as e:
-            logger.error(f"Unexpected error in chat completions API v2 streaming: {e}")
+        except Exception:
+            logger.exception("Unexpected error in chat completions API v2 streaming")
             raise
 
     async def _chat_non_stream_response(
@@ -162,11 +165,11 @@ class OlmApiClientV2:
                 )
                 response.raise_for_status()
                 return response.json()
-        except httpx.RequestError as e:
-            logger.error(f"Chat completions API v2 non-streaming request failed: {e}")
+        except httpx.RequestError:
+            logger.exception("Chat completions API v2 non-streaming request failed")
             raise
-        except Exception as e:
-            logger.error(
-                f"Unexpected error in chat completions API v2 non-streaming: {e}"
+        except Exception:
+            logger.exception(
+                "Unexpected error in chat completions API v2 non-streaming"
             )
             raise

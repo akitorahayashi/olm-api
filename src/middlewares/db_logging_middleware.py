@@ -23,9 +23,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         if not settings.API_LOGGING_ENABLED:
             return await call_next(request)
 
-        # Only log generate (v1) and chat completions (v2) endpoints
+        # Only log chat endpoints (v1) and chat (v2) endpoints
         should_log = (
-            "/generate" in request.url.path or "/chat/completions" in request.url.path
+            "/api/v1/chat" in request.url.path or "/api/v2/chat" in request.url.path
         )
         if not should_log:
             return await call_next(request)
@@ -50,26 +50,28 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             content_type = response.headers.get("content-type", "")
             is_streaming = "event-stream" in content_type
 
-            response_body_bytes = b""
-            async for chunk in response.body_iterator:
-                response_body_bytes += chunk
-
             if is_streaming:
-                generated_response = self._decode_sse_body(
-                    response_body_bytes, request.url.path
-                )
+                # For streaming, log a placeholder and do NOT consume the body.
+                # Consuming it here would buffer the whole response and break streaming.
+                generated_response = "[stream omitted]"
             else:
+                # For non-streaming, buffer the body to log it.
+                response_body_bytes = b""
+                async for chunk in response.body_iterator:
+                    response_body_bytes += chunk
+
                 generated_response = self._extract_text_from_json_body(
                     response_body_bytes, request.url.path
                 )
 
-            # Re-create the response since we've consumed the iterator
-            response = Response(
-                content=response_body_bytes,
-                status_code=response.status_code,
-                headers=dict(response.headers),
-                media_type=response.media_type,
-            )
+                # Re-create the response since we consumed the iterator
+                response = Response(
+                    content=response_body_bytes,
+                    status_code=response.status_code,
+                    headers=dict(response.headers),
+                    media_type=response.media_type,
+                    background=response.background,  # Preserve background tasks
+                )
 
             if response.status_code >= 400:
                 # For error responses, try to extract error details from the response body
@@ -83,6 +85,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
 
         except Exception as e:
             error_details = f"Exception: {str(e)}"
+            self._logger.exception("Internal server error during middleware dispatch")
             # Return a 500 response instead of re-raising
             response = Response(
                 content=json.dumps({"detail": "Internal server error"}),

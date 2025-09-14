@@ -3,7 +3,7 @@ from collections.abc import AsyncGenerator
 
 import pytest
 
-from sdk.olm_api_client.v1.mock_client import MockOlmClientV1
+from sdk.olm_api_client.v1.mock_client import DEFAULT_TOKEN_DELAY, MockOlmClientV1
 from sdk.olm_api_client.v1.protocol import OlmClientV1Protocol
 
 
@@ -268,5 +268,5 @@ class TestMockEnvironmentVariable:
     def test_init_with_invalid_env_var(self, monkeypatch):
         """Test initialization with invalid environment variable falls back to default"""
         monkeypatch.setenv("MOCK_TOKEN_DELAY", "invalid")
-        with pytest.raises(ValueError):  # float() conversion should fail
-            MockOlmClientV1()
+        client = MockOlmClientV1()  # Should not raise, should fall back to default
+        assert client.token_delay == DEFAULT_TOKEN_DELAY

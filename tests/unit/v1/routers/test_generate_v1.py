@@ -25,7 +25,7 @@ async def test_generate_with_model_name(
 
     # Act
     response = await unit_test_client.post(
-        "/api/v1/generate",
+        "/api/v1/chat",
         json={"prompt": prompt, "model_name": model_name, "stream": False},
     )
 
@@ -46,7 +46,7 @@ async def test_generate_missing_model_name(
     """
     # Act
     response = await unit_test_client.post(
-        "/api/v1/generate", json={"prompt": "test", "stream": False}
+        "/api/v1/chat", json={"prompt": "test", "stream": False}
     )
 
     # Assert

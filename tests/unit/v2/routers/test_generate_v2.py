@@ -41,7 +41,7 @@ async def test_chat_completions_basic(
 
     # Act
     response = await unit_test_client.post(
-        "/api/v2/chat/completions",
+        "/api/v2/chat",
         json={"model": model, "messages": messages, "stream": False},
     )
 
@@ -110,7 +110,7 @@ async def test_chat_completions_with_tools(
 
     # Act
     response = await unit_test_client.post(
-        "/api/v2/chat/completions",
+        "/api/v2/chat",
         json={"model": model, "messages": messages, "tools": tools, "stream": False},
     )
 
@@ -134,7 +134,7 @@ async def test_chat_completions_missing_model(
     """
     # Act
     response = await unit_test_client.post(
-        "/api/v2/chat/completions",
+        "/api/v2/chat",
         json={"messages": [{"role": "user", "content": "test"}]},
     )
 
@@ -152,7 +152,7 @@ async def test_chat_completions_empty_messages(
     """
     # Act
     response = await unit_test_client.post(
-        "/api/v2/chat/completions", json={"model": "qwen3:0.6b", "messages": []}
+        "/api/v2/chat", json={"model": "qwen3:0.6b", "messages": []}
     )
 
     # Assert

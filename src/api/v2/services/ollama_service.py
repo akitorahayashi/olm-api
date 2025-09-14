@@ -129,20 +129,23 @@ class OllamaServiceV2:
                 chat_response = await run_in_threadpool(self.client.chat, **chat_params)
                 iterator = await run_in_threadpool(iter, chat_response)
 
+                created_time = int(time.time())
+                created_id = f"chatcmpl-{created_time}"
+
                 while True:
                     try:
                         chunk = await run_in_threadpool(next, iterator)
                         # Transform chunk to OpenAI-compatible streaming format
                         stream_chunk = self._transform_ollama_chunk_to_openai(
-                            chunk, model
+                            chunk, model, created_id, created_time
                         )
                         yield f"data: {json.dumps(stream_chunk)}\n\n"
                     except StopIteration:
                         # Send final chunk
                         final_chunk = {
-                            "id": f"chatcmpl-{int(time.time())}",
+                            "id": created_id,
                             "object": "chat.completion.chunk",
-                            "created": int(time.time()),
+                            "created": created_time,
                             "model": model,
                             "choices": [
                                 {"index": 0, "delta": {}, "finish_reason": "stop"}
@@ -182,9 +185,7 @@ class OllamaServiceV2:
         message = ollama_response.get("message", {})
 
         # Handle tool calls if present
-        tool_calls = None
-        if "tool_calls" in message and message["tool_calls"]:
-            tool_calls = message["tool_calls"]
+        tool_calls = message.get("tool_calls")
 
         return {
             "id": f"chatcmpl-{int(time.time())}",
@@ -197,7 +198,7 @@ class OllamaServiceV2:
                     "message": {
                         "role": message.get("role", "assistant"),
                         "content": message.get("content"),
-                        "tool_calls": tool_calls,
+                        **({"tool_calls": tool_calls} if tool_calls else {}),
                     },
                     "finish_reason": "stop",
                 }
@@ -211,7 +212,11 @@ class OllamaServiceV2:
         }
 
     def _transform_ollama_chunk_to_openai(
-        self, ollama_chunk: Dict[str, Any], model: str
+        self,
+        ollama_chunk: Dict[str, Any],
+        model: str,
+        created_id: str,
+        created_time: int,
     ) -> Dict[str, Any]:
         """
         Transform Ollama streaming chunk to OpenAI-compatible format.
@@ -238,9 +243,9 @@ class OllamaServiceV2:
             delta["tool_calls"] = message.get("tool_calls")
 
         return {
-            "id": f"chatcmpl-{int(time.time())}",
+            "id": created_id,
             "object": "chat.completion.chunk",
-            "created": int(time.time()),
+            "created": created_time,
             "model": model,
             "choices": [
                 {

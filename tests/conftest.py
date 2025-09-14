@@ -132,13 +132,13 @@ async def unit_test_client(monkeypatch) -> AsyncGenerator[AsyncClient, None]:
     """
     # 1. Set dummy environment variables to satisfy Pydantic settings
     monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://test:test@localhost/test")
-    monkeypatch.setenv("BUILT_IN_OLLAMA_MODEL", "test-built-in-model")
+    monkeypatch.setenv("BUILT_IN_OLLAMA_MODELS", "test-built-in-model")
 
     # 2. Disable the DB logging middleware to prevent DB writes
     monkeypatch.setattr(
         db_logging_middleware.LoggingMiddleware,
         "_safe_log",
-        lambda *args, **kwargs: None,
+        lambda self, *args, **kwargs: None,
     )
 
     # 3. Yield the database-independent client
@@ -159,6 +159,8 @@ def load_prompt() -> str:
     Load prompt from the shared prompt.txt file.
     """
     prompt_path = os.path.join(os.path.dirname(__file__), "perf", "prompt.txt")
+    if not os.path.exists(prompt_path):
+        raise FileNotFoundError(f"Prompt file not found: {prompt_path}")
     with open(prompt_path, "r", encoding="utf-8") as f:
         return f.read().strip()
 
@@ -180,4 +182,4 @@ def get_model_name() -> str:
 # Set environment variables for Docker Compose
 os.environ["HOST_BIND_IP"] = os.getenv("HOST_BIND_IP", "127.0.0.1")
 os.environ["TEST_PORT"] = os.getenv("TEST_PORT", "8002")
-os.environ["BUILT_IN_OLLAMA_MODEL"] = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
+os.environ["BUILT_IN_OLLAMA_MODELS"] = os.getenv("BUILT_IN_OLLAMA_MODELS", "qwen3:0.6b")

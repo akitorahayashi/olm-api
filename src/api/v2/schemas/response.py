@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 from pydantic import BaseModel
 
@@ -20,7 +20,7 @@ class ChatResponseChoice(BaseModel):
 
 class ChatResponse(BaseModel):
     id: Optional[str] = None
-    object: str = "chat.completion"
+    object: Literal["chat.completion"] = "chat.completion"
     created: Optional[int] = None
     model: str
     choices: List[ChatResponseChoice]
@@ -41,7 +41,7 @@ class ChatStreamChoice(BaseModel):
 
 class ChatStreamResponse(BaseModel):
     id: Optional[str] = None
-    object: str = "chat.completion.chunk"
+    object: Literal["chat.completion.chunk"] = "chat.completion.chunk"
     created: Optional[int] = None
     model: str
     choices: List[ChatStreamChoice]

@@ -13,7 +13,7 @@ def mock_ollama_client_instance():
     This prevents the actual client from being created while allowing tests
     to configure the behavior of the instance's methods.
     """
-    with patch("ollama.AsyncClient") as mock_class:
+    with patch("sdk.olm_api_client.v1.local_client.ollama.AsyncClient") as mock_class:
         mock_instance = AsyncMock()
         mock_class.return_value = mock_instance
         yield mock_instance
@@ -41,6 +41,7 @@ class TestOlmLocalClientV1:
             model="test-model",
             messages=[{"role": "user", "content": "test prompt"}],
             stream=False,
+            options={},
         )
 
     @pytest.mark.asyncio
@@ -62,6 +63,7 @@ class TestOlmLocalClientV1:
             model="test-model",
             messages=[{"role": "user", "content": "test prompt"}],
             stream=True,
+            options={},
         )
 
     @pytest.mark.asyncio

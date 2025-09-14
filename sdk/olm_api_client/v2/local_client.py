@@ -96,9 +96,7 @@ class OlmLocalClientV2:
         message = ollama_response.get("message", {})
 
         # Handle tool calls if present
-        tool_calls = None
-        if "tool_calls" in message and message["tool_calls"]:
-            tool_calls = message["tool_calls"]
+        tool_calls = message.get("tool_calls")
 
         return {
             "id": f"chatcmpl-local-{hash(str(ollama_response))}",

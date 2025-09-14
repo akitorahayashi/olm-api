@@ -61,7 +61,7 @@
     <script>
         async function fetchLogs() {
             try {
-                const response = await fetch('/logs/data');
+                const response = await fetch('/logs/data', { cache: 'no-store' });
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }

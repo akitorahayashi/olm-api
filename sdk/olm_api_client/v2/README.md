@@ -338,6 +338,8 @@ response = await client.generate(
 content = response["choices"][0]["message"]["content"]
 ```
 
+**Note**: While the API is "OpenAI Compatible" in format, its behavior (like finish_reason values or usage calculation) may differ from OpenAI's production API, as it is a proxy for Ollama.
+
 ## Use Cases
 
 The v2 client is ideal for:

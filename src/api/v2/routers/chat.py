@@ -16,7 +16,7 @@ router = APIRouter(
 )
 
 
-@router.post("/chat/completions", response_model=ChatResponse)
+@router.post("/chat", response_model=ChatResponse)
 async def chat_completions(
     request: ChatRequest,
     ollama_service: OllamaServiceV2 = Depends(get_ollama_service_v2),

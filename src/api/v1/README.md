@@ -35,7 +35,7 @@ Text generation endpoint. Receives a simple prompt string and returns a response
 
 Server-Sent Events (SSE) format:
 
-```
+```text
 data: {"response": "I'm"}
 data: {"response": " doing"}
 data: {"response": " well,"}

@@ -13,14 +13,16 @@ import pytest
 
 
 @pytest.fixture
-async def http_client() -> AsyncGenerator[httpx.AsyncClient, None]:
+async def http_client(api_config) -> AsyncGenerator[httpx.AsyncClient, None]:
     """
     Fixture to provide an async HTTP client for making requests to the API.
 
     This fixture creates an httpx.AsyncClient with appropriate timeout settings
     for testing against the running Docker Compose services.
     """
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(
+        base_url=api_config["base_url"], timeout=60.0
+    ) as client:
         yield client
 
 
@@ -33,12 +35,12 @@ def api_config():
     to ensure consistent testing across all E2E tests.
     """
     host_port = os.getenv("TEST_PORT", "8002")
-    model_name = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
+    model_name = os.getenv("BUILT_IN_OLLAMA_MODELS", "qwen3:0.6b").split(",")[0]
 
     return {
         "base_url": f"http://localhost:{host_port}",
-        "v1_generate_url": f"http://localhost:{host_port}/api/v1/generate",
-        "v2_chat_completions_url": f"http://localhost:{host_port}/api/v2/chat/completions",
+        "v1_generate_url": f"http://localhost:{host_port}/api/v1/chat",
+        "v2_chat_completions_url": f"http://localhost:{host_port}/api/v2/chat",
         "model_name": model_name,
     }
 
@@ -50,7 +52,7 @@ def e2e_setup() -> Generator[None, None, None]:
     This fixture is automatically invoked for all tests in the 'e2e' directory.
     """
     # Determine if sudo should be used based on environment variable
-    use_sudo = os.getenv("SUDO") == "true"
+    use_sudo = os.getenv("SUDO", "").lower() in ("1", "true", "yes")
     docker_command = ["sudo", "-E", "docker"] if use_sudo else ["docker"]
 
     host_bind_ip = os.getenv("HOST_BIND_IP", "127.0.0.1")
@@ -87,9 +89,9 @@ def e2e_setup() -> Generator[None, None, None]:
         while time.time() - start_time < timeout:
             try:
                 response = httpx.get(url, timeout=5.0)
-                if response.status_code == 200:
+                if 200 <= response.status_code < 300:
                     return True
-            except (httpx.RequestError, httpx.HTTPStatusError):
+            except httpx.RequestError:
                 pass
             time.sleep(2)
         return False
@@ -98,7 +100,9 @@ def e2e_setup() -> Generator[None, None, None]:
         print("\nStarting Docker Compose services for E2E testing...")
         result = subprocess.run(compose_up_command, capture_output=True, text=True)
         if result.returncode != 0:
-            raise RuntimeError(f"Failed to start services: {result.stderr}")
+            raise RuntimeError(
+                f"Failed to start services.\nSTDOUT:\n{result.stdout}\nSTDERR:\n{result.stderr}"
+            )
 
         print(f"Waiting for application to be healthy at {health_url}...")
         if not wait_for_health_check(health_url):
@@ -108,6 +112,10 @@ def e2e_setup() -> Generator[None, None, None]:
         yield
 
     finally:
-        print("Stopping Docker Compose services...")
-        subprocess.run(compose_down_command, capture_output=True, text=True)
+        print("\nStopping Docker Compose services...")
+        cleanup_result = subprocess.run(
+            compose_down_command, capture_output=True, text=True
+        )
+        if cleanup_result.returncode != 0:
+            print(f"Warning: Failed during cleanup: {cleanup_result.stderr}")
         print("E2E test cleanup completed.")

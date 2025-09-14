@@ -17,7 +17,7 @@ class OlmApiClientV1:
 
     def __init__(self, api_url: str):
         self.api_url = api_url.rstrip("/")
-        self.generate_endpoint = f"{self.api_url}/api/v1/generate"
+        self.generate_endpoint = f"{self.api_url}/api/v1/chat"
 
     async def _stream_response(
         self, prompt: str, model_name: str
@@ -45,17 +45,20 @@ class OlmApiClientV1:
 
                     async for line in response.aiter_lines():
                         if line.startswith("data: "):
+                            data_str = line[6:].strip()
+                            if data_str == "[DONE]":
+                                break
                             try:
-                                data = json.loads(line[6:])  # Remove "data: " prefix
+                                data = json.loads(data_str)
                                 if "response" in data:
                                     yield data["response"]
                             except json.JSONDecodeError:
                                 continue
-        except httpx.RequestError as e:
-            logger.error(f"Olm API v1 streaming request failed: {e}")
+        except httpx.RequestError:
+            logger.exception("Olm API v1 streaming request failed")
             raise
-        except Exception as e:
-            logger.error(f"Unexpected error in Olm API v1 streaming: {e}")
+        except Exception:
+            logger.exception("Unexpected error in Olm API v1 streaming")
             raise
 
     async def _non_stream_response(self, prompt: str, model_name: str) -> str:
@@ -81,11 +84,11 @@ class OlmApiClientV1:
 
                 data = response.json()
                 return data.get("response", "")
-        except httpx.RequestError as e:
-            logger.error(f"Olm API v1 non-streaming request failed: {e}")
+        except httpx.RequestError:
+            logger.exception("Olm API v1 non-streaming request failed")
             raise
-        except Exception as e:
-            logger.error(f"Unexpected error in Olm API v1 non-streaming: {e}")
+        except Exception:
+            logger.exception("Unexpected error in Olm API v1 non-streaming")
             raise
 
     async def generate(

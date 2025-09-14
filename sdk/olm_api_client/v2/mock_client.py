@@ -130,15 +130,17 @@ class MockOlmClientV2:
 
     async def _mock_chat_stream(
         self, full_text: str, model: str
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         """Stream mock chat response in OpenAI format."""
         tokens = self._tokenize_realistic(full_text)
+        created_time = int(time.time())
+        created_id = f"chatcmpl-mock-{created_time}"
 
         # Send first chunk with role
         first_chunk = {
-            "id": f"chatcmpl-mock-{int(time.time())}",
+            "id": created_id,
             "object": "chat.completion.chunk",
-            "created": int(time.time()),
+            "created": created_time,
             "model": model,
             "choices": [
                 {"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}
@@ -149,9 +151,9 @@ class MockOlmClientV2:
         # Send content chunks
         for token in tokens:
             chunk = {
-                "id": f"chatcmpl-mock-{int(time.time())}",
+                "id": created_id,
                 "object": "chat.completion.chunk",
-                "created": int(time.time()),
+                "created": created_time,
                 "model": model,
                 "choices": [
                     {"index": 0, "delta": {"content": token}, "finish_reason": None}

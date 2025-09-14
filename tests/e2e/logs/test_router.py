@@ -7,7 +7,7 @@ pytestmark = pytest.mark.asyncio
 
 async def test_get_logs_returns_empty_list(http_client: AsyncClient, api_config):
     """
-    Test that the /logs/data endpoint returns an empty list when no logs exist.
+    Test that the /logs/data endpoint returns data in the expected list format.
     Note: E2E tests cannot create test data directly in the database,
     so we test the endpoint behavior with an empty database.
     """

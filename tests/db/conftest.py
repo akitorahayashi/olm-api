@@ -45,7 +45,9 @@ def db_setup(
     if is_master:
         # Set a dummy model for DB tests, which don't need a real one.
         # This is required for Alembic's env.py to validate settings.
-        os.environ["BUILT_IN_OLLAMA_MODEL"] = "test-db-model"
+        os.environ["BUILT_IN_OLLAMA_MODELS"] = "test-db-model"
+        # Enable API logging for DB middleware tests
+        os.environ["API_LOGGING_ENABLED"] = "true"
 
         # Enable testcontainers logging to show container startup progress
         logging.getLogger("testcontainers").setLevel(logging.INFO)

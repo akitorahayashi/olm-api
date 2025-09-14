@@ -78,7 +78,7 @@ async def run_sequential_requests_with_interval(
     host_port = os.getenv("TEST_PORT", "8002")
     model_name = get_model_name()
 
-    chat_url = f"http://localhost:{host_port}/api/v2/chat/completions"
+    chat_url = f"http://localhost:{host_port}/api/v2/chat"
     request_payload = {
         "model": model_name,
         "messages": [{"role": "user", "content": load_prompt()}],

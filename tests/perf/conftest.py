@@ -18,7 +18,7 @@ import pytest
 # Set environment variables for Docker Compose
 os.environ["HOST_BIND_IP"] = os.getenv("HOST_BIND_IP", "127.0.0.1")
 os.environ["TEST_PORT"] = os.getenv("TEST_PORT", "8002")
-os.environ["BUILT_IN_OLLAMA_MODEL"] = os.getenv("BUILT_IN_OLLAMA_MODEL", "qwen3:0.6b")
+os.environ["BUILT_IN_OLLAMA_MODELS"] = os.getenv("BUILT_IN_OLLAMA_MODELS", "qwen3:0.6b")
 
 
 @pytest.fixture(scope="session", autouse=True)
@@ -27,7 +27,7 @@ def perf_setup() -> Generator[None, None, None]:
     Manages the lifecycle of the application for performance testing.
     """
     # Determine if sudo should be used based on environment variable
-    use_sudo = os.getenv("SUDO") == "true"
+    use_sudo = os.getenv("SUDO", "").lower() in ("1", "true", "yes")
     docker_command = ["sudo", "-E", "docker"] if use_sudo else ["docker"]
 
     host_bind_ip = os.getenv("HOST_BIND_IP", "127.0.0.1")

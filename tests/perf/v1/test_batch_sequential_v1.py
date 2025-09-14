@@ -74,7 +74,7 @@ async def run_sequential_requests_with_interval(
     """
     host_port = os.getenv("TEST_PORT", "8002")
 
-    generate_url = f"http://localhost:{host_port}/api/v1/generate"
+    generate_url = f"http://localhost:{host_port}/api/v1/chat"
     request_payload = {
         "prompt": prompt,
         "model_name": model_name,
