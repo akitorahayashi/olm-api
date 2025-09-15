@@ -16,7 +16,7 @@ DEFAULT_RESPONSES = [
 
 class MockOlmClientV2:
     """
-    A high-fidelity mock client that simulates v2 API behavior with OpenAI-compatible responses.
+    A high-fidelity mock client that simulates v2 API behavior with chat completion responses.
     """
 
     def __init__(
@@ -105,7 +105,7 @@ class MockOlmClientV2:
             return self._create_chat_response(response_text, model_name)
 
     def _create_chat_response(self, content: str, model: str) -> Dict[str, Any]:
-        """Create OpenAI-compatible chat response."""
+        """Create chat completion response."""
         return {
             "id": f"chatcmpl-mock-{int(time.time())}",
             "object": "chat.completion",
@@ -131,7 +131,7 @@ class MockOlmClientV2:
     async def _mock_chat_stream(
         self, full_text: str, model: str
     ) -> AsyncGenerator[Dict[str, Any], None]:
-        """Stream mock chat response in OpenAI format."""
+        """Stream mock chat response in streaming format."""
         tokens = self._tokenize_realistic(full_text)
         created_time = int(time.time())
         created_id = f"chatcmpl-mock-{created_time}"

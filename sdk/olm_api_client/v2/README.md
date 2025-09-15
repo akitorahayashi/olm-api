@@ -1,23 +1,18 @@
 # Olm API Client v2
 
-A Python client library for the Olm API v2, providing OpenAI-compatible chat completion functionality with advanced features including conversation history, tool calling, and fine-grained generation control.
+A Python client library for the Olm API v2, providing chat completion functionality with advanced features including conversation history, tool calling, and fine-grained generation control.
 
 ## Features
 
-- **OpenAI Compatible**: Drop-in replacement for OpenAI GPT clients
+- **Chat Completion API**: Standard chat completion interface
 - **Conversation History**: Multi-turn conversations with message arrays
 - **System Prompts**: Control model behavior with system instructions
+- **Vision Support**: Process images with vision-capable models
 - **Tool Calling**: Function calling and external API integration
 - **Advanced Parameters**: Fine control over generation (temperature, top_p, etc.)
 - **Streaming Support**: Real-time text generation with Server-Sent Events
 - **Type Safety**: Full typing support with protocols
 - **Error Handling**: Comprehensive error handling with proper exception types
-
-## Installation
-
-```bash
-pip install httpx  # Required dependency
-```
 
 ## Quick Start
 
@@ -114,6 +109,36 @@ async def main():
 asyncio.run(main())
 ```
 
+### Vision (Image Processing)
+
+```python
+import asyncio
+import base64
+from olm_api_client.v2 import OlmApiClientV2
+
+async def main():
+    client = OlmApiClientV2("http://localhost:8000")
+
+    # Load and encode image
+    with open("image.png", "rb") as f:
+        image_data = base64.b64encode(f.read()).decode()
+
+    messages = [
+        {
+            "role": "user",
+            "content": "What do you see in this image?",
+            "images": [image_data]
+        }
+    ]
+
+    response = await client.generate(messages, "gemma3:270m")
+    print(response["choices"][0]["message"]["content"])
+
+asyncio.run(main())
+```
+
+**Note**: Vision support requires vision-capable models like `gemma3`. Non-vision models will ignore the images field.
+
 ### Tool Calling
 
 ```python
@@ -201,7 +226,7 @@ async def generate(
 ) -> Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]
 ```
 
-Generate chat completion with OpenAI-compatible format.
+Generate chat completion with standard format.
 
 **Parameters:**
 - `messages` (List[Dict]): Array of message objects
@@ -217,7 +242,8 @@ Generate chat completion with OpenAI-compatible format.
     "content": "Message content",
     "name": "Optional sender name",
     "tool_calls": "Optional tool calls (for assistant messages)",
-    "tool_call_id": "Optional tool call ID (for tool messages)"
+    "tool_call_id": "Optional tool call ID (for tool messages)",
+    "images": ["base64_encoded_image1", "base64_encoded_image2"]  # Optional for vision
 }
 ```
 
@@ -251,7 +277,7 @@ Generate chat completion with OpenAI-compatible format.
 - `tool_choice` (str|Dict): Control tool selection
 
 **Returns:**
-- Non-streaming: `Dict[str, Any]` - OpenAI-compatible response object
+- Non-streaming: `Dict[str, Any]` - Chat completion response object
 - Streaming: `AsyncGenerator[Dict[str, Any], None]` - Async generator yielding JSON objects (dictionaries).
 
 ## Response Format
@@ -316,12 +342,11 @@ async def main():
         print(f"HTTP error: {e.response.status_code}")
 ```
 
-## OpenAI Compatibility
+## Chat Completion Format
 
-The v2 client is fully compatible with OpenAI's chat completion format:
+The v2 client uses a standard chat completion format:
 
 ```python
-# Can be used as a drop-in replacement for OpenAI client
 messages = [
     {"role": "system", "content": "You are a helpful assistant."},
     {"role": "user", "content": "Hello!"}
@@ -334,11 +359,8 @@ response = await client.generate(
     max_tokens=100
 )
 
-# Response format matches OpenAI exactly
 content = response["choices"][0]["message"]["content"]
 ```
-
-**Note**: While the API is "OpenAI Compatible" in format, its behavior (like finish_reason values or usage calculation) may differ from OpenAI's production API, as it is a proxy for Ollama.
 
 ## Use Cases
 
@@ -346,8 +368,9 @@ The v2 client is ideal for:
 
 - **Modern Applications**: Full-featured chat applications
 - **Conversational AI**: Multi-turn conversations with context
+- **Vision Applications**: Image analysis and multimodal interactions
 - **Agent Systems**: Tool calling and function execution
-- **OpenAI Migration**: Drop-in replacement for OpenAI GPT APIs
+- **API Integration**: Standard chat completion interface
 - **Advanced Control**: Fine-grained generation parameter control
 
 ## Testing

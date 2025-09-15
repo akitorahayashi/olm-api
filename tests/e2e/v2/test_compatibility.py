@@ -5,10 +5,10 @@ pytestmark = pytest.mark.asyncio
 
 
 class TestGenerate:
-    """Test generation OpenAI API compatibility."""
+    """Test generation compatibility."""
 
-    async def test_openai_compatible_response_structure(self, http_client, api_config):
-        """Test that response structure matches OpenAI format."""
+    async def test_compatible_response_structure(self, http_client, api_config):
+        """Test that response structure matches expected format."""
         payload = {
             "model": api_config["model_name"],
             "messages": [{"role": "user", "content": "Hello"}],
@@ -19,7 +19,7 @@ class TestGenerate:
         )
         data = response.json()
 
-        # Check all required OpenAI fields are present
+        # Check all required fields are present
         required_fields = ["id", "object", "created", "model", "choices", "usage"]
         for field in required_fields:
             assert field in data, f"Missing required field: {field}"

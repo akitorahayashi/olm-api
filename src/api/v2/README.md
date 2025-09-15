@@ -1,12 +1,12 @@
 # API v2 - Chat Completions Proxy
 
-API v2 is a next-generation interface providing advanced features compatible with OpenAI/Ollama. It supports conversation history, system prompts, Tool Calling, and more.
+API v2 is a next-generation interface providing advanced features for Ollama. It supports conversation history, system prompts, Tool Calling, and more.
 
 ## Endpoints
 
 ### POST /api/v2/chat/completions
 
-OpenAI Chat Completions API compatible endpoint. Supports conversation based on message arrays, Tool Calling, and advanced generation parameters.
+Chat Completions endpoint. Supports conversation based on message arrays, Tool Calling, and advanced generation parameters.
 
 #### Request
 
@@ -32,6 +32,7 @@ OpenAI Chat Completions API compatible endpoint. Supports conversation based on 
   - `name`: Sender name (optional)
   - `tool_calls`: Tool call information (for assistant messages)
   - `tool_call_id`: Tool call ID (for tool messages)
+  - `images`: Array of base64-encoded images (for vision models, optional)
 - `tools` (array, optional): Array of available tool definitions
 - `tool_choice` (string/object, optional): Control tool selection
 - `stream` (boolean, optional): Enable streaming response
@@ -41,6 +42,24 @@ OpenAI Chat Completions API compatible endpoint. Supports conversation based on 
 - `max_tokens` (int, optional): Maximum number of tokens
 - `stop` (string/array, optional): Stop sequence
 - `options` (object, optional): Other Ollama-specific options
+
+#### Vision Example (Image Input)
+
+```json
+{
+  "model": "gemma3:270m",
+  "messages": [
+    {
+      "role": "user",
+      "content": "What do you see in this image?",
+      "images": ["iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="]
+    }
+  ],
+  "stream": false
+}
+```
+
+**Note**: Images should be base64-encoded. Vision support depends on the model capabilities. Non-vision models will ignore the images field.
 
 #### Tool Calling Example
 
@@ -150,9 +169,10 @@ data: [DONE]
 
 - **Conversation History Management**: Supports multi-turn conversations via the messages field
 - **System Prompt**: Controls model behavior with the system role
+- **Vision Support**: Process images with vision-capable models (base64-encoded)
 - **Tool Calling**: Supports calling external functions and APIs
 - **Advanced Parameters**: Fine control with temperature, top_p, top_k, etc.
-- **OpenAI Compatible**: Usable with existing OpenAI GPT client libraries
+- **Chat Completion API**: Standard chat completion interface
 
 ## Implementation Files
 

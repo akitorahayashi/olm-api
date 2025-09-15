@@ -1,4 +1,4 @@
-# Ollama API
+# Ol, API
 
 ## Overview
 
@@ -11,13 +11,13 @@ The architecture emphasizes a clean separation of concerns and a fully container
 The project leverages a modern Python technology stack:
 
 - **Backend Framework**: FastAPI
-- **Database**: PostgreSQL
 - **Containerization**: Docker, Docker Compose
-- **Dependency Management**: Poetry
+- **Dependency Management**: Uv
 - **Database Migrations**: Alembic
+- **Database**: PostgreSQL
 - **Code Quality**: Ruff (Linter), Black (Formatter)
 - **Testing**: Pytest
-- **LLM Integration**: Ollama (with GPU support)
+- **LLM Integration**: Ollama
 
 ## Setup and Execution
 

@@ -19,7 +19,7 @@ async def chat_completions(
     ollama_service: OllamaServiceV2 = Depends(OllamaServiceV2.get_instance),
 ) -> Union[ChatResponse, StreamingResponse]:
     """
-    Chat completions endpoint compatible with OpenAI API.
+    Chat completions endpoint.
 
     Supports:
     - Messages array (system, user, assistant, tool roles)

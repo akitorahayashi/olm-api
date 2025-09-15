@@ -21,7 +21,7 @@ class OllamaServiceV2:
     """
     OllamaService specifically designed for v2 API endpoints.
 
-    Provides OpenAI-compatible chat completion functionality with proper
+    Provides chat completion functionality with proper
     support for tool calling, thought/answer distinction, and structured streaming.
     """
 
@@ -42,7 +42,7 @@ class OllamaServiceV2:
     ) -> Union[Dict[str, Any], StreamingResponse]:
         """
         Chat completion method for v2 API.
-        Provides OpenAI-compatible responses with proper tool calling support.
+        Provides responses with proper tool calling support.
         """
         if stream:
             return StreamingResponse(
@@ -58,7 +58,7 @@ class OllamaServiceV2:
                     # Build parameters for ollama.chat call
                     chat_params = {
                         "model": model,
-                        "messages": messages,
+                        "messages": self._prepare_messages_for_ollama(messages),
                         "stream": False,
                     }
 
@@ -74,10 +74,8 @@ class OllamaServiceV2:
                         self.client.chat, **chat_params
                     )
 
-                    # Transform to OpenAI-compatible format
-                    return self._transform_ollama_response_to_openai(
-                        chat_response, model
-                    )
+                    # Transform response format
+                    return self._transform_ollama_response(chat_response, model)
 
                 except ollama.ResponseError as e:
                     error_message = e.args[0] if e.args else "Unknown error"
@@ -114,7 +112,7 @@ class OllamaServiceV2:
                 # Build parameters for ollama.chat call
                 chat_params = {
                     "model": model,
-                    "messages": messages,
+                    "messages": self._prepare_messages_for_ollama(messages),
                     "stream": True,
                 }
 
@@ -135,8 +133,8 @@ class OllamaServiceV2:
                 while True:
                     try:
                         chunk = await run_in_threadpool(next, iterator)
-                        # Transform chunk to OpenAI-compatible streaming format
-                        stream_chunk = self._transform_ollama_chunk_to_openai(
+                        # Transform chunk to streaming format
+                        stream_chunk = self._transform_ollama_chunk(
                             chunk, model, created_id, created_time
                         )
                         yield f"data: {json.dumps(stream_chunk)}\n\n"
@@ -178,10 +176,37 @@ class OllamaServiceV2:
                 )
                 raise HTTPException(status_code=500, detail="Internal server error")
 
-    def _transform_ollama_response_to_openai(
+    def _prepare_messages_for_ollama(
+        self, messages: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Prepare messages for ollama client by handling images field.
+
+        Converts message format from API schema to ollama-compatible format.
+        """
+        prepared_messages = []
+
+        for message in messages:
+            # Create a copy of the message
+            prepared_message = message.copy()
+
+            # If message has images, add them to the ollama format
+            images = message.get("images")
+            if images:
+                # Remove images from the top level since ollama expects it in the message
+                prepared_message["images"] = images
+                # Clean up - remove None images field if it exists
+                if "images" in prepared_message and prepared_message["images"] is None:
+                    del prepared_message["images"]
+
+            prepared_messages.append(prepared_message)
+
+        return prepared_messages
+
+    def _transform_ollama_response(
         self, ollama_response: Dict[str, Any], model: str
     ) -> Dict[str, Any]:
-        """Transform Ollama response to OpenAI-compatible format."""
+        """Transform Ollama response to chat completion format."""
         message = ollama_response.get("message", {})
 
         # Handle tool calls if present
@@ -211,7 +236,7 @@ class OllamaServiceV2:
             },
         }
 
-    def _transform_ollama_chunk_to_openai(
+    def _transform_ollama_chunk(
         self,
         ollama_chunk: Dict[str, Any],
         model: str,
@@ -219,7 +244,7 @@ class OllamaServiceV2:
         created_time: int,
     ) -> Dict[str, Any]:
         """
-        Transform Ollama streaming chunk to OpenAI-compatible format.
+        Transform Ollama streaming chunk to streaming format.
 
         Properly handles tool_calls to enable thought/answer distinction:
         - When tool_calls are present: thought mode (save_thought function)

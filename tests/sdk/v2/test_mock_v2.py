@@ -59,14 +59,14 @@ class TestMockOlmClientV2:
             MockOlmClientV2(responses=["valid", 123, "also valid"])
 
     @pytest.mark.asyncio
-    async def test_generate_non_streaming_openai_format(self):
-        """Test non-streaming response follows OpenAI format exactly"""
+    async def test_generate_non_streaming_format(self):
+        """Test non-streaming response follows chat completion format exactly"""
         client = MockOlmClientV2(token_delay=0)
         messages = [{"role": "user", "content": "Hello"}]
 
         result = await client.generate(messages, "test-model", stream=False)
 
-        # Validate complete OpenAI chat completion format
+        # Validate complete chat completion format
         assert isinstance(result, dict)
         assert result["object"] == "chat.completion"
         assert result["model"] == "test-model"
@@ -101,8 +101,8 @@ class TestMockOlmClientV2:
         )
 
     @pytest.mark.asyncio
-    async def test_generate_streaming_openai_format(self):
-        """Test streaming response follows OpenAI chunk format exactly"""
+    async def test_generate_streaming_format(self):
+        """Test streaming response follows streaming chunk format exactly"""
         client = MockOlmClientV2(token_delay=0)
         messages = [{"role": "user", "content": "Hello"}]
 
