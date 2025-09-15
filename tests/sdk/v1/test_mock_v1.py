@@ -64,9 +64,17 @@ class TestMockOlmClientV1:
         async for chunk in client._stream_response(text):
             chunks.append(chunk)
 
-        combined = "".join(chunks)
-        assert "Hello" in combined
-        assert "world" in combined
+        # Each chunk should be a dict with the required structure
+        assert all(isinstance(chunk, dict) for chunk in chunks)
+        assert all(
+            "think" in chunk and "content" in chunk and "response" in chunk
+            for chunk in chunks
+        )
+
+        # Final content should contain the original text
+        final_content = chunks[-1]["content"] if chunks else ""
+        assert "Hello" in final_content
+        assert "world" in final_content
 
     @pytest.mark.asyncio
     async def test_stream_response_with_delay(self):
@@ -83,6 +91,7 @@ class TestMockOlmClientV1:
         # Should have taken some time due to delay
         assert end_time - start_time > 0.005  # At least some delay
         assert len(chunks) > 0
+        assert all(isinstance(chunk, dict) for chunk in chunks)
 
     @pytest.mark.asyncio
     async def test_generate_streaming(self):
@@ -98,9 +107,17 @@ class TestMockOlmClientV1:
         async for chunk in result:
             chunks.append(chunk)
 
-        combined = "".join(chunks)
-        assert len(combined) > 0
-        assert "Hello" in combined  # Check for part of the default response
+        # Each chunk should be a dict
+        assert all(isinstance(chunk, dict) for chunk in chunks)
+        assert all(
+            "think" in chunk and "content" in chunk and "response" in chunk
+            for chunk in chunks
+        )
+
+        # Final content should contain expected text
+        final_content = chunks[-1]["content"] if chunks else ""
+        assert len(final_content) > 0
+        assert "Hello" in final_content  # Check for part of the default response
 
     @pytest.mark.asyncio
     async def test_generate_batch(self):
@@ -109,10 +126,13 @@ class TestMockOlmClientV1:
 
         result = await client.generate("test prompt", "test-model", stream=False)
 
-        # Should return string
-        assert isinstance(result, str)
-        assert len(result) > 0
-        assert "Hello" in result  # Check for part of the default response
+        # Should return dict with required structure
+        assert isinstance(result, dict)
+        assert "think" in result
+        assert "content" in result
+        assert "response" in result
+        assert len(result["content"]) > 0
+        assert "Hello" in result["content"]  # Check for part of the default response
 
     def test_init_with_custom_responses(self):
         """Test initialization with custom responses parameter"""
@@ -135,7 +155,9 @@ class TestMockOlmClientV1:
 
         for i, expected_response in enumerate(custom_responses):
             result = await client.generate(f"test prompt {i}", "test-model")
-            assert result == expected_response
+            assert isinstance(result, dict)
+            assert result["content"] == expected_response
+            assert result["response"] == expected_response
 
     @pytest.mark.asyncio
     async def test_generate_with_custom_responses_streaming(self):
@@ -148,7 +170,7 @@ class TestMockOlmClientV1:
         chunks = []
         async for chunk in result:
             chunks.append(chunk)
-        result1 = "".join(chunks)
+        result1 = chunks[-1]["content"] if chunks else ""
         assert result1 == custom_responses[0]
 
         # Test second response
@@ -156,7 +178,7 @@ class TestMockOlmClientV1:
         chunks = []
         async for chunk in result:
             chunks.append(chunk)
-        result2 = "".join(chunks)
+        result2 = chunks[-1]["content"] if chunks else ""
         assert result2 == custom_responses[1]
 
     @pytest.mark.asyncio
@@ -168,7 +190,7 @@ class TestMockOlmClientV1:
         results = []
         for i in range(6):  # Test two full cycles
             result = await client.generate(f"test {i}", "test-model")
-            results.append(result)
+            results.append(result["content"])
 
         # Should cycle through responses: First, Second, Third, First, Second, Third
         expected = custom_responses * 2
@@ -182,7 +204,7 @@ class TestMockOlmClientV1:
         results = []
         for i in range(7):  # More than the number of default responses (5)
             result = await client.generate(f"unique prompt {i}", "test-model")
-            results.append(result)
+            results.append(result["content"])
 
         # Should have cycled through all 5 default responses and started again
         assert len(results) == 7
@@ -197,16 +219,17 @@ class TestMockOlmClientV1:
         client = MockOlmClientV1(api_url="http://localhost:11434", token_delay=0)
 
         result = await client.generate("test prompt", "some-model", stream=False)
-        assert isinstance(result, str)
-        assert len(result) > 0
+        assert isinstance(result, dict)
+        assert "content" in result
+        assert len(result["content"]) > 0
 
         # Streaming should also work
         stream_result = await client.generate("test", "some-model", stream=True)
         chunks = []
         async for chunk in stream_result:
             chunks.append(chunk)
-        combined = "".join(chunks)
-        assert len(combined) > 0
+        combined_content = chunks[-1]["content"] if chunks else ""
+        assert len(combined_content) > 0
 
     @pytest.mark.asyncio
     async def test_mixed_parameters(self):
@@ -222,19 +245,19 @@ class TestMockOlmClientV1:
         assert client.mock_responses == custom_responses
 
         result = await client.generate("test", "some-model", stream=False)
-        assert result in custom_responses
+        assert result["content"] in custom_responses
 
         # Test that responses cycle through in order
         response2 = await client.generate("I have a question for you.", "test-model")
-        assert response2 in custom_responses
+        assert response2["content"] in custom_responses
 
         # Test cycling continues
         response3 = await client.generate("Some other prompt", "test-model")
-        assert response3 in custom_responses
+        assert response3["content"] in custom_responses
 
         # Test that responses cycle correctly
         response4 = await client.generate("Another prompt", "test-model")
-        assert response4 in custom_responses
+        assert response4["content"] in custom_responses
 
     # Note: Dictionary and callable responses are not currently supported in v1 mock client
     # These tests are disabled until the feature is implemented

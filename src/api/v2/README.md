@@ -113,10 +113,11 @@ Returns a standard chat completion object.
 
 ### Response (Streaming)
 
-If `stream: true`, the server returns a stream of `chat.completion.chunk` objects in SSE format. The stream is terminated by `[DONE]`.
+If `stream: true`, the server returns a stream of `chat.completion.chunk` objects in SSE format. Each chunk's `delta` object may contain `content`, `think`, and `response` fields. The stream is terminated by `[DONE]`.
 
 ```text
 data: {"id":"...","choices":[{"delta":{"role":"assistant"}}]}
+data: {"id":"...","choices":[{"delta":{"think":"The user is asking..."}}]}
 data: {"id":"...","choices":[{"delta":{"content":"I'm"}}]}
 ...
 data: [DONE]

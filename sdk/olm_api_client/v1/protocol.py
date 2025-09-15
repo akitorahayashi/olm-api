@@ -1,4 +1,12 @@
-from typing import AsyncGenerator, Protocol, Union, runtime_checkable
+from typing import (
+    Any,
+    AsyncGenerator,
+    Dict,
+    Optional,
+    Protocol,
+    Union,
+    runtime_checkable,
+)
 
 
 @runtime_checkable
@@ -10,8 +18,12 @@ class OlmClientV1Protocol(Protocol):
     """
 
     async def generate(
-        self, prompt: str, model_name: str, stream: bool = False
-    ) -> Union[str, AsyncGenerator[str, None]]:
+        self,
+        prompt: str,
+        model_name: str,
+        stream: bool = False,
+        think: Optional[bool] = None,
+    ) -> Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]:
         """
         Generate text using the model (v1 API).
 
@@ -19,8 +31,10 @@ class OlmClientV1Protocol(Protocol):
             prompt: The prompt to send to the model.
             model_name: The name of the model to use for generation.
             stream: Whether to stream the response.
+            think: Whether to enable thinking mode.
 
         Returns:
-            Complete text response (if stream=False) or AsyncGenerator (if stream=True).
+            Complete JSON response (if stream=False) or AsyncGenerator of JSON chunks (if stream=True).
+            Each response contains 'think', 'content', and 'response' fields.
         """
         ...

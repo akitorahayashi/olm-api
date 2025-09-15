@@ -112,6 +112,31 @@ async def use_tools():
 asyncio.run(use_tools())
 ```
 
+## Client Implementations
+
+This SDK provides two client implementations that conform to the `OlmClientV2Protocol`:
+
+1.  **`OlmApiClientV2`**: The standard client that communicates with a remote Olm API server over HTTP. This is the recommended client for most use cases.
+
+2.  **`OlmLocalClientV2`**: A client that interacts directly with a local `ollama` instance, bypassing the Olm API server. This is useful for local development or when you need to interface with Ollama directly while using the same SDK protocol.
+
+### Implementation Differences
+
+While both clients aim to provide a consistent interface, there is a notable difference in the return type for streaming operations:
+
+-   **`OlmApiClientV2`**: When `stream=True`, the `generate` method returns an `AsyncGenerator` that yields `dict` objects, with each dictionary representing a JSON chunk from the API.
+
+-   **`OlmLocalClientV2`**: When `stream=True`, the `generate` method returns an `AsyncGenerator` that yields JSON-encoded `str` objects. You will need to parse these strings (e.g., using `json.loads()`) to work with the data as a dictionary. This is a known deviation from the protocol, as confirmed in the test suite (`tests/sdk/v2/test_local_client_v2.py`).
+
+**Example with `OlmLocalClientV2` stream:**
+```python
+import json
+# Assuming `local_client` is an instance of OlmLocalClientV2
+async for chunk_str in await local_client.generate(..., stream=True):
+    chunk_dict = json.loads(chunk_str)
+    # ... process chunk_dict
+```
+
 ## API Reference
 
 ### `OlmApiClientV2`

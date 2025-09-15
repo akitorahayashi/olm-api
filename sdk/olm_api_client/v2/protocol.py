@@ -26,7 +26,7 @@ class OlmClientV2Protocol(Protocol):
         tools: Optional[List[Dict[str, Any]]] = None,
         stream: bool = False,
         **kwargs,
-    ) -> Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]:
+    ) -> Union[Dict[str, Any], AsyncGenerator[Union[Dict[str, Any], str], None]]:
         """
         Generate chat completion using the v2 API.
 

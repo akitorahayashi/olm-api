@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import AsyncGenerator, Union
+from typing import Any, AsyncGenerator, Dict, Optional, Union
 
 import httpx
 
@@ -20,8 +20,8 @@ class OlmApiClientV1:
         self.generate_endpoint = f"{self.api_url}/api/v1/chat"
 
     async def _stream_response(
-        self, prompt: str, model_name: str
-    ) -> AsyncGenerator[str, None]:
+        self, prompt: str, model_name: str, think: Optional[bool] = None
+    ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Stream response from the Olm API v1.
         """
@@ -30,6 +30,8 @@ class OlmApiClientV1:
             "model_name": model_name,
             "stream": True,
         }
+        if think is not None:
+            payload["think"] = think
 
         try:
             async with httpx.AsyncClient(
@@ -51,7 +53,7 @@ class OlmApiClientV1:
                             try:
                                 data = json.loads(data_str)
                                 if "response" in data:
-                                    yield data["response"]
+                                    yield data
                             except json.JSONDecodeError:
                                 continue
         except httpx.RequestError:
@@ -61,7 +63,9 @@ class OlmApiClientV1:
             logger.exception("Unexpected error in Olm API v1 streaming")
             raise
 
-    async def _non_stream_response(self, prompt: str, model_name: str) -> str:
+    async def _non_stream_response(
+        self, prompt: str, model_name: str, think: Optional[bool] = None
+    ) -> Dict[str, Any]:
         """
         Get non-streaming response from the Olm API v1.
         """
@@ -70,6 +74,8 @@ class OlmApiClientV1:
             "model_name": model_name,
             "stream": False,
         }
+        if think is not None:
+            payload["think"] = think
 
         try:
             async with httpx.AsyncClient(
@@ -83,7 +89,7 @@ class OlmApiClientV1:
                 response.raise_for_status()
 
                 data = response.json()
-                return data.get("response", "")
+                return data
         except httpx.RequestError:
             logger.exception("Olm API v1 non-streaming request failed")
             raise
@@ -92,8 +98,12 @@ class OlmApiClientV1:
             raise
 
     async def generate(
-        self, prompt: str, model_name: str, stream: bool = False
-    ) -> Union[str, AsyncGenerator[str, None]]:
+        self,
+        prompt: str,
+        model_name: str,
+        stream: bool = False,
+        think: Optional[bool] = None,
+    ) -> Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]:
         """
         Generates text using the Olm API v1.
 
@@ -101,9 +111,11 @@ class OlmApiClientV1:
             prompt: The prompt to send to the model.
             model_name: The name of the model to use for generation.
             stream: Whether to stream the response.
+            think: Whether to enable thinking mode.
 
         Returns:
-            Complete text response (if stream=False) or AsyncGenerator (if stream=True).
+            Complete JSON response (if stream=False) or AsyncGenerator of JSON chunks (if stream=True).
+            Each response contains 'think', 'content', and 'response' fields.
 
         Raises:
             httpx.RequestError: If a network error occurs.
@@ -111,15 +123,16 @@ class OlmApiClientV1:
         Examples:
             Non-streaming:
                 >>> client = OlmApiClientV1("http://localhost:8000")
-                >>> response = await client.generate("Hello", "llama3.2")
-                >>> print(response)
+                >>> response = await client.generate("Hello", "llama3.2", think=True)
+                >>> print(f"Thinking: {response['think']}")
+                >>> print(f"Content: {response['content']}")
 
             Streaming:
-                >>> response = await client.generate("Hello", "llama3.2", stream=True)
+                >>> response = await client.generate("Hello", "llama3.2", stream=True, think=True)
                 >>> async for chunk in response:
-                ...     print(chunk, end="")
+                ...     print(f"Content: {chunk['content']}", end="")
         """
         if stream:
-            return self._stream_response(prompt, model_name)
+            return self._stream_response(prompt, model_name, think)
         else:
-            return await self._non_stream_response(prompt, model_name)
+            return await self._non_stream_response(prompt, model_name, think)

@@ -2,6 +2,8 @@ from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import ollama
 
+from ..utils.thinking_parser import parse_thinking_response
+
 
 class OlmLocalClientV2:
     """
@@ -56,7 +58,7 @@ class OlmLocalClientV2:
             return await self._batch_generate(**chat_params)
 
     async def _stream_generate(self, **chat_params) -> AsyncGenerator[str, None]:
-        """Generate JSON chunks from local Ollama streaming."""
+        """Generate JSON chunks from local Ollama streaming with thinking separation."""
         import json
         import time
 
@@ -65,7 +67,11 @@ class OlmLocalClientV2:
 
         async for chunk in stream:
             if content := chunk["message"]["content"]:
-                # Convert to streaming format
+                # For streaming, we want to send the incremental content, not accumulated
+                # Parse just this chunk to determine if it's thinking or content
+                parsed = parse_thinking_response(content)
+
+                # Convert to streaming format with incremental content
                 chunk_data = {
                     "id": f"chatcmpl-local-{int(time.time())}",
                     "object": "chat.completion.chunk",
@@ -74,7 +80,11 @@ class OlmLocalClientV2:
                     "choices": [
                         {
                             "index": 0,
-                            "delta": {"content": content},
+                            "delta": {
+                                "content": content,  # Send incremental content
+                                "think": parsed["thinking"],  # Custom field
+                                "response": content,  # Custom field - same as content for streaming
+                            },
                             "finish_reason": None,
                         }
                     ],
@@ -92,8 +102,12 @@ class OlmLocalClientV2:
     def _transform_to_chat_format(
         self, ollama_response: Dict[str, Any], model: str
     ) -> Dict[str, Any]:
-        """Transform Ollama response to chat completion format."""
+        """Transform Ollama response to chat completion format with thinking separation."""
         message = ollama_response.get("message", {})
+        raw_content = message.get("content", "")
+
+        # Parse thinking vs content using same logic as API server
+        parsed = parse_thinking_response(raw_content)
 
         # Handle tool calls if present
         tool_calls = message.get("tool_calls")
@@ -108,7 +122,11 @@ class OlmLocalClientV2:
                     "index": 0,
                     "message": {
                         "role": message.get("role", "assistant"),
-                        "content": message.get("content"),
+                        "content": (
+                            parsed["content"] if not tool_calls else None
+                        ),  # Clean content without think tags, None if tool calls
+                        "think": parsed["thinking"],  # Custom field for thinking
+                        "response": raw_content,  # Custom field for raw response
                         "tool_calls": tool_calls,
                     },
                     "finish_reason": "stop",
