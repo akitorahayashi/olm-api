@@ -1,6 +1,6 @@
 ## Overview
 
-A FastAPI server for enabling API access to a live Ollama model..
+A FastAPI server for enabling API access to a live Ollama model.
 
 ## Architecture & Features
 
@@ -14,12 +14,12 @@ A FastAPI server for enabling API access to a live Ollama model..
 ## API References
 
 For detailed API specs, see:
-- [v2 Chat Completions](src/api/v2/README.md)
 - [v1 Simple Proxy](src/api/v1/README.md)
+- [v2 Chat Completions](src/api/v2/README.md)
 
 ## SDKs
 
 Client libraries for Python:
-- [v2 (chat & tools)](sdk/olm_api_client/v2/README.md)
 - [v1 (prompt only)](sdk/olm_api_client/v1/README.md)
+- [v2 (chat & tools)](sdk/olm_api_client/v2/README.md)
 
