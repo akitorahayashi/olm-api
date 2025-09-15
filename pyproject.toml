@@ -1,7 +1,7 @@
 [project]
 name = "olm-api"
-version = "2.0.0"
-description = "A local LLM wrapped as an API."
+version = "2.1.0"
+description = "Enabling API access to a live Ollama model."
 authors = [{ name = "akitorahayashi", email = "atora.has75@gmail.com" }]
 readme = "README.md"
 requires-python = ">=3.12,<4.0"

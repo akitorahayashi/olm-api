@@ -135,7 +135,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             if "/api/v1/" in path:
                 return data.get("response")
 
-            # v2 API: extract from OpenAI-compatible response structure
+            # v2 API: extract from chat completion response structure
             elif "/api/v2/" in path:
                 choices = data.get("choices", [])
                 if choices and len(choices) > 0:
@@ -179,7 +179,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                         if "/api/v1/" in path:
                             full_text.append(data.get("response", ""))
 
-                        # v2 API: extract from OpenAI-compatible streaming format
+                        # v2 API: extract from chat completion streaming format
                         elif "/api/v2/" in path:
                             choices = data.get("choices", [])
                             if choices and len(choices) > 0:

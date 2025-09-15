@@ -1,69 +1,49 @@
 # API v1 - Simple Proxy
 
-API v1 is an endpoint for conventional simple prompt execution. It is maintained for backward compatibility and will not be changed in the future.
+This document specifies the v1 API, a simple endpoint for prompt-based text generation. It is maintained for backward compatibility.
 
-## Endpoints
+## Endpoint: `POST /api/v1/generate`
 
-### POST /api/v1/generate
-
-Text generation endpoint. Receives a simple prompt string and returns a response from the Ollama model.
-
-#### Request
+### Request
 
 ```json
 {
   "prompt": "Hello, how are you?",
   "model_name": "llama3.2",
-  "stream": false
+  "stream": false,
+  "think": false
 }
 ```
 
 **Parameters:**
-- `prompt` (string, required): Prompt string to send to the model
-- `model_name` (string, required): Ollama model name to use
-- `stream` (boolean, optional): Enable streaming response (default: false)
+- `prompt` (string, **required**): The input text for the model.
+- `model_name` (string, **required**): The name of the Ollama model to use.
+- `stream` (boolean, optional, default: `false`): If `true`, the response will be a stream of Server-Sent Events (SSE).
+- `think` (boolean, optional, default: `false`): If `true`, enables thinking mode for compatible models, which may include a reasoning process in the response.
 
-#### Response (Non-Streaming)
+### Response (Non-Streaming)
+
+The response is a single JSON object.
 
 ```json
 {
-  "response": "I'm doing well, thank you! How can I help you today?"
+  "think": "Let me consider this greeting...",
+  "content": "I'm doing well, thank you!",
+  "response": "<think>Let me consider this greeting...</think>I'm doing well, thank you!"
 }
 ```
 
-#### Response (Streaming)
+**Fields:**
+- `think` (string | null): The model's reasoning process, extracted from `<think>` tags. `null` if not present.
+- `content` (string): The final response content, with `<think>` tags removed.
+- `response` (string): The raw response from the model, including any tags.
 
-Server-Sent Events (SSE) format:
+### Response (Streaming)
+
+If `stream: true`, the server returns a stream of JSON objects in SSE format. Each object represents a token or a small part of the response.
 
 ```text
-data: {"response": "I'm"}
-data: {"response": " doing"}
-data: {"response": " well,"}
-data: {"response": " thank you!"}
+data: {"think": "...", "content": "I'm", "response": "..."}
+data: {"think": "...", "content": "I'm doing", "response": "..."}
+...
 ```
-
-### POST /api/v1/logs
-
-Log retrieval endpoint (see logs.py for details)
-
-## Use Cases
-
-- Maintaining compatibility with legacy systems
-- Use cases that only require simple prompt execution
-- Compatibility with existing client code
-
-## Limitations
-
-- Only supports a single prompt string
-- No conversation history management
-- Cannot specify system prompt
-- Tool Calling not supported
-- Limited advanced generation parameters
-
-## Implementation Files
-
-- **Router**: `routers/generate.py` - Endpoint definitions
-- **Service**: `services/ollama_service.py` - Business logic
-- **Models**: Pydantic model definitions inline
-
-For more advanced features, use `/api/v2/chat/completions` in the v2 API.

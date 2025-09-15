@@ -15,7 +15,7 @@ class OlmClientV2Protocol(Protocol):
     """
     Protocol for Olm API v2 clients.
 
-    Provides OpenAI-compatible chat completion functionality with advanced features
+    Provides chat completion functionality with advanced features
     including conversation history, tool calling, and fine-grained generation control.
     """
 
@@ -28,7 +28,7 @@ class OlmClientV2Protocol(Protocol):
         **kwargs,
     ) -> Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]:
         """
-        Generate chat completion using the v2 API with OpenAI-compatible format.
+        Generate chat completion using the v2 API.
 
         Args:
             messages: List of message dictionaries with role and content.

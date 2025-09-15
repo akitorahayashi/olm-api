@@ -12,8 +12,8 @@ from dotenv import load_dotenv
 from httpx import ASGITransport, AsyncClient
 
 from sdk.olm_api_client.v1.mock_client import MockOlmClientV1
-from src.api.v1.services.ollama_service import get_ollama_service
-from src.api.v2.services.ollama_service import get_ollama_service_v2
+from src.api.v1.ollama_service_v1 import OllamaServiceV1
+from src.api.v2.ollama_service_v2 import OllamaServiceV2
 from src.main import app
 from src.middlewares import db_logging_middleware
 
@@ -90,9 +90,9 @@ def mock_ollama_service() -> MagicMock:
     mock_service.pull_model = AsyncMock()
     mock_service.delete_model = AsyncMock()
 
-    app.dependency_overrides[get_ollama_service] = lambda: mock_service
+    app.dependency_overrides[OllamaServiceV1.get_instance] = lambda: mock_service
     yield mock_service
-    app.dependency_overrides.pop(get_ollama_service, None)
+    app.dependency_overrides.pop(OllamaServiceV1.get_instance, None)
 
 
 @pytest.fixture
@@ -104,9 +104,9 @@ def mock_ollama_service_v2() -> MagicMock:
     mock_service.chat_completion = AsyncMock()
     mock_service.list_models = AsyncMock()
 
-    app.dependency_overrides[get_ollama_service_v2] = lambda: mock_service
+    app.dependency_overrides[OllamaServiceV2.get_instance] = lambda: mock_service
     yield mock_service
-    app.dependency_overrides.pop(get_ollama_service_v2, None)
+    app.dependency_overrides.pop(OllamaServiceV2.get_instance, None)
 
 
 # =============================================================================

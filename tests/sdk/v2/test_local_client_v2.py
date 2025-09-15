@@ -37,7 +37,7 @@ class TestOlmLocalClientV2:
 
             result = await client.generate(messages, "qwen3:0.6b", stream=False)
 
-            # Verify OpenAI-compatible format
+            # Verify chat completion format
             assert result["id"].startswith("chatcmpl-local-")
             assert result["object"] == "chat.completion"
             assert result["model"] == "qwen3:0.6b"
@@ -49,7 +49,7 @@ class TestOlmLocalClientV2:
 
     @pytest.mark.asyncio
     async def test_generate_streaming(self):
-        """Test streaming chat completion returns OpenAI-compatible JSON chunks"""
+        """Test streaming chat completion returns JSON chunks"""
         with patch(
             "sdk.olm_api_client.v2.local_client.ollama.AsyncClient"
         ) as mock_client_class:
@@ -162,7 +162,7 @@ class TestOlmLocalClientV2:
                 messages, "qwen3:0.6b", tools=tools, stream=False
             )
 
-            # Verify OpenAI-compatible format with tool calls
+            # Verify chat completion format with tool calls
             assert result["choices"][0]["message"]["content"] is None
             assert result["choices"][0]["message"]["tool_calls"] is not None
             assert len(result["choices"][0]["message"]["tool_calls"]) == 1

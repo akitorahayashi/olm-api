@@ -11,7 +11,7 @@ class OlmApiClientV2:
     """
     A client for interacting with the Olm API v2.
 
-    Provides OpenAI-compatible chat completion functionality with support for:
+    Provides chat completion functionality with support for:
     - Conversation history via messages array
     - System prompts and multi-role conversations
     - Tool calling and function execution
@@ -32,10 +32,10 @@ class OlmApiClientV2:
         **kwargs,
     ) -> Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]:
         """
-        Generate chat completion using the v2 API with OpenAI-compatible format.
+        Generate chat completion using the v2 API.
 
         Args:
-            messages: List of message dictionaries with role and content.
+            messages: List of message dictionaries with role, content, and optional images.
             model_name: The name of the model to use for generation.
             tools: Optional list of tool definitions for function calling.
             stream: Whether to stream the response.
@@ -84,6 +84,17 @@ class OlmApiClientV2:
                 >>> response = await client.generate(
                 ...     messages, "llama3.2", tools=tools
                 ... )
+
+            With images (vision models):
+                >>> import base64
+                >>> with open("image.png", "rb") as f:
+                ...     image_data = base64.b64encode(f.read()).decode()
+                >>> messages = [{
+                ...     "role": "user",
+                ...     "content": "What do you see in this image?",
+                ...     "images": [image_data]
+                ... }]
+                >>> response = await client.generate(messages, "gemma3:4b")
         """
         payload = {
             "model": model_name,

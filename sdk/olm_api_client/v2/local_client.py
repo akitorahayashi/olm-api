@@ -7,7 +7,7 @@ class OlmLocalClientV2:
     """
     A client for interacting with a local `ollama serve` instance using v2 API schema.
 
-    This client converts the project's v2 API schema (OpenAI-compatible) to direct Ollama calls,
+    This client converts the project's v2 API schema to direct Ollama calls,
     bypassing the proxy server while maintaining the same interface.
     """
 
@@ -56,7 +56,7 @@ class OlmLocalClientV2:
             return await self._batch_generate(**chat_params)
 
     async def _stream_generate(self, **chat_params) -> AsyncGenerator[str, None]:
-        """Generate OpenAI-compatible JSON chunks from local Ollama streaming."""
+        """Generate JSON chunks from local Ollama streaming."""
         import json
         import time
 
@@ -65,8 +65,8 @@ class OlmLocalClientV2:
 
         async for chunk in stream:
             if content := chunk["message"]["content"]:
-                # Convert to OpenAI-compatible streaming format
-                openai_chunk = {
+                # Convert to streaming format
+                chunk_data = {
                     "id": f"chatcmpl-local-{int(time.time())}",
                     "object": "chat.completion.chunk",
                     "created": int(time.time()),
@@ -79,20 +79,20 @@ class OlmLocalClientV2:
                         }
                     ],
                 }
-                yield json.dumps(openai_chunk)
+                yield json.dumps(chunk_data)
 
     async def _batch_generate(self, **chat_params) -> Dict[str, Any]:
-        """Generate complete response from local Ollama and convert to OpenAI format."""
+        """Generate complete response from local Ollama and convert to chat completion format."""
         chat_params["stream"] = False
         ollama_response = await self.client.chat(**chat_params)
 
-        # Transform to OpenAI-compatible format
-        return self._transform_to_openai_format(ollama_response, chat_params["model"])
+        # Transform to chat completion format
+        return self._transform_to_chat_format(ollama_response, chat_params["model"])
 
-    def _transform_to_openai_format(
+    def _transform_to_chat_format(
         self, ollama_response: Dict[str, Any], model: str
     ) -> Dict[str, Any]:
-        """Transform Ollama response to OpenAI-compatible format."""
+        """Transform Ollama response to chat completion format."""
         message = ollama_response.get("message", {})
 
         # Handle tool calls if present

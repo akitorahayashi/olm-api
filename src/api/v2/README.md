@@ -1,14 +1,10 @@
-# API v2 - Chat Completions Proxy
+# API v2 - Chat Proxy
 
-API v2 is a next-generation interface providing advanced features compatible with OpenAI/Ollama. It supports conversation history, system prompts, Tool Calling, and more.
+This document specifies the v2 API, which provides advanced chat features including conversation history, vision capabilities, and tool calling.
 
-## Endpoints
+## Endpoint: `POST /api/v2/chat`
 
-### POST /api/v2/chat/completions
-
-OpenAI Chat Completions API compatible endpoint. Supports conversation based on message arrays, Tool Calling, and advanced generation parameters.
-
-#### Request
+### Request
 
 ```json
 {
@@ -19,164 +15,109 @@ OpenAI Chat Completions API compatible endpoint. Supports conversation based on 
   ],
   "stream": false,
   "temperature": 0.7,
-  "top_p": 0.9,
   "max_tokens": 100
 }
 ```
 
-**Parameters:**
-- `model` (string, required): Ollama model name to use
-- `messages` (array, required): Array of messages
-  - `role`: "system", "user", "assistant", "tool"
-  - `content`: Message content
-  - `name`: Sender name (optional)
-  - `tool_calls`: Tool call information (for assistant messages)
-  - `tool_call_id`: Tool call ID (for tool messages)
-- `tools` (array, optional): Array of available tool definitions
-- `tool_choice` (string/object, optional): Control tool selection
-- `stream` (boolean, optional): Enable streaming response
-- `temperature` (float, optional): Controls randomness (0.0-2.0)
-- `top_p` (float, optional): Nucleus sampling (0.0-1.0)
-- `top_k` (int, optional): Top-K sampling
-- `max_tokens` (int, optional): Maximum number of tokens
-- `stop` (string/array, optional): Stop sequence
-- `options` (object, optional): Other Ollama-specific options
+**Key Parameters:**
+- `model` (string, **required**): The model name.
+- `messages` (array, **required**): An array of message objects representing the conversation history.
+- `stream` (boolean, optional, default: `false`): Enable streaming response.
+- `think` (boolean, optional): Enable thinking mode.
+- `tools` (array, optional): A list of available tools the model can call.
+- `tool_choice` (string | object, optional): Controls how the model uses tools.
+- Other parameters like `temperature`, `top_p`, `max_tokens`, `stop` are also available.
 
-#### Tool Calling Example
+### Message Object
 
 ```json
 {
-  "model": "llama3.2",
+  "role": "system | user | assistant | tool",
+  "content": "Message text",
+  "images": ["base64_encoded_image"], 
+  "tool_calls": [{}],             
+  "tool_call_id": "call_abc123"   
+}
+```
+- `images` (array of strings, optional): For vision models, a list of base64-encoded images.
+- `tool_calls` (array, optional): For assistant messages, a list of tool calls requested by the model.
+- `tool_call_id` (string, optional): For tool messages, the ID of the tool call this message is a result for.
+
+### Vision (Image Input)
+
+To use vision capabilities, include the `images` field in a `user` message.
+
+```json
+{
+  "model": "gemma3:270m",
   "messages": [
-    {"role": "user", "content": "What's the weather like today?"}
-  ],
-  "tools": [
     {
-      "type": "function",
-      "function": {
-        "name": "get_weather",
-        "description": "Get current weather information",
-        "parameters": {
-          "type": "object",
-          "properties": {
-            "location": {"type": "string", "description": "City name"}
-          },
-          "required": ["location"]
-        }
-      }
+      "role": "user",
+      "content": "What do you see in this image?",
+      "images": ["iVBORw0KGgoAAAAN...RU5ErkJggg=="]
     }
   ]
 }
 ```
 
-#### Response (Non-Streaming)
+### Tool Calling
 
+1.  **Define tools** in the `tools` array of the request.
+2.  The model may respond with a `tool_calls` object in the assistant's message.
+
+**Tool Definition (`tools` array):**
 ```json
 {
-  "id": "chatcmpl-123456789",
-  "object": "chat.completion",
-  "created": 1699000000,
-  "model": "llama3.2",
-  "choices": [
-    {
-      "index": 0,
-      "message": {
-        "role": "assistant",
-        "content": "I'm doing well, thank you! How can I help you today?"
+  "type": "function",
+  "function": {
+    "name": "get_weather",
+    "description": "Get current weather information",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "location": {"type": "string", "description": "City name"}
       },
-      "finish_reason": "stop"
+      "required": ["location"]
     }
-  ],
-  "usage": {
-    "prompt_tokens": 15,
-    "completion_tokens": 12,
-    "total_tokens": 27
   }
 }
 ```
 
-#### Tool Calling Response
+### Response (Non-Streaming)
+
+Returns a standard chat completion object.
 
 ```json
 {
-  "id": "chatcmpl-123456789",
+  "id": "chatcmpl-123",
   "object": "chat.completion",
-  "created": 1699000000,
   "model": "llama3.2",
   "choices": [
     {
       "index": 0,
       "message": {
         "role": "assistant",
-        "content": null,
-        "tool_calls": [
-          {
-            "id": "call_abc123",
-            "type": "function",
-            "function": {
-              "name": "get_weather",
-              "arguments": "{\"location\": \"Tokyo\"}"
-            }
-          }
-        ]
+        "content": "I'm doing well, thank you!",
+        "think": "The user is asking how I am...",
+        "response": "<think>...</think>I'm doing well, thank you!",
+        "tool_calls": null
       },
-      "finish_reason": "tool_calls"
+      "finish_reason": "stop"
     }
-  ]
+  ],
+  "usage": {"prompt_tokens": 15, "completion_tokens": 12, "total_tokens": 27}
 }
 ```
 
-#### Response (Streaming)
+- If the model decides to call a tool, `finish_reason` will be `tool_calls` and `message.tool_calls` will contain the details.
 
-Server-Sent Events (SSE) format:
+### Response (Streaming)
 
-```
-Server-Sent Events (SSE) format:
+If `stream: true`, the server returns a stream of `chat.completion.chunk` objects in SSE format. The stream is terminated by `[DONE]`.
 
 ```text
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1699000000,"model":"llama3.2","choices":[{"index":0,"delta":{"role":"assistant"},"finish_reason":null}]}
-
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1699000000,"model":"llama3.2","choices":[{"index":0,"delta":{"content":"I'm"},"finish_reason":null}]}
-
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1699000000,"model":"llama3.2","choices":[{"index":0,"delta":{"content":" doing"},"finish_reason":null}]}
-```
-
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","created":1699000000,"model":"llama3.2","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
-
+data: {"id":"...","choices":[{"delta":{"role":"assistant"}}]}
+data: {"id":"...","choices":[{"delta":{"content":"I'm"}}]}
+...
 data: [DONE]
 ```
-
-## Features
-
-- **Conversation History Management**: Supports multi-turn conversations via the messages field
-- **System Prompt**: Controls model behavior with the system role
-- **Tool Calling**: Supports calling external functions and APIs
-- **Advanced Parameters**: Fine control with temperature, top_p, top_k, etc.
-- **OpenAI Compatible**: Usable with existing OpenAI GPT client libraries
-
-## Implementation Files
-
-- **Router**: `routers/chat.py` - Endpoint definitions
-- **Schemas**: `schemas/` directory - Pydantic models organized by domain
-  - `message.py`: Message-related schemas
-  - `tool.py`: Tool-related schemas
-  - `request.py`: Request schemas
-  - `response.py`: Response schemas
-- **Service**: `../v1/services/ollama_service.py` - Shared business logic (v2 compatible)
-
-## Migration Guide
-
-Migration from v1 to v2:
-
-```python
-# v1 (old)
-response = await client.gen_batch("Hello", "llama3.2")
-
-# v2 (new)
-response = await client.chat_completion(
-    messages=[{"role": "user", "content": "Hello"}],
-    model_name="llama3.2"
-)
-```
-
-The v2 API is completely independent from v1 and does not affect existing v1 behavior.

@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import json
 import logging
 import os
@@ -21,13 +22,16 @@ class OllamaServiceV2:
     """
     OllamaService specifically designed for v2 API endpoints.
 
-    Provides OpenAI-compatible chat completion functionality with proper
+    Provides chat completion functionality with proper
     support for tool calling, thought/answer distinction, and structured streaming.
     """
 
     def __init__(self, settings: Settings):
         host = os.environ.get("OLLAMA_HOST", "http://ollama:11434")
-        self.client = ollama.Client(host=host)
+        # Initialize ollama client with extended timeout for vision models
+        self.client = ollama.Client(
+            host=host, timeout=300.0  # 5 minutes timeout for heavy vision models
+        )
         if settings.CONCURRENT_REQUEST_LIMIT < 1:
             raise ValueError("CONCURRENT_REQUEST_LIMIT must be at least 1")
         self.semaphore = asyncio.BoundedSemaphore(settings.CONCURRENT_REQUEST_LIMIT)
@@ -38,16 +42,17 @@ class OllamaServiceV2:
         model: str,
         tools: Optional[List[Dict[str, Any]]] = None,
         stream: bool = False,
+        think: Optional[bool] = None,
         **options,
     ) -> Union[Dict[str, Any], StreamingResponse]:
         """
         Chat completion method for v2 API.
-        Provides OpenAI-compatible responses with proper tool calling support.
+        Provides responses with proper tool calling support.
         """
         if stream:
             return StreamingResponse(
                 self._chat_completion_stream_generator(
-                    messages, model, tools, **options
+                    messages, model, tools, think, **options
                 ),
                 media_type="text/event-stream; charset=utf-8",
                 headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
@@ -55,10 +60,16 @@ class OllamaServiceV2:
         else:
             async with self.semaphore:
                 try:
+                    # Prepare messages and validate images first
+                    prepared_messages = self._prepare_messages_for_ollama(messages)
+
+                    # Check if any message contains images
+                    has_images = any(msg.get("images") for msg in prepared_messages)
+
                     # Build parameters for ollama.chat call
                     chat_params = {
                         "model": model,
-                        "messages": messages,
+                        "messages": prepared_messages,
                         "stream": False,
                     }
 
@@ -66,18 +77,33 @@ class OllamaServiceV2:
                     if tools:
                         chat_params["tools"] = tools
 
-                    # Add additional options
+                    # Add think parameter if provided
+                    if think is not None:
+                        chat_params["think"] = think
+
+                    # Add additional options with vision-specific adjustments
                     if options:
+                        chat_params["options"] = options
+
+                    # For vision models with images, adjust options for better handling
+                    if has_images:
+                        if "options" not in chat_params:
+                            chat_params["options"] = {}
+                        # Add vision-specific options
+                        chat_params["options"].setdefault(
+                            "num_predict", 512
+                        )  # Limit tokens for vision
+                        chat_params["options"].setdefault(
+                            "temperature", 0.7
+                        )  # Moderate creativity
                         chat_params["options"] = options
 
                     chat_response = await run_in_threadpool(
                         self.client.chat, **chat_params
                     )
 
-                    # Transform to OpenAI-compatible format
-                    return self._transform_ollama_response_to_openai(
-                        chat_response, model
-                    )
+                    # Transform response format
+                    return self._transform_ollama_response(chat_response, model)
 
                 except ollama.ResponseError as e:
                     error_message = e.args[0] if e.args else "Unknown error"
@@ -103,6 +129,7 @@ class OllamaServiceV2:
         messages: List[Dict[str, Any]],
         model: str,
         tools: Optional[List[Dict[str, Any]]] = None,
+        think: Optional[bool] = None,
         **options,
     ):
         """
@@ -114,13 +141,17 @@ class OllamaServiceV2:
                 # Build parameters for ollama.chat call
                 chat_params = {
                     "model": model,
-                    "messages": messages,
+                    "messages": self._prepare_messages_for_ollama(messages),
                     "stream": True,
                 }
 
                 # Add tools if provided
                 if tools:
                     chat_params["tools"] = tools
+
+                # Add think parameter if provided
+                if think is not None:
+                    chat_params["think"] = think
 
                 # Add additional options
                 if options:
@@ -131,13 +162,20 @@ class OllamaServiceV2:
 
                 created_time = int(time.time())
                 created_id = f"chatcmpl-{created_time}"
+                accumulated_content = ""
 
                 while True:
                     try:
                         chunk = await run_in_threadpool(next, iterator)
-                        # Transform chunk to OpenAI-compatible streaming format
-                        stream_chunk = self._transform_ollama_chunk_to_openai(
-                            chunk, model, created_id, created_time
+
+                        # Update accumulated content
+                        chunk_content = chunk.get("message", {}).get("content", "")
+                        if chunk_content:
+                            accumulated_content += chunk_content
+
+                        # Transform chunk to streaming format
+                        stream_chunk = self._transform_ollama_chunk(
+                            chunk, model, created_id, created_time, accumulated_content
                         )
                         yield f"data: {json.dumps(stream_chunk)}\n\n"
                     except StopIteration:
@@ -178,11 +216,100 @@ class OllamaServiceV2:
                 )
                 raise HTTPException(status_code=500, detail="Internal server error")
 
-    def _transform_ollama_response_to_openai(
+    def _prepare_messages_for_ollama(
+        self, messages: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """
+        Prepare messages for ollama client by handling images field.
+
+        Converts message format from API schema to ollama-compatible format.
+        Validates base64 image data and limits number of images.
+        """
+        prepared_messages = []
+
+        for message in messages:
+            # Create a copy of the message
+            prepared_message = message.copy()
+
+            # If message has images, validate and add them to the ollama format
+            images = message.get("images")
+            if images:
+                try:
+                    validated_images = self._validate_images(images)
+                    prepared_message["images"] = validated_images
+                except ValueError as e:
+                    logger.warning(f"Invalid image data: {e}")
+                    raise HTTPException(status_code=400, detail=str(e))
+
+                # Clean up - remove None images field if it exists
+                if "images" in prepared_message and prepared_message["images"] is None:
+                    del prepared_message["images"]
+
+            prepared_messages.append(prepared_message)
+
+        return prepared_messages
+
+    def _validate_images(self, images: List[str]) -> List[str]:
+        """
+        Validate base64 image data and limit number of images.
+
+        Args:
+            images: List of base64 encoded image strings
+
+        Returns:
+            List of validated base64 image strings
+
+        Raises:
+            ValueError: If image data is invalid or too many images
+        """
+        if not images:
+            return []
+
+        # Limit number of images to prevent resource exhaustion
+        max_images = 5
+        if len(images) > max_images:
+            raise ValueError(f"Too many images. Maximum {max_images} images allowed.")
+
+        validated_images = []
+        for i, image_data in enumerate(images):
+            if not isinstance(image_data, str):
+                raise ValueError(f"Image {i + 1}: Image data must be a string")
+
+            if not image_data.strip():
+                raise ValueError(f"Image {i + 1}: Image data cannot be empty")
+
+            # Validate base64 format
+            try:
+                # Try to decode the base64 data
+                decoded_data = base64.b64decode(image_data, validate=True)
+
+                # Check if it's a reasonable size (not too small, not too large)
+                if len(decoded_data) < 100:  # Too small to be a valid image
+                    raise ValueError(
+                        f"Image {i + 1}: Image data appears to be too small"
+                    )
+
+                if len(decoded_data) > 10 * 1024 * 1024:  # 10MB limit
+                    raise ValueError(f"Image {i + 1}: Image data too large (max 10MB)")
+
+                validated_images.append(image_data)
+
+            except Exception as e:
+                raise ValueError(f"Image {i + 1}: Invalid base64 image data - {str(e)}")
+
+        return validated_images
+
+    def _transform_ollama_response(
         self, ollama_response: Dict[str, Any], model: str
     ) -> Dict[str, Any]:
-        """Transform Ollama response to OpenAI-compatible format."""
+        """Transform Ollama response to chat completion format."""
         message = ollama_response.get("message", {})
+        raw_content = message.get("content", "")
+
+        # Parse thinking vs content
+        from src.utils.thinking_parser import parse_thinking_response
+
+        parsed = parse_thinking_response(raw_content)
 
         # Handle tool calls if present
         tool_calls = message.get("tool_calls")
@@ -197,7 +324,9 @@ class OllamaServiceV2:
                     "index": 0,
                     "message": {
                         "role": message.get("role", "assistant"),
-                        "content": message.get("content"),
+                        "content": parsed["content"],
+                        "think": parsed["thinking"],
+                        "response": raw_content,
                         **({"tool_calls": tool_calls} if tool_calls else {}),
                     },
                     "finish_reason": "stop",
@@ -211,34 +340,43 @@ class OllamaServiceV2:
             },
         }
 
-    def _transform_ollama_chunk_to_openai(
+    def _transform_ollama_chunk(
         self,
         ollama_chunk: Dict[str, Any],
         model: str,
         created_id: str,
         created_time: int,
+        accumulated_content: str = "",
     ) -> Dict[str, Any]:
         """
-        Transform Ollama streaming chunk to OpenAI-compatible format.
-
-        Properly handles tool_calls to enable thought/answer distinction:
-        - When tool_calls are present: thought mode (save_thought function)
-        - When content is present: answer mode (direct response)
+        Transform Ollama streaming chunk to streaming format with thinking separation.
         """
         message = ollama_chunk.get("message", {})
+        chunk_content = message.get("content", "")
 
-        # Build delta object with all possible fields
+        # Update accumulated content
+        if chunk_content:
+            accumulated_content += chunk_content
+
+        # Parse current accumulated content for thinking
+        from src.utils.thinking_parser import parse_thinking_response
+
+        parsed = parse_thinking_response(accumulated_content)
+
+        # Build delta object with thinking separation
         delta = {}
 
         # Add role if present
         if message.get("role"):
             delta["role"] = message.get("role")
 
-        # Add content if present - this indicates "answer" mode
-        if message.get("content"):
-            delta["content"] = message.get("content")
+        # Add separated content
+        if chunk_content:
+            delta["content"] = parsed["content"]
+            delta["think"] = parsed["thinking"]
+            delta["response"] = accumulated_content
 
-        # Add tool_calls if present - this indicates "thought" mode
+        # Add tool_calls if present
         if message.get("tool_calls"):
             delta["tool_calls"] = message.get("tool_calls")
 
@@ -262,15 +400,15 @@ class OllamaServiceV2:
         """
         return await run_in_threadpool(self.client.list)
 
+    @staticmethod
+    @lru_cache
+    def get_instance() -> "OllamaServiceV2":
+        """
+        Get singleton OllamaServiceV2 instance.
 
-@lru_cache
-def get_ollama_service_v2() -> OllamaServiceV2:
-    """
-    Dependency provider for the OllamaServiceV2.
-
-    This function returns a singleton instance of the OllamaServiceV2.
-    Using @lru_cache without arguments ensures that the same instance is returned
-    for every call, making it a singleton across the application's lifecycle.
-    """
-    settings = get_settings()
-    return OllamaServiceV2(settings)
+        This method returns a singleton instance of the OllamaServiceV2.
+        Using @lru_cache without arguments ensures that the same instance is returned
+        for every call, making it a singleton across the application's lifecycle.
+        """
+        settings = get_settings()
+        return OllamaServiceV2(settings)
