@@ -1,6 +1,6 @@
-import logging
 import os
-import time
+import tempfile
+from pathlib import Path
 from typing import AsyncGenerator, Generator, Optional
 from unittest.mock import AsyncMock, MagicMock
 
@@ -9,7 +9,6 @@ from httpx import ASGITransport, AsyncClient
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session, sessionmaker
-from testcontainers.postgres import PostgresContainer
 
 from alembic import command
 from alembic.config import Config
@@ -25,77 +24,36 @@ def db_setup(
     request: pytest.FixtureRequest, tmp_path_factory: pytest.TempPathFactory
 ) -> Generator[str, None, None]:
     """
-    Session-scoped fixture to manage the test database container.
+    Session-scoped fixture to manage the test SQLite database.
 
-    This fixture is automatically used by all tests in this directory and its
-    subdirectories. It handles xdist by having the master node create the DB
-    container and share its connection URL with worker nodes via a temporary file.
+    Creates a temporary SQLite database for testing and runs migrations.
     """
-    is_master = not hasattr(request.config, "workerinput")
+    # Set a dummy model for DB tests, which don't need a real one.
+    # This is required for Alembic's env.py to validate settings.
+    os.environ["BUILT_IN_OLLAMA_MODELS"] = "test-db-model"
+    # Enable API logging for DB middleware tests
+    os.environ["API_LOGGING_ENABLED"] = "true"
 
-    db_conn_file = None
-    if request.config.pluginmanager.is_registered("xdist"):
-        # In xdist, tmp_path_factory provides a shared directory for the session.
-        root_tmp_dir = tmp_path_factory.getbasetemp().parent
-        db_conn_file = root_tmp_dir / "db_url.txt"
+    # Create temporary SQLite database
+    temp_dir = tempfile.mkdtemp()
+    db_path = Path(temp_dir) / "test.db"
+    db_url_value = f"sqlite:///{db_path}"
 
-    container: Optional[PostgresContainer] = None
-    db_url_value: str
+    os.environ["DATABASE_URL"] = db_url_value
+    print(f"\n✅ SQLite test database created: {db_url_value}")
+    print("🔄 Running database migrations...")
 
-    if is_master:
-        # Set a dummy model for DB tests, which don't need a real one.
-        # This is required for Alembic's env.py to validate settings.
-        os.environ["BUILT_IN_OLLAMA_MODELS"] = "test-db-model"
-        # Enable API logging for DB middleware tests
-        os.environ["API_LOGGING_ENABLED"] = "true"
-
-        # Enable testcontainers logging to show container startup progress
-        logging.getLogger("testcontainers").setLevel(logging.INFO)
-        print("\n🚀 Starting PostgreSQL test container...")
-
-        container = PostgresContainer(
-            f"postgres:{os.environ.get('POSTGRES_VERSION', '16-alpine')}",
-            driver="psycopg",
-            username=os.environ.get("POSTGRES_USER", "user"),
-            password=os.environ.get("POSTGRES_PASSWORD", "password"),
-            dbname=os.environ.get("POSTGRES_DB_NAME", "olm-api-test-db"),
-        )
-        container.start()
-        db_url_value = container.get_connection_url()
-        os.environ["DATABASE_URL"] = db_url_value
-        print(f"✅ PostgreSQL container started: {db_url_value}")
-        print("🔄 Running database migrations...")
-
-        alembic_cfg = Config()
-        alembic_cfg.set_main_option("script_location", "alembic")
-        alembic_cfg.set_main_option("sqlalchemy.url", db_url_value)
-        command.upgrade(alembic_cfg, "head")
-        print("✅ Database migrations completed!")
-
-        if db_conn_file:
-            db_conn_file.write_text(db_url_value)
-    else:  # worker node
-        if not db_conn_file:
-            pytest.fail(
-                "xdist is running but the db_conn_file path could not be determined."
-            )
-
-        timeout = 20
-        start_time = time.time()
-        while not db_conn_file.exists():
-            if time.time() - start_time > timeout:
-                pytest.fail(
-                    f"Worker could not find db_url.txt after {timeout} seconds."
-                )
-            time.sleep(0.1)
-        db_url_value = db_conn_file.read_text()
+    alembic_cfg = Config()
+    alembic_cfg.set_main_option("script_location", "alembic")
+    alembic_cfg.set_main_option("sqlalchemy.url", db_url_value)
+    command.upgrade(alembic_cfg, "head")
+    print("✅ Database migrations completed!")
 
     yield db_url_value
 
-    if is_master and container:
-        container.stop()
-        if db_conn_file and db_conn_file.exists():
-            db_conn_file.unlink(missing_ok=True)
+    # Cleanup
+    if db_path.exists():
+        db_path.unlink()
 
 
 @pytest.fixture(scope="session")
@@ -115,7 +73,12 @@ def db_session(db_url: str, monkeypatch) -> Generator[Session, None, None]:
     engine: Optional[Engine] = None
     db: Optional[Session] = None
     try:
-        engine = create_engine(db_url)
+        engine = create_engine(
+            db_url,
+            connect_args=(
+                {"check_same_thread": False} if db_url.startswith("sqlite") else {}
+            ),
+        )
         TestingSessionLocal = sessionmaker(
             autocommit=False, autoflush=False, bind=engine
         )

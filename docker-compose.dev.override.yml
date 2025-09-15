@@ -1,10 +1,6 @@
 # Development override - includes built-in Ollama service
 # Environment variables are fixed for development (no .env override)
 services:
-  db:
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DEV_DB_NAME}" ]
-
   ollama:
     volumes:
       - ollama-data:/root/.ollama
@@ -17,8 +13,7 @@ services:
     env_file:
       - .env
     environment:
-      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DEV_DB_NAME}
-      - POSTGRES_DB_NAME=${POSTGRES_DEV_DB_NAME}
+      - DATABASE_URL=sqlite:///data/sqlite_dev.db
     volumes:
       - .:/app
       - /app/.venv

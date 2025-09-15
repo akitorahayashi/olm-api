@@ -50,8 +50,8 @@ RUN --mount=type=cache,target=/root/.cache \
 # ==============================================================================
 FROM python:3.12-slim AS development
 
-# Install PostgreSQL client and development tools
-RUN apt-get update && apt-get install -y postgresql-client curl && rm -rf /var/lib/apt/lists/*
+# Install development tools
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 
 # Create a non-root user for development
 RUN groupadd -r appgroup && useradd -r -g appgroup -d /home/appuser -m appuser
@@ -93,8 +93,8 @@ ENTRYPOINT ["/app/entrypoint.sh"]
 # ==============================================================================
 FROM python:3.12-slim AS production
 
-# Install PostgreSQL client for database operations
-RUN apt-get update && apt-get install -y postgresql-client && rm -rf /var/lib/apt/lists/*
+# Install minimal system dependencies
+RUN apt-get update && rm -rf /var/lib/apt/lists/*
 
 
 

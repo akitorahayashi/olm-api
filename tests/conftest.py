@@ -131,7 +131,7 @@ async def unit_test_client(monkeypatch) -> AsyncGenerator[AsyncClient, None]:
         An `AsyncClient` configured for database-free testing.
     """
     # 1. Set dummy environment variables to satisfy Pydantic settings
-    monkeypatch.setenv("DATABASE_URL", "postgresql+psycopg://test:test@localhost/test")
+    monkeypatch.setenv("DATABASE_URL", "sqlite:///test.db")
     monkeypatch.setenv("BUILT_IN_OLLAMA_MODELS", "test-built-in-model")
 
     # 2. Disable the DB logging middleware to prevent DB writes

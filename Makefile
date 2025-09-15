@@ -67,8 +67,7 @@ setup: ## Initialize project: install dependencies, create .env file and pull re
 	@echo "   📝 Change OLLAMA_HOST to switch between container/host Ollama"
 	@echo "   📝 Adjust other settings as needed"
 	@echo ""
-	@echo "Pulling PostgreSQL image for tests..."
-	$(DOCKER_CMD) pull postgres:16-alpine
+	@echo "✅ Setup completed - using SQLite for database"
 
 # ==============================================================================
 # Development Environment Commands

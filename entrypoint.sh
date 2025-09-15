@@ -4,30 +4,21 @@
 # or if an unset variable is used ('u').
 set -eu
 
-# --- Wait for DB and run migrations ---
+# --- Run migrations ---
 # This section is skipped if the command is not the default uvicorn server
 # (e.g., if a user runs 'shell' or another command).
 if [ "$#" -eq 0 ] || [ "$1" = "uvicorn" ]; then
     count=0
-    echo "Waiting for database to be ready..."
-    
-    # Create database if it doesn't exist
-    echo "Checking if database exists and creating if necessary..."
-    while ! PGPASSWORD="${POSTGRES_PASSWORD}" psql -h db -U "${POSTGRES_USER}" -d postgres -c "SELECT 1 FROM pg_database WHERE datname='${POSTGRES_DB_NAME}'" | grep -q 1; do
-        echo "Creating database ${POSTGRES_DB_NAME}..."
-        PGPASSWORD="${POSTGRES_PASSWORD}" psql -h db -U "${POSTGRES_USER}" -d postgres -c "CREATE DATABASE \"${POSTGRES_DB_NAME}\";" || true
-        sleep 1
-    done
-    echo "Database exists."
-    
+    echo "Running database migrations..."
+
     while ! alembic upgrade head; do
         count=$((count + 1))
-        if [ ${count} -ge 20 ]; then
-            echo "Failed to connect to database after 20 attempts. Exiting."
+        if [ ${count} -ge 10 ]; then
+            echo "Failed to run migrations after 10 attempts. Exiting."
             exit 1
         fi
-        echo "Migration failed, retrying in 2 seconds... (${count}/20)"
-        sleep 2
+        echo "Migration failed, retrying in 1 second... (${count}/10)"
+        sleep 1
     done
     echo "Database migrations completed successfully."
 fi

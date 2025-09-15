@@ -1,17 +1,4 @@
 services:
-  db:
-    image: postgres:16-alpine
-    env_file:
-      - .env
-    volumes:
-      - postgres-db:/var/lib/postgresql/data
-    healthcheck:
-      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_HOST_DB_NAME}" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
   ollama:
     image: ollama:latest
     build:
@@ -48,15 +35,12 @@ services:
     ports:
       - "${HOST_BIND_IP}:${HOST_PORT}:8000"
     depends_on:
-      db:
-        condition: service_healthy
       ollama:
         condition: service_healthy
     env_file:
       - .env
     environment:
-      - POSTGRES_DB_NAME=${POSTGRES_HOST_DB_NAME}
-      - DATABASE_URL=postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_HOST_DB_NAME}
+      - DATABASE_URL=sqlite:///data/sqlite.db
     healthcheck:
       test: [ "CMD", "python", "-c", "import sys, urllib.request; sys.exit(0) if urllib.request.urlopen('http://localhost:8000/health').getcode() == 200 else sys.exit(1)" ]
       interval: 30s
@@ -66,10 +50,6 @@ services:
     restart: unless-stopped
 
 volumes:
-  postgres-db:
-    driver: local
-    name: ${PROJECT_NAME}-postgres-db-prod
-    external: false
   ollama-data:
     driver: local
     name: ${PROJECT_NAME}-ollama-data
