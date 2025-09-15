@@ -2,7 +2,7 @@
 
 This document specifies the v1 API, a simple endpoint for prompt-based text generation. It is maintained for backward compatibility.
 
-## Endpoint: `POST /api/v1/generate`
+## Endpoint: `POST /api/v1/chat`
 
 ### Request
 

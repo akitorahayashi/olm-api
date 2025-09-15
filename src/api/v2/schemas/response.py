@@ -10,6 +10,8 @@ class ChatResponseMessage(BaseModel):
     role: MessageRole
     content: Optional[str] = None
     tool_calls: Optional[List[ToolCall]] = None
+    think: Optional[str] = None
+    response: Optional[str] = None
 
 
 class ChatResponseChoice(BaseModel):
@@ -31,6 +33,10 @@ class ChatStreamDelta(BaseModel):
     role: Optional[MessageRole] = None
     content: Optional[str] = None
     tool_calls: Optional[List[ToolCall]] = None
+
+    # 以下の2行を追加
+    think: Optional[str] = None
+    response: Optional[str] = None
 
 
 class ChatStreamChoice(BaseModel):

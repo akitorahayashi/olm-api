@@ -36,7 +36,14 @@ class TestOlmLocalClientV1:
         }
 
         response = await client.generate("test prompt", "test-model", stream=False)
-        assert response == "Test response"
+
+        assert isinstance(response, dict)
+        assert "think" in response
+        assert "content" in response
+        assert "response" in response
+        assert response["content"] == "Test response"
+        assert response["response"] == "Test response"
+
         mock_ollama_client_instance.chat.assert_called_once_with(
             model="test-model",
             messages=[{"role": "user", "content": "test prompt"}],
@@ -58,7 +65,19 @@ class TestOlmLocalClientV1:
 
         result = await client.generate("test prompt", "test-model", stream=True)
         chunks = [chunk async for chunk in result]
-        assert "".join(chunks) == "Hello World"
+
+        assert len(chunks) == 3
+        assert all(isinstance(chunk, dict) for chunk in chunks)
+        assert all(
+            "think" in chunk and "content" in chunk and "response" in chunk
+            for chunk in chunks
+        )
+
+        # Check cumulative response accumulation
+        assert chunks[0]["response"] == "Hello"
+        assert chunks[1]["response"] == "Hello "
+        assert chunks[2]["response"] == "Hello World"
+
         mock_ollama_client_instance.chat.assert_called_once_with(
             model="test-model",
             messages=[{"role": "user", "content": "test prompt"}],
@@ -80,4 +99,8 @@ class TestOlmLocalClientV1:
 
         result = await client.generate("prompt", "model", stream=True)
         chunks = [chunk async for chunk in result]
-        assert chunks == ["First", "Last"]
+
+        # Only 2 chunks should be yielded (empty content chunks are skipped)
+        assert len(chunks) == 2
+        assert chunks[0]["response"] == "First"
+        assert chunks[1]["response"] == "FirstLast"

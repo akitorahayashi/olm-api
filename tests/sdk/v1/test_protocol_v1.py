@@ -22,7 +22,7 @@ class TestOlmClientV1Protocol:
 
         # Check return type
         assert "return" in hints
-        # The return type should be Union[str, AsyncGenerator[str, None]]
+        # The return type should be Union[Dict[str, Any], AsyncGenerator[Dict[str, Any], None]]
 
     def test_real_client_implements_protocol(self):
         """Test that OlmApiClientV1 implements the protocol"""
@@ -40,16 +40,20 @@ class TestOlmClientV1Protocol:
         # Create a mock that follows the protocol
         class ProtocolCompliantMock:
             async def generate(
-                self, prompt: str, model_name: str, stream: bool = False
+                self, prompt: str, model_name: str, stream: bool = False, think=None
             ):
                 if stream:
                     return self._async_gen()
                 else:
-                    return "batch response"
+                    return {
+                        "think": "",
+                        "content": "batch response",
+                        "response": "batch response",
+                    }
 
             async def _async_gen(self):
-                yield "chunk1"
-                yield "chunk2"
+                yield {"think": "", "content": "chunk1", "response": "chunk1"}
+                yield {"think": "", "content": "chunk2", "response": "chunk1chunk2"}
 
         mock = ProtocolCompliantMock()
         assert isinstance(mock, OlmClientV1Protocol)
@@ -59,15 +63,19 @@ class TestOlmClientV1Protocol:
 
         class ProtocolCompliantMock:
             async def generate(
-                self, prompt: str, model_name: str, stream: bool = False
+                self, prompt: str, model_name: str, stream: bool = False, think=None
             ):
                 if stream:
                     return self._async_gen()
                 else:
-                    return "complete response"
+                    return {
+                        "think": "",
+                        "content": "complete response",
+                        "response": "complete response",
+                    }
 
             async def _async_gen(self):
-                yield "chunk"
+                yield {"think": "", "content": "chunk", "response": "chunk"}
 
         mock = ProtocolCompliantMock()
         assert isinstance(mock, OlmClientV1Protocol)
@@ -129,11 +137,15 @@ class TestProtocolUsage:
 
         class ExtendedClient:
             async def generate(
-                self, prompt: str, model_name: str, stream: bool = False
+                self, prompt: str, model_name: str, stream: bool = False, think=None
             ):
                 if stream:
                     return AsyncMock()
-                return "batch response"
+                return {
+                    "think": "",
+                    "content": "batch response",
+                    "response": "batch response",
+                }
 
             def additional_method(self):
                 return "extra functionality"
@@ -178,4 +190,7 @@ class TestProtocolUsage:
 
         # Test batch mode
         batch_result = await mock_client.generate("test", "test-model", stream=False)
-        assert isinstance(batch_result, str)  # Should be string
+        assert isinstance(batch_result, dict)  # Should be dict
+        assert "think" in batch_result
+        assert "content" in batch_result
+        assert "response" in batch_result

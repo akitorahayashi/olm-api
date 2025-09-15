@@ -28,8 +28,9 @@ async def generate_text():
         model_name="llama3.2",
         think=True # Optional: to get the model's reasoning
     )
-    print("Content:", result.content)
-    print("Thinking:", result.think) # Contains reasoning if think=True
+    print("Content:", result["content"])
+    print("Thinking:", result["think"]) # Contains reasoning if think=True
+    print("Full response:", result["response"]) # Raw response from model
 
 asyncio.run(generate_text())
 ```
@@ -43,9 +44,11 @@ async def stream_text():
     async for chunk in await client.generate(
         prompt="Tell me a story", 
         model_name="llama3.2", 
-        stream=True
+        stream=True,
+        think=True
     ):
-        print(chunk.content, end="", flush=True)
+        print(chunk["content"], end="", flush=True)
+        # chunk is a dict with 'content', 'think', and 'response' keys
 
 asyncio.run(stream_text())
 ```
@@ -59,5 +62,10 @@ asyncio.run(stream_text())
 
 #### `async def generate(prompt: str, model_name: str, stream: bool = False, think: Optional[bool] = None)`
 - **Returns**: 
-    - If `stream=False`: A `GenerateResponse` object with `content`, `think`, and `response` attributes.
-    - If `stream=True`: An `AsyncGenerator` that yields `GenerateResponse` chunks.
+    - If `stream=False`: A `Dict[str, Any]` with `content`, `think`, and `response` keys.
+    - If `stream=True`: An `AsyncGenerator` that yields `Dict[str, Any]` chunks with the same structure.
+
+**Response Structure:**
+- `content`: Clean text without thinking tags
+- `think`: The model's reasoning process (if think=True)
+- `response`: Raw response from the model including thinking tags

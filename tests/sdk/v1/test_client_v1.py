@@ -38,8 +38,13 @@ class TestOlmApiClientV1:
         """Test generate method with streaming"""
         client = OlmApiClientV1(api_url="http://localhost:11434")
 
+        mock_chunks = [
+            {"think": "thinking1", "content": "Hello", "response": "Hello"},
+            {"think": "thinking2", "content": " world", "response": "Hello world"},
+        ]
+
         with patch.object(client, "_stream_response") as mock_stream:
-            mock_stream.return_value = async_generator_mock(["Hello", " world"])
+            mock_stream.return_value = async_generator_mock(mock_chunks)
 
             result = await client.generate("test prompt", "test-model", stream=True)
 
@@ -51,21 +56,30 @@ class TestOlmApiClientV1:
             async for chunk in result:
                 chunks.append(chunk)
 
-            assert chunks == ["Hello", " world"]
-            mock_stream.assert_called_once_with("test prompt", "test-model")
+            assert chunks == mock_chunks
+            mock_stream.assert_called_once_with("test prompt", "test-model", None)
 
     @pytest.mark.asyncio
     async def test_generate_non_streaming(self):
         """Test generate method without streaming"""
         client = OlmApiClientV1(api_url="http://localhost:11434")
 
+        mock_response = {
+            "think": "some thinking",
+            "content": "Complete response",
+            "response": "Complete response",
+        }
+
         with patch.object(client, "_non_stream_response") as mock_non_stream:
-            mock_non_stream.return_value = "Complete response"
+            mock_non_stream.return_value = mock_response
 
             result = await client.generate("test prompt", "test-model", stream=False)
 
-            assert result == "Complete response"
-            mock_non_stream.assert_called_once_with("test prompt", "test-model")
+            assert result == mock_response
+            assert "think" in result
+            assert "content" in result
+            assert "response" in result
+            mock_non_stream.assert_called_once_with("test prompt", "test-model", None)
 
 
 async def async_generator_mock(items):
@@ -83,9 +97,9 @@ class TestIntegrationWithMock:
         client = OlmApiClientV1(api_url="http://localhost:11434")
 
         mock_response_data = [
-            'data: {"response": "Hello"}\n',
-            'data: {"response": " world"}\n',
-            'data: {"response": "!"}\n',
+            'data: {"think": "thinking1", "content": "Hello", "response": "Hello"}\n',
+            'data: {"think": "thinking2", "content": " world", "response": "Hello world"}\n',
+            'data: {"think": "thinking3", "content": "!", "response": "Hello world!"}\n',
         ]
 
         # Create mock response object
@@ -115,7 +129,12 @@ class TestIntegrationWithMock:
             async for chunk in result:
                 chunks.append(chunk)
 
-            assert chunks == ["Hello", " world", "!"]
+            assert len(chunks) == 3
+            assert chunks[0]["content"] == "Hello"
+            assert chunks[1]["content"] == " world"
+            assert chunks[2]["content"] == "!"
+            assert all("think" in chunk for chunk in chunks)
+            assert all("response" in chunk for chunk in chunks)
 
     @pytest.mark.asyncio
     async def test_non_stream_response_success(self):
@@ -124,7 +143,11 @@ class TestIntegrationWithMock:
 
         # Create mock response object
         mock_response = MagicMock()
-        mock_response.json.return_value = {"response": "Complete response text"}
+        mock_response.json.return_value = {
+            "think": "some thinking process",
+            "content": "Complete response text",
+            "response": "Complete response text",
+        }
         mock_response.raise_for_status = MagicMock()
 
         # Create mock client
@@ -139,7 +162,11 @@ class TestIntegrationWithMock:
         with patch("httpx.AsyncClient", return_value=mock_async_client):
             result = await client._non_stream_response("test prompt", "test-model")
 
-            assert result == "Complete response text"
+            assert isinstance(result, dict)
+            assert "think" in result
+            assert "content" in result
+            assert "response" in result
+            assert result["content"] == "Complete response text"
             mock_client.post.assert_called_once()
 
     @pytest.mark.asyncio
