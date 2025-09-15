@@ -13,7 +13,7 @@ from testcontainers.postgres import PostgresContainer
 
 from alembic import command
 from alembic.config import Config
-from src.api.v1.services.ollama_service import get_ollama_service
+from src.api.v1.ollama_service_v1 import OllamaServiceV1
 from src.db.database import create_db_session
 from src.logs.models import Log
 from src.main import app
@@ -148,9 +148,9 @@ def mock_ollama_service() -> MagicMock:
     mock_service.pull_model = AsyncMock()
     mock_service.delete_model = AsyncMock()
 
-    app.dependency_overrides[get_ollama_service] = lambda: mock_service
+    app.dependency_overrides[OllamaServiceV1.get_instance] = lambda: mock_service
     yield mock_service
-    app.dependency_overrides.pop(get_ollama_service, None)
+    app.dependency_overrides.pop(OllamaServiceV1.get_instance, None)
 
 
 @pytest.fixture

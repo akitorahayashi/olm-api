@@ -14,7 +14,7 @@ from src.config.settings import Settings, get_settings
 logger = logging.getLogger(__name__)
 
 
-class OllamaService:
+class OllamaServiceV1:
     """Simple Ollama service for v1 API - direct prompt to response."""
 
     def __init__(self, settings: Settings):
@@ -83,9 +83,9 @@ class OllamaService:
                 except StopIteration:
                     break
 
-
-@lru_cache
-def get_ollama_service() -> OllamaService:
-    """Get singleton OllamaService instance."""
-    settings = get_settings()
-    return OllamaService(settings)
+    @staticmethod
+    @lru_cache
+    def get_instance() -> "OllamaServiceV1":
+        """Get singleton OllamaServiceV1 instance."""
+        settings = get_settings()
+        return OllamaServiceV1(settings)

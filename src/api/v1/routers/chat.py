@@ -3,11 +3,8 @@ from typing import Union
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
+from src.api.v1.ollama_service_v1 import OllamaServiceV1
 from src.api.v1.schemas.generate import GenerateRequest, GenerateResponse
-from src.api.v1.services.ollama_service import (
-    OllamaService,
-    get_ollama_service,
-)
 
 router = APIRouter(
     prefix="/api/v1",
@@ -18,7 +15,7 @@ router = APIRouter(
 @router.post("/chat", response_model=GenerateResponse)
 async def generate(
     request: GenerateRequest,
-    ollama_service: OllamaService = Depends(get_ollama_service),
+    ollama_service: OllamaServiceV1 = Depends(OllamaServiceV1.get_instance),
 ) -> Union[GenerateResponse, StreamingResponse]:
     """
     Endpoint to generate text based on a prompt using the specified model.

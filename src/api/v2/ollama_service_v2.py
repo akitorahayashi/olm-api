@@ -262,15 +262,15 @@ class OllamaServiceV2:
         """
         return await run_in_threadpool(self.client.list)
 
+    @staticmethod
+    @lru_cache
+    def get_instance() -> "OllamaServiceV2":
+        """
+        Get singleton OllamaServiceV2 instance.
 
-@lru_cache
-def get_ollama_service_v2() -> OllamaServiceV2:
-    """
-    Dependency provider for the OllamaServiceV2.
-
-    This function returns a singleton instance of the OllamaServiceV2.
-    Using @lru_cache without arguments ensures that the same instance is returned
-    for every call, making it a singleton across the application's lifecycle.
-    """
-    settings = get_settings()
-    return OllamaServiceV2(settings)
+        This method returns a singleton instance of the OllamaServiceV2.
+        Using @lru_cache without arguments ensures that the same instance is returned
+        for every call, making it a singleton across the application's lifecycle.
+        """
+        settings = get_settings()
+        return OllamaServiceV2(settings)
