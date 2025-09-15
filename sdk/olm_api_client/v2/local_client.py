@@ -1,8 +1,7 @@
 from typing import Any, AsyncGenerator, Dict, List, Optional, Union
 
 import ollama
-
-from ..utils.thinking_parser import parse_thinking_response
+from src.utils.thinking_parser import parse_thinking_response
 
 
 class OlmLocalClientV2:
