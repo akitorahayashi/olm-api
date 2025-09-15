@@ -8,7 +8,7 @@ from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 import ollama
-from src.api.v1.schemas.generate import GenerateResponse
+from src.api.v1.schemas import GenerateResponse
 from src.config.settings import Settings, get_settings
 
 logger = logging.getLogger(__name__)

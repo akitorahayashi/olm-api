@@ -156,7 +156,7 @@ data: [DONE]
 
 ## Implementation Files
 
-- **Router**: `routers/chat.py` - Endpoint definitions
+- **Router**: `router.py` - Endpoint definitions
 - **Schemas**: `schemas/` directory - Pydantic models organized by domain
   - `message.py`: Message-related schemas
   - `tool.py`: Tool-related schemas

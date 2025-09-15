@@ -6,8 +6,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 import ollama
-from src.api.v1.routers import chat as v1_chat
-from src.api.v2.routers import chat as v2_chat
+from src.api.v1 import router as v1_router
+from src.api.v2 import router as v2_router
 from src.logs import router as logs_router
 from src.middlewares.db_logging_middleware import LoggingMiddleware
 
@@ -40,13 +40,13 @@ app.add_middleware(LoggingMiddleware)
 
 
 # Include the routers from the v1 API
-app.include_router(v1_chat.router)
+app.include_router(v1_router.router)
 
 # Include the logs router
 app.include_router(logs_router.router)
 
 # Include the routers from the v2 API
-app.include_router(v2_chat.router)
+app.include_router(v2_router.router)
 
 
 # ==============================================================================
