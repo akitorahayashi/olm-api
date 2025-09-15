@@ -117,9 +117,7 @@ def e2e_setup() -> Generator[None, None, None]:
                 "olm-api-test",
                 "logs",
             ]
-            log_result = subprocess.run(
-                logs_command, capture_output=True, text=True
-            )
+            log_result = subprocess.run(logs_command, capture_output=True, text=True)
             raise RuntimeError(
                 f"Application failed to become healthy within timeout.\nLogs:\n{log_result.stdout}\n{log_result.stderr}"
             )
