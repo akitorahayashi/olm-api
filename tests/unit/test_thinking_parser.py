@@ -1,7 +1,5 @@
 """Tests for thinking parser utilities."""
 
-import pytest
-
 from src.utils.thinking_parser import (
     ThinkingParser,
     create_enhanced_response,
@@ -95,26 +93,6 @@ class TestThinkingParser:
         assert results[1]["content"] == "thinking here"
         assert results[2]["type"] == "content"
         assert results[2]["content"] == " final content"
-
-    @pytest.mark.skip(reason="Streaming parser currently not used in implementation")
-    def test_streaming_partial_tags(self):
-        """Test streaming with tags split across chunks."""
-        parser = ThinkingParser()
-
-        chunks = ["<thi", "nk>", "content", "</", "think>", "after"]
-        results = []
-
-        for chunk in chunks:
-            results.extend(list(parser.parse_streaming_chunk(chunk)))
-
-        # Should handle partial tags correctly
-        thinking_results = [r for r in results if r["type"] == "thinking"]
-        content_results = [r for r in results if r["type"] == "content"]
-
-        assert len(thinking_results) == 1
-        assert thinking_results[0]["content"] == "content"
-        assert len(content_results) == 1
-        assert content_results[0]["content"] == "after"
 
 
 class TestUtilityFunctions:

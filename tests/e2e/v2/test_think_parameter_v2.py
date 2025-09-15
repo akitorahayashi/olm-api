@@ -41,9 +41,8 @@ class TestThinkParameter:
         )
         assert response.status_code == 200
 
-        data = response.json()
+        response.json()
         # Response may contain thinking tags
-        content = data["choices"][0]["message"]["content"]
         # We just verify the request was processed successfully
 
     async def test_think_false_with_non_thinking_model(self, http_client, api_config):
