@@ -28,12 +28,16 @@ class TestVision:
         """Get non-vision model name from environment."""
         import os
 
-        models = os.getenv("BUILT_IN_OLLAMA_MODELS", "").split(",")
-        # Look for qwen3 (non-vision) or default to first model
+        # BUILT_IN_OLLAMA_MODELS 未設定だと [""] となり、空文字モデルを返します。
+        # デフォルトと空要素除去を入れてください。
+        models = os.getenv("BUILT_IN_OLLAMA_MODELS", "qwen3:0.6b").split(",")
+        # 正規化（空要素除去・trim）
+        models = [m.strip() for m in models if m.strip()]
+        # Look for qwen3 (non-vision) or fallback
         for model in models:
-            if "qwen3" in model.strip():
-                return model.strip()
-        return models[0]
+            if "qwen3" in model:
+                return model
+        return models[0] if models else "qwen3:0.6b"
 
     @pytest.mark.skip(reason="Vision model 'gemma3:4b' is not a built-in model.")
     async def test_vision_model_with_image_success(

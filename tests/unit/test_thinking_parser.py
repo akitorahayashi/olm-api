@@ -94,6 +94,48 @@ class TestThinkingParser:
         assert results[2]["type"] == "content"
         assert results[2]["content"] == " final content"
 
+    def test_streaming_partial_tags(self):
+        """Test streaming with partial tags split across chunks."""
+        parser = ThinkingParser()
+
+        # Simulate partial tags
+        chunks = [
+            "Some content",
+            "<thi",
+            "nk>Thinking starts",
+            " and continues</th",
+            "ink>",
+            "Final content",
+        ]
+
+        results = []
+        for chunk in chunks:
+            results.extend(list(parser.parse_streaming_chunk(chunk)))
+
+        # Combine adjacent results of the same type for assertion
+        combined_results = []
+        if results:
+            # Filter out empty content
+            results = [r for r in results if r["content"]]
+            if results:
+                combined_results.append(results[0])
+                for i in range(1, len(results)):
+                    if results[i]["type"] == combined_results[-1]["type"]:
+                        combined_results[-1]["content"] += results[i]["content"]
+                    else:
+                        combined_results.append(results[i])
+
+        assert len(combined_results) == 3
+
+        assert combined_results[0]["type"] == "content"
+        assert combined_results[0]["content"] == "Some content"
+
+        assert combined_results[1]["type"] == "thinking"
+        assert combined_results[1]["content"] == "Thinking starts and continues"
+
+        assert combined_results[2]["type"] == "content"
+        assert combined_results[2]["content"] == "Final content"
+
 
 class TestUtilityFunctions:
     """Test utility functions."""

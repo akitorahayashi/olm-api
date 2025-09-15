@@ -2,7 +2,7 @@
 FROM ollama/ollama
 
 # Argument to specify the models to be pulled during the build (comma-separated)
-ARG BUILT_IN_OLLAMA_MODELS=""
+ARG BUILT_IN_OLLAMA_MODELS="qwen3:0.6b"
 
 # Set the host to 0.0.0.0 to allow connections from other containers
 ENV OLLAMA_HOST=0.0.0.0

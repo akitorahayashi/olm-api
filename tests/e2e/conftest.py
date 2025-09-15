@@ -106,7 +106,23 @@ def e2e_setup() -> Generator[None, None, None]:
 
         print(f"Waiting for application to be healthy at {health_url}...")
         if not wait_for_health_check(health_url):
-            raise RuntimeError("Application failed to become healthy within timeout")
+            # If health check fails, print logs before raising error
+            logs_command = docker_command + [
+                "compose",
+                "-f",
+                "docker-compose.yml",
+                "-f",
+                "docker-compose.test.override.yml",
+                "--project-name",
+                "olm-api-test",
+                "logs",
+            ]
+            log_result = subprocess.run(
+                logs_command, capture_output=True, text=True
+            )
+            raise RuntimeError(
+                f"Application failed to become healthy within timeout.\nLogs:\n{log_result.stdout}\n{log_result.stderr}"
+            )
 
         print("✅ E2E test environment is ready.")
         yield

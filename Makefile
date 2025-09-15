@@ -84,12 +84,6 @@ down: ## Stop and remove all development containers
 	@echo "Shutting down development services..."
 	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) down --remove-orphans
 
-.PHONY: rebuild
-rebuild: ## Rebuild the api service without cache and restart it
-	@echo "Rebuilding api service with --no-cache..."
-	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) build --no-cache api
-	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) up -d api
-
 .PHONY: up-prod
 up-prod: ## Start all production-like containers
 	@echo "Starting up production-like services..."
@@ -100,32 +94,12 @@ down-prod: ## Stop and remove all production-like containers
 	@echo "Shutting down production-like services..."
 	$(DOCKER_CMD) compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) down --remove-orphans
 
-.PHONY: logs
-logs: ## View the logs for the development API service
-	@echo "Following logs for the dev api service..."
-	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) logs -f api
-
-.PHONY: shell
-shell: ## Open a shell inside the running development API container
-	@echo "Opening shell in dev api container..."
-	@$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) exec api /bin/sh || \
-		(echo "Failed to open shell. Is the container running? Try 'make up'" && exit 1)
-
-.PHONY: migrate
-migrate: ## Run database migrations against the development database
-	@echo "Running database migrations for dev environment..."
-	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic upgrade head"
-
-.PHONY: migration
-migration: ## Generate a new database migration file. Usage: make migration m="Your migration message"
-	@if [ -z "$(m)" ]; then \
-		echo "  \033[31mError: Migration message is required.\033[0m"; \
-		echo "  Usage: make migration m=\"Your migration message\""; \
-		exit 1; \
-	fi
-	@echo "Generating new migration for dev environment with message: $(m)..."
-	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) exec api sh -c ". /app/.venv/bin/activate && alembic revision --autogenerate -m \"$(m)\""
-
+.PHONY: rebuild
+rebuild: ## Rebuild and restart development containers
+	@echo "Rebuilding and restarting development services..."
+	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) down --remove-orphans
+	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) build --no-cache
+	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) up -d
 
 # ==============================================================================
 # CODE QUALITY 

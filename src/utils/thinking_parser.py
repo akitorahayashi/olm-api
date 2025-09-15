@@ -79,55 +79,77 @@ class ThinkingParser:
     ) -> Generator[Dict[str, str], None, None]:
         """
         Parse a streaming chunk and yield content with types.
-
-        Simple approach: accumulate text and use regex parsing.
+        Handles tags that are split across chunks.
         """
         if not chunk:
             return
 
-        # Accumulate all text
         self.partial_tag_buffer += chunk
 
-        # Try to parse complete tags from accumulated text
-        current_text = self.partial_tag_buffer
+        while True:
+            if self.in_think_tag:
+                # We are inside a <think> block, looking for </think>
+                end_tag_pos = self.partial_tag_buffer.find("</think>")
+                if end_tag_pos != -1:
+                    # Found the end tag. Yield thinking content.
+                    thinking_content = self.partial_tag_buffer[:end_tag_pos]
+                    if thinking_content:
+                        yield {
+                            "type": ContentType.THINKING.value,
+                            "content": thinking_content,
+                        }
+                    # Move buffer past the tag and change state
+                    self.partial_tag_buffer = self.partial_tag_buffer[
+                        end_tag_pos + len("</think>") :
+                    ]
+                    self.in_think_tag = False
+                else:
+                    # End tag not found. The buffer might end with a partial tag.
+                    # Yield everything except the partial tag.
+                    send_up_to = len(self.partial_tag_buffer)
+                    for i in range(len(self.partial_tag_buffer)):
+                        if "</think>".startswith(self.partial_tag_buffer[i:]):
+                            send_up_to = i
+                            break
 
-        # Find all complete thinking blocks
-        import re
+                    content_to_yield = self.partial_tag_buffer[:send_up_to]
+                    if content_to_yield:
+                        yield {
+                            "type": ContentType.THINKING.value,
+                            "content": content_to_yield,
+                        }
+                    self.partial_tag_buffer = self.partial_tag_buffer[send_up_to:]
+                    break  # Wait for more chunks
+            else:
+                # We are outside a <think> block, looking for <think>
+                start_tag_pos = self.partial_tag_buffer.find("<think>")
+                if start_tag_pos != -1:
+                    # Found the start tag. Yield content before it.
+                    content = self.partial_tag_buffer[:start_tag_pos]
+                    if content:
+                        yield {"type": ContentType.CONTENT.value, "content": content}
+                    # Move buffer past the tag and change state
+                    self.partial_tag_buffer = self.partial_tag_buffer[
+                        start_tag_pos + len("<think>") :
+                    ]
+                    self.in_think_tag = True
+                else:
+                    # Start tag not found. The buffer might end with a partial tag.
+                    # Yield everything except the partial tag.
+                    send_up_to = len(self.partial_tag_buffer)
+                    for i in range(len(self.partial_tag_buffer)):
+                        if "<think>".startswith(self.partial_tag_buffer[i:]):
+                            send_up_to = i
+                            break
 
-        # Pattern to find complete thinking blocks
-        pattern = r"<think>(.*?)</think>"
-        matches = list(re.finditer(pattern, current_text, re.DOTALL))
-
-        last_end = 0
-
-        for match in matches:
-            start, end = match.span()
-            thinking_content = match.group(1)
-
-            # Yield content before thinking block
-            if start > last_end:
-                content_before = current_text[last_end:start]
-                if content_before.strip():
-                    yield {"type": ContentType.CONTENT.value, "content": content_before}
-
-            # Yield thinking content
-            if thinking_content.strip():
-                yield {"type": ContentType.THINKING.value, "content": thinking_content}
-
-            last_end = end
-
-        # Keep remaining text for next chunk
-        if matches:
-            self.partial_tag_buffer = current_text[last_end:]
-
-        # If no complete thinking blocks, check if we have content to yield
-        if not matches and not (
-            "<think>" in current_text and "</think>" not in current_text
-        ):
-            # No partial thinking tags, yield as content
-            if current_text.strip():
-                yield {"type": ContentType.CONTENT.value, "content": current_text}
-            self.partial_tag_buffer = ""
+                    content_to_yield = self.partial_tag_buffer[:send_up_to]
+                    if content_to_yield:
+                        yield {
+                            "type": ContentType.CONTENT.value,
+                            "content": content_to_yield,
+                        }
+                    self.partial_tag_buffer = self.partial_tag_buffer[send_up_to:]
+                    break  # Wait for more chunks
 
 
 def parse_thinking_response(text: str) -> Dict[str, str]:

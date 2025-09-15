@@ -94,7 +94,7 @@ class OlmApiClientV2:
                 ...     "content": "What do you see in this image?",
                 ...     "images": [image_data]
                 ... }]
-                >>> response = await client.generate(messages, "gemma3:270m")
+                >>> response = await client.generate(messages, "gemma3:4b")
         """
         payload = {
             "model": model_name,
