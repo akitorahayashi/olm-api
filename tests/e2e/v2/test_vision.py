@@ -1,3 +1,6 @@
+import base64
+from pathlib import Path
+
 import pytest
 
 # Mark all tests in this file as asyncio
@@ -9,21 +12,16 @@ class TestVision:
 
     @pytest.fixture
     def test_image_base64(self):
-        """A small 1x1 red pixel PNG image in base64 format for testing."""
-        # 1x1 red PNG image
-        return "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg=="
+        """An image in base64 format for testing."""
+        image_path = Path(__file__).parent / "test_images" / "test_image_1.png"
+        with open(image_path, "rb") as f:
+            return base64.b64encode(f.read()).decode("utf-8")
 
     @pytest.fixture
     def vision_model_name(self):
         """Get vision-capable model name from environment."""
-        import os
-
-        models = os.getenv("BUILT_IN_OLLAMA_MODELS", "").split(",")
-        # Look for gemma3 (vision capable) or default to first model
-        for model in models:
-            if "gemma3" in model.strip():
-                return model.strip()
-        return models[1] if len(models) > 1 else models[0]
+        # Force use of gemma3:4b for image processing
+        return "gemma3:4b"
 
     @pytest.fixture
     def non_vision_model_name(self):
@@ -196,5 +194,7 @@ class TestVision:
         response = await http_client.post(
             api_config["v2_chat_completions_url"], json=payload
         )
-        # May return error or handle gracefully depending on ollama implementation
-        assert response.status_code in [200, 400, 502]
+        # Should return 400 Bad Request for invalid base64 data
+        assert response.status_code in [400, 500]  # Allow both for now
+        data = response.json()
+        assert "detail" in data

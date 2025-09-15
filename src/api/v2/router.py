@@ -45,14 +45,21 @@ async def chat_completions(
         if request.stop is not None:
             options["stop"] = request.stop
 
+        # Pass think parameter if specified
+        think = request.think
+
         return await ollama_service.chat_completion(
             messages=messages,
             model=request.model,
             tools=tools,
             stream=request.stream,
+            think=think,
             **options,
         )
 
+    except HTTPException:
+        # Re-raise HTTPExceptions to preserve their status codes
+        raise
     except ValueError as e:
         raise HTTPException(status_code=502, detail=str(e))
     except Exception:

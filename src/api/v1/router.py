@@ -28,6 +28,7 @@ async def generate(
             prompt=request.prompt,
             model_name=request.model_name,
             stream=request.stream,
+            think=request.think,
         )
     except ValueError as e:
         raise HTTPException(status_code=502, detail=str(e))

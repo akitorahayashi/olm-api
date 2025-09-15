@@ -20,7 +20,7 @@ async def test_generate_with_model_name(
     prompt = "Test prompt"
     model_name = "test-model"
     mock_ollama_service.generate_response.return_value = GenerateResponse(
-        response="test response"
+        think="", content="test response", response="test response"
     )
 
     # Act
@@ -31,9 +31,13 @@ async def test_generate_with_model_name(
 
     # Assert
     assert response.status_code == status.HTTP_200_OK
-    assert response.json() == {"response": "test response"}
+    assert response.json() == {
+        "think": "",
+        "content": "test response",
+        "response": "test response",
+    }
     mock_ollama_service.generate_response.assert_called_once_with(
-        prompt=prompt, model_name=model_name, stream=False
+        prompt=prompt, model_name=model_name, stream=False, think=None
     )
 
 

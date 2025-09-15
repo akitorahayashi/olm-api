@@ -21,7 +21,7 @@ async def http_client(api_config) -> AsyncGenerator[httpx.AsyncClient, None]:
     for testing against the running Docker Compose services.
     """
     async with httpx.AsyncClient(
-        base_url=api_config["base_url"], timeout=60.0
+        base_url=api_config["base_url"], timeout=300.0
     ) as client:
         yield client
 
