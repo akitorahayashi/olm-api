@@ -1,9 +1,8 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
-from sdk.olm_api_client.v1.local_client import OlmLocalClientV1
-from sdk.olm_api_client.v1.protocol import OlmClientV1Protocol
+from olm_api_sdk.v1.local_client import OlmLocalClientV1
+from olm_api_sdk.v1.protocol import OlmClientV1Protocol
 
 
 @pytest.fixture
@@ -13,7 +12,7 @@ def mock_ollama_client_instance():
     This prevents the actual client from being created while allowing tests
     to configure the behavior of the instance's methods.
     """
-    with patch("sdk.olm_api_client.v1.local_client.ollama.AsyncClient") as mock_class:
+    with patch("olm_api_sdk.v1.local_client.ollama.AsyncClient") as mock_class:
         mock_instance = AsyncMock()
         mock_class.return_value = mock_instance
         yield mock_instance

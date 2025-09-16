@@ -5,8 +5,8 @@ from httpx import AsyncClient
 from sqlalchemy.orm import Session
 from starlette.responses import StreamingResponse
 
-from src.api.v1.ollama_service_v1 import GenerateResponse
-from src.logs.models import Log
+from olm_api.api.v1.ollama_service_v1 import GenerateResponse
+from olm_api.logs.models import Log
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio

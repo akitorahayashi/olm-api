@@ -1,11 +1,9 @@
 from typing import get_type_hints
 
 import pytest
-
-from sdk.olm_api_client.v2.client import OlmApiClientV2
-from sdk.olm_api_client.v2.local_client import OlmLocalClientV2
-from sdk.olm_api_client.v2.mock_client import MockOlmClientV2
-from sdk.olm_api_client.v2.protocol import OlmClientV2Protocol
+from olm_api_sdk.v2.client import OlmApiClientV2
+from olm_api_sdk.v2.local_client import OlmLocalClientV2
+from olm_api_sdk.v2.protocol import OlmClientV2Protocol
 
 
 class TestOlmClientV2Protocol:
@@ -21,23 +19,22 @@ class TestOlmClientV2Protocol:
         assert "return" in hints
         # Should specify Union return type for streaming/non-streaming
 
-    def test_all_clients_implement_protocol(self):
+    def test_all_clients_implement_protocol(self, fast_mock_client_v2):
         """Test that all v2 client implementations implement the protocol"""
         api_client = OlmApiClientV2(api_url="http://localhost:8000")
         local_client = OlmLocalClientV2()
-        mock_client = MockOlmClientV2()
 
         assert isinstance(api_client, OlmClientV2Protocol)
         assert isinstance(local_client, OlmClientV2Protocol)
-        assert isinstance(mock_client, OlmClientV2Protocol)
+        assert isinstance(fast_mock_client_v2, OlmClientV2Protocol)
 
     @pytest.mark.asyncio
-    async def test_protocol_method_signature_compatibility(self):
+    async def test_protocol_method_signature_compatibility(self, fast_mock_client_v2):
         """Test that all implementations accept the same parameters"""
         clients = [
             OlmApiClientV2(api_url="http://localhost:8000"),
             OlmLocalClientV2(),
-            MockOlmClientV2(token_delay=0),
+            fast_mock_client_v2,
         ]
 
         test_params = {
@@ -69,12 +66,11 @@ class TestOlmClientV2Protocol:
                 pass
 
     @pytest.mark.asyncio
-    async def test_protocol_return_type_streaming(self):
+    async def test_protocol_return_type_streaming(self, fast_mock_client_v2):
         """Test that streaming mode returns async generator for all clients"""
-        mock_client = MockOlmClientV2(token_delay=0)
         messages = [{"role": "user", "content": "test"}]
 
-        result = await mock_client.generate(messages, "test-model", stream=True)
+        result = await fast_mock_client_v2.generate(messages, "test-model", stream=True)
         assert hasattr(result, "__aiter__")  # Should be async generator
 
         # Verify it actually yields data
@@ -86,12 +82,13 @@ class TestOlmClientV2Protocol:
         assert len(chunks) >= 2
 
     @pytest.mark.asyncio
-    async def test_protocol_return_type_non_streaming(self):
+    async def test_protocol_return_type_non_streaming(self, fast_mock_client_v2):
         """Test that non-streaming mode returns dict for all clients"""
-        mock_client = MockOlmClientV2(token_delay=0)
         messages = [{"role": "user", "content": "test"}]
 
-        result = await mock_client.generate(messages, "test-model", stream=False)
+        result = await fast_mock_client_v2.generate(
+            messages, "test-model", stream=False
+        )
         assert isinstance(result, dict)
         assert "choices" in result
 
@@ -133,7 +130,7 @@ class TestOlmClientV2Protocol:
         assert hasattr(extended, "additional_method")
 
     @pytest.mark.asyncio
-    async def test_protocol_polymorphism(self):
+    async def test_protocol_polymorphism(self, fast_mock_client_v2):
         """Test polymorphic usage of different client implementations"""
 
         def process_client(client: OlmClientV2Protocol) -> str:
@@ -142,7 +139,7 @@ class TestOlmClientV2Protocol:
         clients = [
             OlmApiClientV2(api_url="http://localhost:8000"),
             OlmLocalClientV2(),
-            MockOlmClientV2(token_delay=0),
+            fast_mock_client_v2,
         ]
 
         for client in clients:
@@ -159,9 +156,8 @@ class TestProtocolCompliance:
     """Test protocol compliance across different scenarios"""
 
     @pytest.mark.asyncio
-    async def test_messages_parameter_compliance(self):
+    async def test_messages_parameter_compliance(self, fast_mock_client_v2):
         """Test that all clients handle messages parameter correctly"""
-        mock_client = MockOlmClientV2(token_delay=0)
 
         # Test various message formats
         test_cases = [
@@ -183,22 +179,23 @@ class TestProtocolCompliance:
         ]
 
         for messages in test_cases:
-            result = await mock_client.generate(messages, "test-model", stream=False)
+            result = await fast_mock_client_v2.generate(
+                messages, "test-model", stream=False
+            )
             assert isinstance(result, dict)
             assert "choices" in result
 
     @pytest.mark.asyncio
-    async def test_tools_parameter_compliance(self):
+    async def test_tools_parameter_compliance(self, fast_mock_client_v2):
         """Test that tools parameter is handled consistently"""
-        mock_client = MockOlmClientV2(token_delay=0)
         messages = [{"role": "user", "content": "Use tools"}]
 
         # Test with no tools
-        result1 = await mock_client.generate(messages, "test-model", tools=None)
+        result1 = await fast_mock_client_v2.generate(messages, "test-model", tools=None)
         assert isinstance(result1, dict)
 
         # Test with empty tools list
-        result2 = await mock_client.generate(messages, "test-model", tools=[])
+        result2 = await fast_mock_client_v2.generate(messages, "test-model", tools=[])
         assert isinstance(result2, dict)
 
         # Test with tool definition
@@ -215,17 +212,18 @@ class TestProtocolCompliance:
                 },
             }
         ]
-        result3 = await mock_client.generate(messages, "test-model", tools=tools)
+        result3 = await fast_mock_client_v2.generate(
+            messages, "test-model", tools=tools
+        )
         assert isinstance(result3, dict)
 
     @pytest.mark.asyncio
-    async def test_kwargs_parameter_handling(self):
+    async def test_kwargs_parameter_handling(self, fast_mock_client_v2):
         """Test that additional kwargs are accepted consistently"""
-        mock_client = MockOlmClientV2(token_delay=0)
         messages = [{"role": "user", "content": "test"}]
 
         # Test various generation parameters
-        result = await mock_client.generate(
+        result = await fast_mock_client_v2.generate(
             messages,
             "test-model",
             temperature=0.7,
@@ -240,9 +238,8 @@ class TestProtocolCompliance:
         assert "choices" in result
 
     @pytest.mark.asyncio
-    async def test_model_name_parameter(self):
+    async def test_model_name_parameter(self, fast_mock_client_v2):
         """Test that model_name parameter is handled correctly"""
-        mock_client = MockOlmClientV2(token_delay=0)
         messages = [{"role": "user", "content": "test"}]
 
         test_models = [
@@ -254,26 +251,29 @@ class TestProtocolCompliance:
         ]
 
         for model in test_models:
-            result = await mock_client.generate(messages, model, stream=False)
+            result = await fast_mock_client_v2.generate(messages, model, stream=False)
             assert isinstance(result, dict)
             assert result["model"] == model
 
     @pytest.mark.asyncio
-    async def test_stream_parameter_compliance(self):
+    async def test_stream_parameter_compliance(self, fast_mock_client_v2):
         """Test that stream parameter works consistently"""
-        mock_client = MockOlmClientV2(token_delay=0)
         messages = [{"role": "user", "content": "test"}]
 
         # Test stream=False
-        result_false = await mock_client.generate(messages, "test-model", stream=False)
+        result_false = await fast_mock_client_v2.generate(
+            messages, "test-model", stream=False
+        )
         assert isinstance(result_false, dict)
 
         # Test stream=True
-        result_true = await mock_client.generate(messages, "test-model", stream=True)
+        result_true = await fast_mock_client_v2.generate(
+            messages, "test-model", stream=True
+        )
         assert hasattr(result_true, "__aiter__")
 
         # Test default (should be False)
-        result_default = await mock_client.generate(messages, "test-model")
+        result_default = await fast_mock_client_v2.generate(messages, "test-model")
         assert isinstance(result_default, dict)
 
 
@@ -317,13 +317,13 @@ class TestProtocolErrorScenarios:
         assert isinstance(client, OlmClientV2Protocol)
 
     @pytest.mark.asyncio
-    async def test_protocol_with_mock_server_simulation(self):
+    async def test_protocol_with_mock_server_simulation(
+        self, custom_response_client_v2
+    ):
         """Test protocol compliance with simulated server responses"""
         # This tests that our mock client can simulate realistic scenarios
 
-        mock_client = MockOlmClientV2(
-            responses=["Simulated API response"], token_delay=0
-        )
+        mock_client = custom_response_client_v2(["Simulated API response"])
 
         # Simulate complex conversation
         conversation = [
@@ -341,16 +341,17 @@ class TestProtocolErrorScenarios:
         assert result["model"] == "gpt-3.5-turbo"
 
     @pytest.mark.asyncio
-    async def test_concurrent_protocol_usage(self):
+    async def test_concurrent_protocol_usage(self, fast_mock_client_v2):
         """Test protocol compliance under concurrent usage"""
         import asyncio
 
-        mock_client = MockOlmClientV2(token_delay=0)
         messages = [{"role": "user", "content": "Concurrent test"}]
 
         # Create multiple concurrent protocol-compliant calls
         async def make_call(i):
-            return await mock_client.generate(messages, f"model-{i}", stream=False)
+            return await fast_mock_client_v2.generate(
+                messages, f"model-{i}", stream=False
+            )
 
         # Execute multiple calls concurrently
         tasks = [make_call(i) for i in range(10)]

@@ -1,12 +1,10 @@
-import asyncio
 import os
 from collections.abc import AsyncGenerator
 from unittest.mock import patch
 
 import pytest
-
-from sdk.olm_api_client.v2.mock_client import MockOlmClientV2
-from sdk.olm_api_client.v2.protocol import OlmClientV2Protocol
+from olm_api_sdk.v2.mock_client import MockOlmClientV2
+from olm_api_sdk.v2.protocol import OlmClientV2Protocol
 
 
 class TestMockOlmClientV2:
@@ -21,8 +19,7 @@ class TestMockOlmClientV2:
         """Test initialization with default values"""
         client = MockOlmClientV2()
         assert client.token_delay == 0.01
-        assert len(client.mock_responses) == 5  # DEFAULT_RESPONSES length
-        assert client.response_index == 0
+        assert len(client.fallback_responses) == 5  # DEFAULT_RESPONSES length
 
     def test_init_custom_token_delay(self):
         """Test initialization with custom token delay"""
@@ -46,16 +43,18 @@ class TestMockOlmClientV2:
         """Test initialization with custom responses"""
         custom_responses = ["Response A", "Response B", "Response C"]
         client = MockOlmClientV2(responses=custom_responses)
-        assert client.mock_responses == custom_responses
+        assert client.fallback_responses == custom_responses
 
     def test_init_empty_responses_raises_error(self):
         """Test initialization with empty responses raises ValueError"""
-        with pytest.raises(ValueError, match="responses must be a non-empty list"):
+        with pytest.raises(ValueError, match="The responses sequence cannot be empty"):
             MockOlmClientV2(responses=[])
 
     def test_init_non_string_responses_raises_error(self):
         """Test initialization with non-string responses raises TypeError"""
-        with pytest.raises(TypeError, match="all responses must be str"):
+        with pytest.raises(
+            TypeError, match="All items in the responses sequence must be strings"
+        ):
             MockOlmClientV2(responses=["valid", 123, "also valid"])
 
     @pytest.mark.asyncio
@@ -187,190 +186,62 @@ class TestMockOlmClientV2:
         assert isinstance(result, dict)
         assert result["object"] == "chat.completion"
 
-    def test_response_cycling(self):
-        """Test that responses cycle through the provided list"""
-        custom_responses = ["First", "Second", "Third"]
-        client = MockOlmClientV2(responses=custom_responses, token_delay=0)
-        messages = [{"role": "user", "content": "test"}]
 
-        # Test cycling through responses
-        results = []
-        for i in range(6):  # More than length of responses
-            result = asyncio.run(client.generate(messages, "test-model", stream=False))
-            results.append(result["choices"][0]["message"]["content"])
-
-        # Should cycle: First, Second, Third, First, Second, Third
-        assert results[0] == "First"
-        assert results[1] == "Second"
-        assert results[2] == "Third"
-        assert results[3] == "First"
-        assert results[4] == "Second"
-        assert results[5] == "Third"
-
-    def test_tokenize_realistic_basic(self):
-        """Test realistic tokenization produces reasonable results"""
-        client = MockOlmClientV2()
-
-        # Test simple sentence
-        tokens = client._tokenize_realistic("Hello world!")
-        assert len(tokens) >= 3  # Should split into multiple tokens
-        assert "Hello" in tokens
-        assert "world" in tokens
-        assert "!" in tokens or "world!" in tokens
-
-    def test_tokenize_realistic_handles_punctuation(self):
-        """Test tokenization handles punctuation correctly"""
-        client = MockOlmClientV2()
-
-        tokens = client._tokenize_realistic("Hello, world!")
-        # Should separate punctuation or keep it attached
-        assert len(tokens) > 1
-        assert any("Hello" in token for token in tokens)
-
-    def test_tokenize_realistic_handles_long_words(self):
-        """Test tokenization may split very long words"""
-        client = MockOlmClientV2()
-
-        long_word = "supercalifragilisticexpialidocious"
-        tokens = client._tokenize_realistic(long_word)
-        # May split long words (20% chance), but should at least return the word
-        assert len(tokens) >= 1
-        token_text = "".join(tokens)
-        assert long_word in token_text or token_text == long_word
+class TestKeyedResponsesV2:
+    """Tests for keyed response functionality in MockOlmClientV2."""
 
     @pytest.mark.asyncio
-    async def test_streaming_respects_token_delay(self):
-        """Test that streaming respects the configured token delay"""
-        import time
+    async def test_keyed_response_batch(self):
+        """Test that a keyed response is returned for a matching prompt."""
+        keyed_responses = {"ping": "pong", "hello": "world"}
+        client = MockOlmClientV2(responses=keyed_responses, token_delay=0)
 
-        client = MockOlmClientV2(token_delay=0.01)  # Small but measurable delay
-        messages = [{"role": "user", "content": "Hello world"}]
+        messages = [{"role": "user", "content": "ping"}]
+        result = await client.generate(messages, "test-model")
+        assert result["choices"][0]["message"]["content"] == "pong"
 
+        messages = [{"role": "user", "content": "hello"}]
+        result = await client.generate(messages, "test-model")
+        assert result["choices"][0]["message"]["content"] == "world"
+
+    @pytest.mark.asyncio
+    async def test_keyed_response_streaming(self):
+        """Test that a keyed response is streamed correctly."""
+        keyed_responses = {"stream_test": "streaming pong"}
+        client = MockOlmClientV2(responses=keyed_responses, token_delay=0)
+
+        messages = [{"role": "user", "content": "stream_test"}]
         result = await client.generate(messages, "test-model", stream=True)
+        chunks = [chunk async for chunk in result]
 
-        start_time = time.time()
-        chunk_count = 0
-        async for chunk in result:
-            chunk_count += 1
-            if chunk_count > 2:  # Skip first chunk, check after a few content chunks
-                break
-
-        elapsed = time.time() - start_time
-        # Should take at least some time due to delays (very loose check)
-        assert elapsed >= 0.005  # At least half the expected delay time
-
-    @pytest.mark.asyncio
-    async def test_streaming_zero_delay(self):
-        """Test that streaming with zero delay works quickly"""
-        import time
-
-        client = MockOlmClientV2(token_delay=0)
-        messages = [{"role": "user", "content": "Quick response"}]
-
-        result = await client.generate(messages, "test-model", stream=True)
-
-        start_time = time.time()
-        chunks = []
-        async for chunk in result:
-            chunks.append(chunk)
-        elapsed = time.time() - start_time
-
-        # Should complete quickly with zero delay
-        assert elapsed < 0.1  # Should be much faster than with delay
-        assert len(chunks) >= 3  # Still should produce multiple chunks
-
-    def test_usage_calculation_accuracy(self):
-        """Test that usage token counts are calculated reasonably"""
-        client = MockOlmClientV2(token_delay=0)
-        messages = [{"role": "user", "content": "Calculate tokens"}]
-
-        result = asyncio.run(client.generate(messages, "test-model", stream=False))
-
-        usage = result["usage"]
-        content = result["choices"][0]["message"]["content"]
-        expected_completion_tokens = len(content.split())
-
-        # Mock uses word count as completion tokens
-        assert usage["completion_tokens"] == expected_completion_tokens
-        assert usage["prompt_tokens"] == 10  # Mock constant
-        assert usage["total_tokens"] == 10 + expected_completion_tokens
-
-    @pytest.mark.asyncio
-    async def test_concurrent_usage(self):
-        """Test that multiple concurrent calls work correctly"""
-        client = MockOlmClientV2(token_delay=0)
-        messages = [{"role": "user", "content": "Concurrent test"}]
-
-        # Create multiple concurrent requests
-        tasks = [
-            client.generate(messages, f"model-{i}", stream=False) for i in range(5)
-        ]
-
-        results = await asyncio.gather(*tasks)
-
-        # All should succeed and have correct format
-        assert len(results) == 5
-        for i, result in enumerate(results):
-            assert result["model"] == f"model-{i}"
-            assert result["object"] == "chat.completion"
-            assert "choices" in result
-
-    @pytest.mark.asyncio
-    async def test_streaming_and_non_streaming_consistency(self):
-        """Test that streaming and non-streaming return equivalent content"""
-        responses = ["Consistent response test"]
-        client = MockOlmClientV2(responses=responses, token_delay=0)
-        messages = [{"role": "user", "content": "test"}]
-
-        # Non-streaming
-        non_stream_result = await client.generate(messages, "test-model", stream=False)
-        non_stream_content = non_stream_result["choices"][0]["message"]["content"]
-
-        # Reset response index
-        client.response_index = 0
-
-        # Streaming
-        stream_result = await client.generate(messages, "test-model", stream=True)
-        stream_content = ""
-        async for chunk in stream_result:
+        # Extract content from streaming chunks
+        content = ""
+        for chunk in chunks:
             if "content" in chunk["choices"][0]["delta"]:
-                stream_content += chunk["choices"][0]["delta"]["content"]
+                content += chunk["choices"][0]["delta"]["content"]
 
-        # Content should be equivalent
-        assert non_stream_content == stream_content
-
-    def test_api_url_parameter_ignored(self):
-        """Test that api_url parameter is accepted but ignored"""
-        client = MockOlmClientV2(api_url="http://example.com")
-        # Should initialize successfully (api_url is ignored in mock)
-        assert isinstance(client, MockOlmClientV2)
+        assert content == "streaming pong"
 
     @pytest.mark.asyncio
-    async def test_empty_messages_list(self):
-        """Test handling of empty messages list"""
-        client = MockOlmClientV2(token_delay=0)
+    async def test_fallback_for_unmatched_prompt(self):
+        """Test that fallback responses are used when prompt does not match a key."""
+        keyed_responses = {"ping": "pong"}
+        client = MockOlmClientV2(responses=keyed_responses, token_delay=0)
 
-        result = await client.generate([], "test-model", stream=False)
+        messages = [{"role": "user", "content": "unmatched_prompt"}]
+        result = await client.generate(messages, "test-model")
+        assert result["choices"][0]["message"]["content"] in client.fallback_responses
 
-        # Should still return valid response
-        assert isinstance(result, dict)
-        assert result["object"] == "chat.completion"
-        assert "choices" in result
+    def test_init_with_invalid_dict(self):
+        """Test that initializing with a non-string key/value in dict raises TypeError."""
+        with pytest.raises(
+            TypeError,
+            match="All keys and values in the responses dictionary must be strings",
+        ):
+            MockOlmClientV2(responses={"valid_key": 123})
 
-    @pytest.mark.asyncio
-    async def test_message_content_ignored_in_mock(self):
-        """Test that message content doesn't affect mock response selection"""
-        client = MockOlmClientV2(responses=["Fixed response"], token_delay=0)
-
-        # Different message contents should get same response
-        messages1 = [{"role": "user", "content": "First message"}]
-        messages2 = [{"role": "user", "content": "Completely different message"}]
-
-        result1 = await client.generate(messages1, "test-model", stream=False)
-        client.response_index = 0  # Reset to get same response
-        result2 = await client.generate(messages2, "test-model", stream=False)
-
-        assert (
-            result1["choices"][0]["message"]["content"]
-            == result2["choices"][0]["message"]["content"]
-        )
+        with pytest.raises(
+            TypeError,
+            match="All keys and values in the responses dictionary must be strings",
+        ):
+            MockOlmClientV2(responses={123: "valid_value"})

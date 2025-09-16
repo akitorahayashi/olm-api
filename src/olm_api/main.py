@@ -6,10 +6,11 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 
 import ollama
-from src.api.v1 import router as v1_router
-from src.api.v2 import router as v2_router
-from src.logs import router as logs_router
-from src.middlewares.db_logging_middleware import LoggingMiddleware
+
+from .api.v1 import router as v1_router
+from .api.v2 import router as v2_router
+from .logs import router as logs_router
+from .middlewares.db_logging_middleware import LoggingMiddleware
 
 
 @asynccontextmanager
@@ -26,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="PVT-LLM-API",
+    title="Olm API",
     version="0.1.0",
     description="A private LLM API server using FastAPI and Ollama, with dynamic model management.",
     lifespan=lifespan,

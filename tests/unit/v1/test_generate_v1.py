@@ -4,7 +4,7 @@ import pytest
 from httpx import AsyncClient
 from starlette import status
 
-from src.api.v1.schemas import GenerateResponse
+from src.olm_api.api.v1.schemas import GenerateResponse
 
 # Mark all tests in this file as asyncio
 pytestmark = pytest.mark.asyncio

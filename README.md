@@ -20,6 +20,6 @@ For detailed API specs, see:
 ## SDKs
 
 Client libraries for Python:
-- [v1 (prompt only)](sdk/olm_api_client/v1/README.md)
-- [v2 (chat & tools)](sdk/olm_api_client/v2/README.md)
+- [v1 (prompt only)](sdk/olm_api_sdk/v1/README.md)
+- [v2 (chat & tools)](sdk/olm_api_sdk/v2/README.md)
 

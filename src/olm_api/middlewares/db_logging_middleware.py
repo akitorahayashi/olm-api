@@ -6,9 +6,9 @@ from fastapi import Request, Response
 from sqlalchemy.orm import Session
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 
-from src.config.settings import get_settings
-from src.db.database import create_db_session
-from src.logs.models import Log
+from ..config.settings import get_settings
+from ..db.database import create_db_session
+from ..logs.models import Log
 
 
 class LoggingMiddleware(BaseHTTPMiddleware):
