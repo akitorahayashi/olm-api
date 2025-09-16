@@ -157,3 +157,39 @@ class MockOlmClientV1:
                 "content": response_text,
                 "full_response": response_text,
             }
+
+    def generate_sync(
+        self,
+        prompt: str,
+        model_name: str,
+        think: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        """
+        Mock generate text using v1 API format (Synchronous version).
+
+        Args:
+            prompt: The prompt to send to the model.
+            model_name: The name of the model (for protocol compatibility).
+            think: Whether to enable thinking mode (for protocol compatibility).
+
+        Returns:
+            Complete JSON response. Streaming is not supported in sync version.
+            Response contains 'think', 'content', and 'full_response' fields.
+        """
+        # Unused args kept for protocol compatibility
+        del model_name, think
+
+        # Check for a keyed response, otherwise use a cycling fallback
+        if prompt in self.keyed_responses:
+            response_text = self.keyed_responses[prompt]
+        else:
+            response_text = self.fallback_responses[
+                self.response_index % len(self.fallback_responses)
+            ]
+            self.response_index += 1
+
+        return {
+            "think": "Mock thinking process",
+            "content": response_text,
+            "full_response": response_text,
+        }

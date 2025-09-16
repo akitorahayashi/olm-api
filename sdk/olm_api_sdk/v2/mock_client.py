@@ -197,3 +197,40 @@ class MockOlmClientV2:
             "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
         }
         yield final_chunk
+
+    def generate_sync(
+        self,
+        messages: List[Dict[str, Any]],
+        model_name: str,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        Mock chat completion using v2 API format (Synchronous version).
+
+        Args:
+            messages: List of message dictionaries with role and content.
+            model_name: The name of the model (for protocol compatibility).
+            tools: Optional list of tool definitions (ignored in mock).
+            **kwargs: Additional generation parameters (ignored in mock).
+
+        Returns:
+            Complete response dict. Streaming is not supported in sync version.
+        """
+        # Extract prompt from the last message
+        prompt = ""
+        if messages and isinstance(messages, list):
+            last_message = messages[-1]
+            if isinstance(last_message, dict) and "content" in last_message:
+                prompt = last_message["content"]
+
+        # Check for a keyed response, otherwise use a cycling fallback
+        if prompt in self.keyed_responses:
+            response_text = self.keyed_responses[prompt]
+        else:
+            response_text = self.fallback_responses[
+                self.response_index % len(self.fallback_responses)
+            ]
+            self.response_index += 1
+
+        return self._create_chat_response(response_text, model_name)

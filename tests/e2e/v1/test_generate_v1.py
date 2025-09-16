@@ -37,6 +37,8 @@ class TestGenerate:
         # Assertions
         assert response.status_code == 200
         response_data = response.json()
-        assert "response" in response_data
-        assert isinstance(response_data["response"], str)
-        assert len(response_data["response"]) > 0
+        assert "think" in response_data
+        assert "content" in response_data
+        assert "full_response" in response_data
+        assert isinstance(response_data["content"], str)
+        assert len(response_data["content"]) > 0

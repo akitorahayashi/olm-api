@@ -23,7 +23,7 @@ class TestV1ThinkParameter:
         # Check new response format
         assert "think" in data
         assert "content" in data
-        assert "response" in data
+        assert "full_response" in data
 
         # Content should not contain thinking tags
         assert "<think>" not in data["content"]
@@ -49,8 +49,8 @@ class TestV1ThinkParameter:
         # Check new response format
         assert "think" in data
         assert "content" in data
-        assert "response" in data
-        assert isinstance(data["response"], str)
+        assert "full_response" in data
+        assert isinstance(data["content"], str)
 
     async def test_think_false_with_non_thinking_model(self, http_client, api_config):
         """Test think=false with a non-thinking model (should be ignored)."""
@@ -65,8 +65,10 @@ class TestV1ThinkParameter:
         assert response.status_code == 200
 
         data = response.json()
-        assert "response" in data
-        assert isinstance(data["response"], str)
+        assert "think" in data
+        assert "content" in data
+        assert "full_response" in data
+        assert isinstance(data["content"], str)
 
     async def test_think_true_with_non_thinking_model(self, http_client, api_config):
         """Test think=true with a non-thinking model (should return error or be ignored)."""
@@ -94,8 +96,10 @@ class TestV1ThinkParameter:
         assert response.status_code == 200
 
         data = response.json()
-        assert "response" in data
-        assert isinstance(data["response"], str)
+        assert "think" in data
+        assert "content" in data
+        assert "full_response" in data
+        assert isinstance(data["content"], str)
 
     async def test_think_parameter_with_streaming(self, http_client, api_config):
         """Test think parameter with streaming response."""

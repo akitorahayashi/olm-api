@@ -15,6 +15,8 @@ from olm_api_sdk.v2 import (
 
 ## Basic Usage
 
+### Asynchronous Usage
+
 ```python
 import asyncio
 from olm_api_sdk.v2 import OlmApiClientV2
@@ -30,9 +32,24 @@ async def main():
 asyncio.run(main())
 ```
 
+### Synchronous Usage
+
+```python
+from olm_api_sdk.v2 import OlmApiClientV2
+
+client = OlmApiClientV2("http://localhost:8000")
+
+messages = [{"role": "user", "content": "Hello!"}]
+response = client.generate_sync(messages=messages, model_name="llama3.2")
+
+print(response["choices"][0]["message"]["content"])
+```
+
 ## Practical Examples
 
 ### Chatbot
+
+#### Asynchronous
 
 ```python
 async def chatbot():
@@ -54,7 +71,28 @@ async def chatbot():
 asyncio.run(chatbot())
 ```
 
+#### Synchronous
+
+```python
+client = OlmApiClientV2("http://localhost:8000")
+
+messages = [
+    {"role": "system", "content": "You are a helpful assistant."},
+    {"role": "user", "content": "Teach me Python basics"}
+]
+
+response = client.generate_sync(
+    messages=messages,
+    model_name="llama3.2",
+    temperature=0.7
+)
+
+print(response["choices"][0]["message"]["content"])
+```
+
 ### Streaming Response
+
+#### Asynchronous
 
 ```python
 async def streaming_chat():
@@ -75,6 +113,8 @@ asyncio.run(streaming_chat())
 ```
 
 ### Vision (Image Recognition)
+
+#### Asynchronous
 
 ```python
 import base64
@@ -98,7 +138,30 @@ async def analyze_image():
 asyncio.run(analyze_image())
 ```
 
+#### Synchronous
+
+```python
+import base64
+
+client = OlmApiClientV2("http://localhost:8000")
+
+# Encode image to base64
+with open("image.jpg", "rb") as f:
+    image_data = base64.b64encode(f.read()).decode()
+
+messages = [{
+    "role": "user",
+    "content": "Describe this image",
+    "images": [image_data]
+}]
+
+response = client.generate_sync(messages=messages, model_name="llama3.2")
+print(response["choices"][0]["message"]["content"])
+```
+
 ### Tool Calling (Function Execution)
+
+#### Asynchronous
 
 ```python
 async def weather_bot():
@@ -142,6 +205,49 @@ async def weather_bot():
 asyncio.run(weather_bot())
 ```
 
+#### Synchronous
+
+```python
+import json
+
+client = OlmApiClientV2("http://localhost:8000")
+
+# Define available tools
+tools = [{
+    "type": "function",
+    "function": {
+        "name": "get_weather",
+        "description": "Get current weather for a city",
+        "parameters": {
+            "type": "object",
+            "properties": {"city": {"type": "string"}},
+            "required": ["city"]
+        }
+    }
+}]
+
+messages = [{"role": "user", "content": "What's the weather in Tokyo?"}]
+
+response = client.generate_sync(
+    messages=messages,
+    model_name="llama3.2",
+    tools=tools
+)
+
+message = response["choices"][0]["message"]
+
+if message.get("tool_calls"):
+    # Handle tool calls
+    tool_call = message["tool_calls"][0]
+    function_name = tool_call["function"]["name"]
+    args = json.loads(tool_call["function"]["arguments"])
+
+    print(f"Function call: {function_name}({args})")
+    # Execute the actual function and return results
+else:
+    print(message["content"])
+```
+
 ## Client Types
 
 ### HTTP Client (Recommended)
@@ -159,6 +265,8 @@ client = OlmLocalClientV2()  # Connect directly to local Ollama
 ```
 
 ## Mock Client for Testing
+
+### Asynchronous Usage
 
 ```python
 from olm_api_sdk.v2.mock_client import MockOlmClientV2
@@ -185,6 +293,39 @@ result1 = await client.generate(
 print(result1["choices"][0]["message"]["content"])  # "Hi there!"
 
 result2 = await client.generate(
+    messages=[{"role": "user", "content": "How are you?"}],
+    model_name="test"
+)
+print(result2["choices"][0]["message"]["content"])  # "I'm doing well, thank you!"
+```
+
+### Synchronous Usage
+
+```python
+from olm_api_sdk.v2.mock_client import MockOlmClientV2
+
+# Test with fixed responses (cycling through list)
+client = MockOlmClientV2(responses=["Hello!", "How are you?"])
+
+messages = [{"role": "user", "content": "Greeting"}]
+result = client.generate_sync(messages=messages, model_name="test")
+print(result["choices"][0]["message"]["content"])  # "Hello!" or "How are you?"
+
+# Test with mapped responses (dictionary)
+# Key is matched against the last message's content
+client = MockOlmClientV2(responses={
+    "Hello": "Hi there!",
+    "How are you?": "I'm doing well, thank you!",
+    "Goodbye": "Farewell!"
+})
+
+result1 = client.generate_sync(
+    messages=[{"role": "user", "content": "Hello"}],
+    model_name="test"
+)
+print(result1["choices"][0]["message"]["content"])  # "Hi there!"
+
+result2 = client.generate_sync(
     messages=[{"role": "user", "content": "How are you?"}],
     model_name="test"
 )

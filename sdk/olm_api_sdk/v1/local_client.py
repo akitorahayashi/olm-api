@@ -15,6 +15,7 @@ class OlmLocalClientV1:
 
     def __init__(self, host: str = "http://localhost:11434"):
         self.client = ollama.AsyncClient(host=host)
+        self.sync_client = ollama.Client(host=host)
 
     async def generate(
         self,
@@ -78,6 +79,52 @@ class OlmLocalClientV1:
     ) -> Dict[str, Any]:
         """Generate complete text response from local Ollama with structured JSON format."""
         response = await self.client.chat(
+            model=model_name, messages=messages, stream=False, options=options
+        )
+        raw_content = response["message"]["content"]
+
+        # Parse thinking vs content using same logic as API server
+        parsed = parse_thinking_response(raw_content)
+
+        return {
+            "think": parsed["thinking"],
+            "content": parsed["content"],
+            "full_response": raw_content,
+        }
+
+    def generate_sync(
+        self,
+        prompt: str,
+        model_name: str,
+        think: Optional[bool] = None,
+        **options: Any,
+    ) -> Dict[str, Any]:
+        """
+        Generate text using local Ollama with v1 schema (Synchronous version).
+
+        Args:
+            prompt: The prompt to send to the model.
+            model_name: The name of the model to use for generation.
+            think: Whether to enable thinking mode.
+            **options: Additional generation parameters to pass to Ollama.
+
+        Returns:
+            Complete JSON response. Streaming is not supported in sync version.
+            Response contains 'think', 'content', and 'full_response' fields.
+        """
+        messages = [{"role": "user", "content": prompt}]
+
+        # Add think parameter to options if provided
+        if think is not None:
+            options["think"] = think
+
+        return self._batch_generate_sync(messages, model_name, **options)
+
+    def _batch_generate_sync(
+        self, messages, model_name: str, **options: Any
+    ) -> Dict[str, Any]:
+        """Generate complete text response from local Ollama with structured JSON format (sync)."""
+        response = self.sync_client.chat(
             model=model_name, messages=messages, stream=False, options=options
         )
         raw_content = response["message"]["content"]

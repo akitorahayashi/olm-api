@@ -15,6 +15,7 @@ class OlmLocalClientV2:
 
     def __init__(self, host: str = "http://localhost:11434"):
         self.client = ollama.AsyncClient(host=host)
+        self.sync_client = ollama.Client(host=host)
 
     async def generate(
         self,
@@ -139,3 +140,47 @@ class OlmLocalClientV2:
                 + ollama_response.get("eval_count", 0),
             },
         }
+
+    def generate_sync(
+        self,
+        messages: List[Dict[str, Any]],
+        model_name: str,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        Generate chat completion using local Ollama with v2 schema (Synchronous version).
+
+        Args:
+            messages: List of message dictionaries with role and content.
+            model_name: The name of the model to use for generation.
+            tools: Optional list of tool definitions for function calling.
+            **kwargs: Additional generation parameters (temperature, top_p, etc.).
+
+        Returns:
+            Complete response dict. Streaming is not supported in sync version.
+        """
+        # Build parameters for ollama.chat call
+        chat_params = {
+            "model": model_name,
+            "messages": messages,
+            "stream": False,  # Force non-streaming for sync
+        }
+
+        # Add tools if provided
+        if tools:
+            chat_params["tools"] = tools
+
+        # Add generation parameters
+        if kwargs:
+            chat_params["options"] = kwargs
+
+        return self._batch_generate_sync(**chat_params)
+
+    def _batch_generate_sync(self, **chat_params) -> Dict[str, Any]:
+        """Generate complete response from local Ollama and convert to chat completion format (sync)."""
+        chat_params["stream"] = False
+        ollama_response = self.sync_client.chat(**chat_params)
+
+        # Transform to chat completion format
+        return self._transform_to_chat_format(ollama_response, chat_params["model"])

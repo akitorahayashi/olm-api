@@ -19,19 +19,30 @@ class OlmApiClientV1:
         self.api_url = api_url.rstrip("/")
         self.generate_endpoint = f"{self.api_url}/api/v1/chat"
 
+    def _build_payload(
+        self,
+        prompt: str,
+        model_name: str,
+        stream: bool = False,
+        think: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        """Helper to build the request payload."""
+        payload = {
+            "prompt": prompt,
+            "model_name": model_name,
+            "stream": stream,
+        }
+        if think is not None:
+            payload["think"] = think
+        return payload
+
     async def _stream_response(
         self, prompt: str, model_name: str, think: Optional[bool] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Stream response from the Olm API v1.
         """
-        payload = {
-            "prompt": prompt,
-            "model_name": model_name,
-            "stream": True,
-        }
-        if think is not None:
-            payload["think"] = think
+        payload = self._build_payload(prompt, model_name, stream=True, think=think)
 
         try:
             async with httpx.AsyncClient(
@@ -69,13 +80,7 @@ class OlmApiClientV1:
         """
         Get non-streaming response from the Olm API v1.
         """
-        payload = {
-            "prompt": prompt,
-            "model_name": model_name,
-            "stream": False,
-        }
-        if think is not None:
-            payload["think"] = think
+        payload = self._build_payload(prompt, model_name, stream=False, think=think)
 
         try:
             async with httpx.AsyncClient(
@@ -136,3 +141,57 @@ class OlmApiClientV1:
             return self._stream_response(prompt, model_name, think)
         else:
             return await self._non_stream_response(prompt, model_name, think)
+
+    def _non_stream_response_sync(
+        self, prompt: str, model_name: str, think: Optional[bool] = None
+    ) -> Dict[str, Any]:
+        """
+        Get non-streaming response from the Olm API v1 (Synchronous).
+        """
+        payload = self._build_payload(prompt, model_name, stream=False, think=think)
+
+        try:
+            with httpx.Client(timeout=httpx.Timeout(10.0, read=120.0)) as client:
+                response = client.post(
+                    self.generate_endpoint,
+                    json=payload,
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                data = response.json()
+                return data
+        except httpx.RequestError:
+            logger.exception("Olm API v1 non-streaming sync request failed")
+            raise
+        except Exception:
+            logger.exception("Unexpected error in Olm API v1 non-streaming sync")
+            raise
+
+    def generate_sync(
+        self,
+        prompt: str,
+        model_name: str,
+        think: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate text using the Olm API v1 (Synchronous version).
+
+        Args:
+            prompt: The prompt to send to the model.
+            model_name: The name of the model to use for generation.
+            think: Whether to enable thinking mode.
+
+        Returns:
+            Complete JSON response. Streaming is not supported in sync version.
+            Response contains 'think', 'content', and 'response' fields.
+
+        Raises:
+            httpx.RequestError: If a network error occurs.
+
+        Examples:
+            >>> client = OlmApiClientV1("http://localhost:8000")
+            >>> response = client.generate_sync("Hello", "llama3.2", think=True)
+            >>> print(f"Thinking: {response['think']}")
+            >>> print(f"Content: {response['content']}")
+        """
+        return self._non_stream_response_sync(prompt, model_name, think)

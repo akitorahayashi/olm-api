@@ -23,6 +23,32 @@ class OlmApiClientV2:
         self.api_url = api_url.rstrip("/")
         self.chat_endpoint = f"{self.api_url}/api/v2/chat"
 
+    def _build_payload(
+        self,
+        messages: List[Dict[str, Any]],
+        model_name: str,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        stream: bool = False,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """Helper to build the request payload."""
+        payload = {
+            "model": model_name,
+            "messages": messages,
+            "stream": stream,
+        }
+
+        # Add optional parameters
+        if tools:
+            payload["tools"] = tools
+
+        # Add generation parameters
+        for key, value in kwargs.items():
+            if value is not None:
+                payload[key] = value
+
+        return payload
+
     async def generate(
         self,
         messages: List[Dict[str, Any]],
@@ -96,20 +122,7 @@ class OlmApiClientV2:
                 ... }]
                 >>> response = await client.generate(messages, "gemma3:4b")
         """
-        payload = {
-            "model": model_name,
-            "messages": messages,
-            "stream": stream,
-        }
-
-        # Add optional parameters
-        if tools:
-            payload["tools"] = tools
-
-        # Add generation parameters
-        for key, value in kwargs.items():
-            if value is not None:
-                payload[key] = value
+        payload = self._build_payload(messages, model_name, tools, stream, **kwargs)
 
         if stream:
             return self._chat_stream_response(payload)
@@ -184,3 +197,47 @@ class OlmApiClientV2:
                 "Unexpected error in chat completions API v2 non-streaming"
             )
             raise
+
+    def _chat_non_stream_response_sync(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Get non-streaming response from the v2 chat completions API (Synchronous).
+        """
+        try:
+            # httpx.Client (同期) を使用
+            with httpx.Client(timeout=httpx.Timeout(10.0, read=120.0)) as client:
+                response = client.post(
+                    self.chat_endpoint,
+                    json=payload,
+                    headers={"Accept": "application/json"},
+                )
+                response.raise_for_status()
+                return response.json()
+        except httpx.RequestError:
+            logger.exception(
+                "Chat completions API v2 non-streaming sync request failed"
+            )
+            raise
+        except Exception:
+            logger.exception(
+                "Unexpected error in chat completions API v2 non-streaming sync"
+            )
+            raise
+
+    def generate_sync(
+        self,
+        messages: List[Dict[str, Any]],
+        model_name: str,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        Generate chat completion using the v2 API (Synchronous version).
+
+        Note: Streaming is not supported in this sync version.
+        """
+        # stream=False を強制
+        payload = self._build_payload(
+            messages, model_name, tools, stream=False, **kwargs
+        )
+
+        return self._chat_non_stream_response_sync(payload)

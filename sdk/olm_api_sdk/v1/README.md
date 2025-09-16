@@ -15,6 +15,8 @@ from olm_api_sdk.v1 import (
 
 ## Basic Usage
 
+### Asynchronous Usage
+
 ```python
 import asyncio
 from olm_api_sdk.v1 import OlmApiClientV1
@@ -32,9 +34,26 @@ async def main():
 asyncio.run(main())
 ```
 
+### Synchronous Usage
+
+```python
+from olm_api_sdk.v1 import OlmApiClientV1
+
+client = OlmApiClientV1("http://localhost:8000")
+
+# Basic text generation
+result = client.generate_sync(
+    prompt="Hello, how are you?",
+    model_name="llama3.2"
+)
+print(result["content"])
+```
+
 ## Advanced Features
 
 ### Generation with Thinking Process
+
+#### Asynchronous
 
 ```python
 result = await client.generate(
@@ -46,7 +65,21 @@ print("Answer:", result["content"])
 print("Thinking:", result["think"])
 ```
 
+#### Synchronous
+
+```python
+result = client.generate_sync(
+    prompt="Solve this math problem",
+    model_name="llama3.2",
+    think=True  # Get thinking process
+)
+print("Answer:", result["content"])
+print("Thinking:", result["think"])
+```
+
 ### Streaming Generation
+
+#### Asynchronous
 
 ```python
 async def stream_example():
@@ -63,6 +96,8 @@ asyncio.run(stream_example())
 ```
 
 ## Mock Client for Testing
+
+### Asynchronous Usage
 
 ```python
 from olm_api_sdk.v1.mock_client import MockOlmClientV1
@@ -84,6 +119,31 @@ result1 = await client.generate(prompt="Hello", model_name="test")
 print(result1["content"])  # "Hi there!"
 
 result2 = await client.generate(prompt="How are you?", model_name="test")
+print(result2["content"])  # "I'm doing well, thank you!"
+```
+
+### Synchronous Usage
+
+```python
+from olm_api_sdk.v1.mock_client import MockOlmClientV1
+
+# Test with fixed responses (cycling through list)
+client = MockOlmClientV1(responses=["Hello!", "I'm fine!"])
+
+result = client.generate_sync(prompt="Greeting", model_name="test")
+print(result["content"])  # "Hello!" or "I'm fine!"
+
+# Test with mapped responses (dictionary)
+client = MockOlmClientV1(responses={
+    "Hello": "Hi there!",
+    "How are you?": "I'm doing well, thank you!",
+    "Goodbye": "Farewell!"
+})
+
+result1 = client.generate_sync(prompt="Hello", model_name="test")
+print(result1["content"])  # "Hi there!"
+
+result2 = client.generate_sync(prompt="How are you?", model_name="test")
 print(result2["content"])  # "I'm doing well, thank you!"
 ```
 
