@@ -42,7 +42,7 @@ from olm_api_sdk.v1 import OlmApiClientV1
 client = OlmApiClientV1("http://localhost:8000")
 
 # Basic text generation
-result = client.generate(
+result = client.generate_sync(
     prompt="Hello, how are you?",
     model_name="llama3.2"
 )
@@ -68,7 +68,7 @@ print("Thinking:", result["think"])
 #### Synchronous
 
 ```python
-result = client.generate(
+result = client.generate_sync(
     prompt="Solve this math problem",
     model_name="llama3.2",
     think=True  # Get thinking process
@@ -93,19 +93,6 @@ async def stream_example():
         print(chunk["content"], end="", flush=True)
 
 asyncio.run(stream_example())
-```
-
-#### Synchronous
-
-```python
-client = OlmApiClientV1("http://localhost:8000")
-
-for chunk in client.generate(
-    prompt="Write a long story",
-    model_name="llama3.2",
-    stream=True
-):
-    print(chunk["content"], end="", flush=True)
 ```
 
 ## Mock Client for Testing
@@ -143,7 +130,7 @@ from olm_api_sdk.v1.mock_client import MockOlmClientV1
 # Test with fixed responses (cycling through list)
 client = MockOlmClientV1(responses=["Hello!", "I'm fine!"])
 
-result = client.generate(prompt="Greeting", model_name="test")
+result = client.generate_sync(prompt="Greeting", model_name="test")
 print(result["content"])  # "Hello!" or "I'm fine!"
 
 # Test with mapped responses (dictionary)
@@ -153,10 +140,10 @@ client = MockOlmClientV1(responses={
     "Goodbye": "Farewell!"
 })
 
-result1 = client.generate(prompt="Hello", model_name="test")
+result1 = client.generate_sync(prompt="Hello", model_name="test")
 print(result1["content"])  # "Hi there!"
 
-result2 = client.generate(prompt="How are you?", model_name="test")
+result2 = client.generate_sync(prompt="How are you?", model_name="test")
 print(result2["content"])  # "I'm doing well, thank you!"
 ```
 

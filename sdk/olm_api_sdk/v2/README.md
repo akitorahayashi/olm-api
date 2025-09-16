@@ -40,7 +40,7 @@ from olm_api_sdk.v2 import OlmApiClientV2
 client = OlmApiClientV2("http://localhost:8000")
 
 messages = [{"role": "user", "content": "Hello!"}]
-response = client.generate(messages=messages, model_name="llama3.2")
+response = client.generate_sync(messages=messages, model_name="llama3.2")
 
 print(response["choices"][0]["message"]["content"])
 ```
@@ -81,7 +81,7 @@ messages = [
     {"role": "user", "content": "Teach me Python basics"}
 ]
 
-response = client.generate(
+response = client.generate_sync(
     messages=messages,
     model_name="llama3.2",
     temperature=0.7
@@ -110,23 +110,6 @@ async def streaming_chat():
             print(delta["content"], end="", flush=True)
 
 asyncio.run(streaming_chat())
-```
-
-#### Synchronous
-
-```python
-client = OlmApiClientV2("http://localhost:8000")
-
-messages = [{"role": "user", "content": "Write a long explanation"}]
-
-for chunk in client.generate(
-    messages=messages,
-    model_name="llama3.2",
-    stream=True
-):
-    delta = chunk.get("choices", [{}])[0].get("delta", {})
-    if "content" in delta:
-        print(delta["content"], end="", flush=True)
 ```
 
 ### Vision (Image Recognition)
@@ -172,7 +155,7 @@ messages = [{
     "images": [image_data]
 }]
 
-response = client.generate(messages=messages, model_name="llama3.2")
+response = client.generate_sync(messages=messages, model_name="llama3.2")
 print(response["choices"][0]["message"]["content"])
 ```
 
@@ -245,7 +228,7 @@ tools = [{
 
 messages = [{"role": "user", "content": "What's the weather in Tokyo?"}]
 
-response = client.generate(
+response = client.generate_sync(
     messages=messages,
     model_name="llama3.2",
     tools=tools
@@ -325,7 +308,7 @@ from olm_api_sdk.v2.mock_client import MockOlmClientV2
 client = MockOlmClientV2(responses=["Hello!", "How are you?"])
 
 messages = [{"role": "user", "content": "Greeting"}]
-result = client.generate(messages=messages, model_name="test")
+result = client.generate_sync(messages=messages, model_name="test")
 print(result["choices"][0]["message"]["content"])  # "Hello!" or "How are you?"
 
 # Test with mapped responses (dictionary)
@@ -336,13 +319,13 @@ client = MockOlmClientV2(responses={
     "Goodbye": "Farewell!"
 })
 
-result1 = client.generate(
+result1 = client.generate_sync(
     messages=[{"role": "user", "content": "Hello"}],
     model_name="test"
 )
 print(result1["choices"][0]["message"]["content"])  # "Hi there!"
 
-result2 = client.generate(
+result2 = client.generate_sync(
     messages=[{"role": "user", "content": "How are you?"}],
     model_name="test"
 )
