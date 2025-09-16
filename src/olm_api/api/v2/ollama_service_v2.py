@@ -308,7 +308,7 @@ class OllamaServiceV2:
         raw_content = message.get("content", "")
 
         # Parse thinking vs content
-        from sdk.olm_api_sdk.utils.thinking_parser import parse_thinking_response
+        from olm_api_sdk.utils.thinking_parser import parse_thinking_response
 
         parsed = parse_thinking_response(raw_content)
 
@@ -360,7 +360,7 @@ class OllamaServiceV2:
             accumulated_content += chunk_content
 
         # Parse current accumulated content for thinking
-        from sdk.olm_api_sdk.utils.thinking_parser import parse_thinking_response
+        from olm_api_sdk.utils.thinking_parser import parse_thinking_response
 
         parsed = parse_thinking_response(accumulated_content)
 

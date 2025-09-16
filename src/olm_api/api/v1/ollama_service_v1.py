@@ -62,7 +62,7 @@ class OllamaServiceV1:
                     raw_content = ""
 
                 # Parse thinking vs content
-                from sdk.olm_api_sdk.utils.thinking_parser import (
+                from olm_api_sdk.utils.thinking_parser import (
                     parse_thinking_response,
                 )
 
@@ -100,7 +100,7 @@ class OllamaServiceV1:
                         accumulated_content += chunk_content
 
                         # Parse current accumulated content
-                        from sdk.olm_api_sdk.utils.thinking_parser import (
+                        from olm_api_sdk.utils.thinking_parser import (
                             parse_thinking_response,
                         )
 
