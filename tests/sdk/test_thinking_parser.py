@@ -155,7 +155,7 @@ class TestUtilityFunctions:
 
         assert result["think"] == "Let me think"
         assert result["content"] == "The answer is 42"
-        assert result["response"] == raw_content  # Original complete response
+        assert result["full_response"] == raw_content  # Original complete response
 
     def test_enhanced_response_no_thinking(self):
         """Test enhanced response without thinking tags."""
@@ -164,4 +164,4 @@ class TestUtilityFunctions:
 
         assert result["think"] == ""
         assert result["content"] == "Direct answer without thinking"
-        assert result["response"] == raw_content
+        assert result["full_response"] == raw_content

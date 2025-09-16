@@ -45,12 +45,12 @@ class TestOlmClientV1Protocol:
                     return {
                         "think": "",
                         "content": "batch response",
-                        "response": "batch response",
+                        "full_response": "batch response",
                     }
 
             async def _async_gen(self):
-                yield {"think": "", "content": "chunk1", "response": "chunk1"}
-                yield {"think": "", "content": "chunk2", "response": "chunk1chunk2"}
+                yield {"think": "", "content": "chunk1", "full_response": "chunk1"}
+                yield {"think": "", "content": "chunk2", "full_response": "chunk1chunk2"}
 
         mock = ProtocolCompliantMock()
         assert isinstance(mock, OlmClientV1Protocol)
@@ -68,11 +68,11 @@ class TestOlmClientV1Protocol:
                     return {
                         "think": "",
                         "content": "complete response",
-                        "response": "complete response",
+                        "full_response": "complete response",
                     }
 
             async def _async_gen(self):
-                yield {"think": "", "content": "chunk", "response": "chunk"}
+                yield {"think": "", "content": "chunk", "full_response": "chunk"}
 
         mock = ProtocolCompliantMock()
         assert isinstance(mock, OlmClientV1Protocol)
@@ -191,4 +191,4 @@ class TestProtocolUsage:
         assert isinstance(batch_result, dict)  # Should be dict
         assert "think" in batch_result
         assert "content" in batch_result
-        assert "response" in batch_result
+        assert "full_response" in batch_result

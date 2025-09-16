@@ -181,5 +181,5 @@ def create_enhanced_response(raw_content: str) -> Dict[str, str]:
     return {
         "think": parsed["thinking"],  # Thinking process
         "content": parsed["content"],  # Clean response without think tags
-        "response": raw_content,  # Original complete response
+        "full_response": raw_content,  # Original complete response
     }

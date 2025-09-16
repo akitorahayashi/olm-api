@@ -39,9 +39,9 @@ class TestOlmLocalClientV1:
         assert isinstance(response, dict)
         assert "think" in response
         assert "content" in response
-        assert "response" in response
+        assert "full_response" in response
         assert response["content"] == "Test response"
-        assert response["response"] == "Test response"
+        assert response["full_response"] == "Test response"
 
         mock_ollama_client_instance.chat.assert_called_once_with(
             model="test-model",
@@ -68,14 +68,14 @@ class TestOlmLocalClientV1:
         assert len(chunks) == 3
         assert all(isinstance(chunk, dict) for chunk in chunks)
         assert all(
-            "think" in chunk and "content" in chunk and "response" in chunk
+            "think" in chunk and "content" in chunk and "full_response" in chunk
             for chunk in chunks
         )
 
         # Check cumulative response accumulation
-        assert chunks[0]["response"] == "Hello"
-        assert chunks[1]["response"] == "Hello "
-        assert chunks[2]["response"] == "Hello World"
+        assert chunks[0]["full_response"] == "Hello"
+        assert chunks[1]["full_response"] == "Hello "
+        assert chunks[2]["full_response"] == "Hello World"
 
         mock_ollama_client_instance.chat.assert_called_once_with(
             model="test-model",
@@ -101,5 +101,5 @@ class TestOlmLocalClientV1:
 
         # Only 2 chunks should be yielded (empty content chunks are skipped)
         assert len(chunks) == 2
-        assert chunks[0]["response"] == "First"
-        assert chunks[1]["response"] == "FirstLast"
+        assert chunks[0]["full_response"] == "First"
+        assert chunks[1]["full_response"] == "FirstLast"

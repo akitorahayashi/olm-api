@@ -27,22 +27,22 @@ Simple prompt-based text generation endpoint for backward compatibility.
 {
   "think": "Let me consider this greeting...",
   "content": "I'm doing well, thank you!",
-  "response": "<think>Let me consider this greeting...</think>I'm doing well, thank you!"
+  "full_response": "<think>Let me consider this greeting...</think>I'm doing well, thank you!"
 }
 ```
 
 **Fields:**
 - `think` (string | null): Model's reasoning process from `<think>` tags
 - `content` (string): Final response content with `<think>` tags removed
-- `response` (string): Raw response including all tags
+- `full_response` (string): Raw response including all tags
 
 ### Response (Streaming)
 
 Returns Server-Sent Events with JSON chunks:
 
 ```text
-data: {"think": "...", "content": "I'm", "response": "..."}
-data: {"think": "...", "content": "I'm doing", "response": "..."}
+data: {"think": "...", "content": "I'm", "full_response": "..."}
+data: {"think": "...", "content": "I'm doing", "full_response": "..."}
 ...
 ```
 

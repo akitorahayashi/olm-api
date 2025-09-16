@@ -1,6 +1,6 @@
 [project]
 name = "olm-api"
-version = "2.2.1"
+version = "2.2.2"
 description = "Enabling API access to a live Ollama model."
 authors = [{ name = "akitorahayashi", email = "atora.has75@gmail.com" }]
 readme = "README.md"

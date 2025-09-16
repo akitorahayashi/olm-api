@@ -11,7 +11,7 @@ class ChatResponseMessage(BaseModel):
     content: Optional[str] = None
     tool_calls: Optional[List[ToolCall]] = None
     think: Optional[str] = None
-    response: Optional[str] = None
+    full_response: Optional[str] = None
 
 
 class ChatResponseChoice(BaseModel):
@@ -36,7 +36,7 @@ class ChatStreamDelta(BaseModel):
 
     # 以下の2行を追加
     think: Optional[str] = None
-    response: Optional[str] = None
+    full_response: Optional[str] = None
 
 
 class ChatStreamChoice(BaseModel):

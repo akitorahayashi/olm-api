@@ -69,7 +69,7 @@ class OllamaServiceV1:
                 return GenerateResponse(
                     think=parsed["thinking"],
                     content=parsed["content"],
-                    response=raw_content,
+                    full_response=raw_content,
                 )
 
     async def _stream_generator(
@@ -106,7 +106,7 @@ class OllamaServiceV1:
                         response_data = {
                             "think": parsed["thinking"],
                             "content": parsed["content"],
-                            "response": accumulated_content,
+                            "full_response": accumulated_content,
                         }
                         yield f"data: {json.dumps(response_data)}\n\n"
                 except StopIteration:

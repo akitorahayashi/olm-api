@@ -111,7 +111,7 @@ class MockOlmClientV1:
             yield {
                 "think": "Mock thinking process",
                 "content": accumulated_content,
-                "response": accumulated_content,
+                "full_response": accumulated_content,
             }
             await asyncio.sleep(self.token_delay)
 
@@ -155,5 +155,5 @@ class MockOlmClientV1:
             return {
                 "think": "Mock thinking process",
                 "content": response_text,
-                "response": response_text,
+                "full_response": response_text,
             }

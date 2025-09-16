@@ -76,7 +76,7 @@ Advanced chat completion API with conversation history, vision, and tool calling
       "role": "assistant",
       "content": "I'm doing well, thank you!",
       "think": "The user is asking how I am...",
-      "response": "<think>...</think>I'm doing well, thank you!",
+      "full_response": "<think>...</think>I'm doing well, thank you!",
       "tool_calls": null
     },
     "finish_reason": "stop"
@@ -95,7 +95,7 @@ Returns Server-Sent Events with completion chunks:
 
 ```text
 data: {"id":"chatcmpl-123","object":"chat.completion.chunk","choices":[{"delta":{"role":"assistant"}}]}
-data: {"id":"chatcmpl-123","object":"chat.completion.chunk","choices":[{"delta":{"content":"I'm"}}]}
+data: {"id":"chatcmpl-123","object":"chat.completion.chunk","choices":[{"delta":{"content":"I'm","think":"...","full_response":"..."}}]}
 ...
 data: [DONE]
 ```

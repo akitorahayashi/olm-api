@@ -69,7 +69,7 @@ class OlmLocalClientV1:
                 response_data = {
                     "think": parsed["thinking"],
                     "content": parsed["content"],
-                    "response": accumulated_content,
+                    "full_response": accumulated_content,
                 }
                 yield response_data
 
@@ -88,5 +88,5 @@ class OlmLocalClientV1:
         return {
             "think": parsed["thinking"],
             "content": parsed["content"],
-            "response": raw_content,
+            "full_response": raw_content,
         }

@@ -83,7 +83,7 @@ class OlmLocalClientV2:
                             "delta": {
                                 "content": content,  # Send incremental content
                                 "think": parsed["thinking"],  # Custom field
-                                "response": content,  # Custom field - same as content for streaming
+                                "full_response": content,  # Custom field - same as content for streaming
                             },
                             "finish_reason": None,
                         }
@@ -126,7 +126,7 @@ class OlmLocalClientV2:
                             parsed["content"] if not tool_calls else None
                         ),  # Clean content without think tags, None if tool calls
                         "think": parsed["thinking"],  # Custom field for thinking
-                        "response": raw_content,  # Custom field for raw response
+                        "full_response": raw_content,  # Custom field for raw response
                         "tool_calls": tool_calls,
                     },
                     "finish_reason": "stop",

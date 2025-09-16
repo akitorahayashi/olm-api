@@ -38,8 +38,8 @@ class TestOlmApiClientV1:
         client = OlmApiClientV1(api_url="http://localhost:11434")
 
         mock_chunks = [
-            {"think": "thinking1", "content": "Hello", "response": "Hello"},
-            {"think": "thinking2", "content": " world", "response": "Hello world"},
+            {"think": "thinking1", "content": "Hello", "full_response": "Hello"},
+            {"think": "thinking2", "content": " world", "full_response": "Hello world"},
         ]
 
         with patch.object(client, "_stream_response") as mock_stream:
@@ -66,7 +66,7 @@ class TestOlmApiClientV1:
         mock_response = {
             "think": "some thinking",
             "content": "Complete response",
-            "response": "Complete response",
+            "full_response": "Complete response",
         }
 
         with patch.object(client, "_non_stream_response") as mock_non_stream:
@@ -77,7 +77,7 @@ class TestOlmApiClientV1:
             assert result == mock_response
             assert "think" in result
             assert "content" in result
-            assert "response" in result
+            assert "full_response" in result
             mock_non_stream.assert_called_once_with("test prompt", "test-model", None)
 
 

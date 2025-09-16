@@ -66,7 +66,7 @@ class TestMockOlmClientV1:
         # Each chunk should be a dict with the required structure
         assert all(isinstance(chunk, dict) for chunk in chunks)
         assert all(
-            "think" in chunk and "content" in chunk and "response" in chunk
+            "think" in chunk and "content" in chunk and "full_response" in chunk
             for chunk in chunks
         )
 
@@ -108,7 +108,7 @@ class TestMockOlmClientV1:
         # Each chunk should be a dict
         assert all(isinstance(chunk, dict) for chunk in chunks)
         assert all(
-            "think" in chunk and "content" in chunk and "response" in chunk
+            "think" in chunk and "content" in chunk and "full_response" in chunk
             for chunk in chunks
         )
 
@@ -128,7 +128,7 @@ class TestMockOlmClientV1:
         assert isinstance(result, dict)
         assert "think" in result
         assert "content" in result
-        assert "response" in result
+        assert "full_response" in result
         assert len(result["content"]) > 0
         assert result["content"] in client.fallback_responses
 
@@ -155,7 +155,7 @@ class TestMockOlmClientV1:
             result = await client.generate(f"test prompt {i}", "test-model")
             assert isinstance(result, dict)
             assert result["content"] in custom_responses
-            assert result["response"] in custom_responses
+            assert result["full_response"] in custom_responses
 
     @pytest.mark.asyncio
     async def test_generate_with_custom_responses_streaming(self):

@@ -131,9 +131,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         try:
             data = json.loads(body)
 
-            # v1 API: extract from "response" field
+            # v1 API: extract from "full_response" field
             if "/api/v1/" in path:
-                return data.get("response")
+                return data.get("full_response")
 
             # v2 API: extract from chat completion response structure
             elif "/api/v2/" in path:
@@ -175,9 +175,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                     try:
                         data = json.loads(json_str)
 
-                        # v1 API: extract from "response" field
+                        # v1 API: extract from "full_response" field
                         if "/api/v1/" in path:
-                            full_text.append(data.get("response", ""))
+                            full_text.append(data.get("full_response", ""))
 
                         # v2 API: extract from chat completion streaming format
                         elif "/api/v2/" in path:

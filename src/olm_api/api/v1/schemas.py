@@ -17,4 +17,4 @@ class GenerateResponse(BaseModel):
 
     think: str = ""
     content: str = ""
-    response: str
+    full_response: str

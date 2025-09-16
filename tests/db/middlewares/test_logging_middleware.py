@@ -24,7 +24,7 @@ async def test_generate_logs_prompt_and_response(
     expected_response = "This is a test response."
     model_name = "test-model"
     mock_ollama_service.generate_response.return_value = GenerateResponse(
-        response=expected_response
+        full_response=expected_response
     )
 
     # Act
@@ -54,9 +54,9 @@ async def test_generate_streaming_logs_full_response(
     prompt = "Stream me a story."
     model_name = "test-model"
     sse_chunks = [
-        'data: {"response": "Once "}\n\n',
-        'data: {"response": "upon "}\n\n',
-        'data: {"response": "a time."}\n\n',
+        'data: {"full_response": "Once "}\n\n',
+        'data: {"full_response": "upon "}\n\n',
+        'data: {"full_response": "a time."}\n\n',
     ]
     stream_chunks_bytes = [c.encode("utf-8") for c in sse_chunks]
 

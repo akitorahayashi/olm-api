@@ -98,4 +98,4 @@ print(result2["content"])  # "I'm doing well, thank you!"
 **Returns:**
 - `content`: Generated text
 - `think`: Thinking process (when think=True)
-- `response`: Raw response
+- `full_response`: Raw response

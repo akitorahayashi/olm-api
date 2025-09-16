@@ -327,7 +327,7 @@ class OllamaServiceV2:
                         "role": message.get("role", "assistant"),
                         "content": parsed["content"],
                         "think": parsed["thinking"],
-                        "response": raw_content,
+                        "full_response": raw_content,
                         **({"tool_calls": tool_calls} if tool_calls else {}),
                     },
                     "finish_reason": "stop",
@@ -375,7 +375,7 @@ class OllamaServiceV2:
         if chunk_content:
             delta["content"] = parsed["content"]
             delta["think"] = parsed["thinking"]
-            delta["response"] = accumulated_content
+            delta["full_response"] = accumulated_content
 
         # Add tool_calls if present
         if message.get("tool_calls"):
