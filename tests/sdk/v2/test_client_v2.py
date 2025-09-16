@@ -1,9 +1,8 @@
 from unittest.mock import patch
 
 import pytest
-
-from sdk.olm_api_client.v2.client import OlmApiClientV2
-from sdk.olm_api_client.v2.protocol import OlmClientV2Protocol
+from olm_api_sdk.v2.client import OlmApiClientV2
+from olm_api_sdk.v2.protocol import OlmClientV2Protocol
 
 
 class TestOlmApiClientV2:

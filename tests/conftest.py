@@ -11,11 +11,11 @@ import pytest
 from dotenv import load_dotenv
 from httpx import ASGITransport, AsyncClient
 
-from sdk.olm_api_client.v1.mock_client import MockOlmClientV1
-from src.api.v1.ollama_service_v1 import OllamaServiceV1
-from src.api.v2.ollama_service_v2 import OllamaServiceV2
-from src.main import app
-from src.middlewares import db_logging_middleware
+from sdk.olm_api_sdk.v1.mock_client import MockOlmClientV1
+from src.olm_api.api.v1.ollama_service_v1 import OllamaServiceV1
+from src.olm_api.api.v2.ollama_service_v2 import OllamaServiceV2
+from src.olm_api.main import app
+from src.olm_api.middlewares import db_logging_middleware
 
 # Load environment variables from .env file
 load_dotenv()

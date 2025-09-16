@@ -13,7 +13,8 @@ from fastapi.responses import StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 import ollama
-from src.config.settings import Settings, get_settings
+
+from ...config.settings import Settings, get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -307,7 +308,7 @@ class OllamaServiceV2:
         raw_content = message.get("content", "")
 
         # Parse thinking vs content
-        from src.utils.thinking_parser import parse_thinking_response
+        from sdk.olm_api_sdk.utils.thinking_parser import parse_thinking_response
 
         parsed = parse_thinking_response(raw_content)
 
@@ -359,7 +360,7 @@ class OllamaServiceV2:
             accumulated_content += chunk_content
 
         # Parse current accumulated content for thinking
-        from src.utils.thinking_parser import parse_thinking_response
+        from sdk.olm_api_sdk.utils.thinking_parser import parse_thinking_response
 
         parsed = parse_thinking_response(accumulated_content)
 

@@ -22,7 +22,7 @@ class MockOlmClientV1:
         self,
         api_url: str = None,
         token_delay: float = None,
-        responses: Sequence[str] = None,
+        responses: Union[Dict[str, str], Sequence[str]] = None,
     ):
         # Configure token delay
         if token_delay is not None:
@@ -37,16 +37,32 @@ class MockOlmClientV1:
                 self.token_delay = DEFAULT_TOKEN_DELAY
 
         # Handle responses
-        if responses is not None:
-            if not responses:
-                raise ValueError("responses must be a non-empty list")
-            if not all(isinstance(x, str) for x in responses):
-                raise TypeError("all responses must be str")
-            self.mock_responses = list(responses)
-        else:
-            self.mock_responses = DEFAULT_RESPONSES.copy()
-
+        self.keyed_responses: Dict[str, str] = {}
+        self.fallback_responses: Sequence[str] = DEFAULT_RESPONSES.copy()
         self.response_index = 0
+
+        if responses is not None:
+            if isinstance(responses, dict):
+                if not all(
+                    isinstance(k, str) and isinstance(v, str)
+                    for k, v in responses.items()
+                ):
+                    raise TypeError(
+                        "All keys and values in the responses dictionary must be strings."
+                    )
+                self.keyed_responses = responses
+            elif isinstance(responses, (list, tuple)):
+                if not responses:
+                    raise ValueError("The responses sequence cannot be empty.")
+                if not all(isinstance(x, str) for x in responses):
+                    raise TypeError(
+                        "All items in the responses sequence must be strings."
+                    )
+                self.fallback_responses = list(responses)
+            else:
+                raise TypeError(
+                    "The 'responses' argument must be a dictionary or a sequence of strings."
+                )
 
     def _tokenize_realistic(self, text: str) -> list[str]:
         """Tokenize text in a way that resembles real LLM tokenization."""
@@ -120,13 +136,16 @@ class MockOlmClientV1:
             Each response contains 'think', 'content', and 'response' fields.
         """
         # Unused args kept for protocol compatibility
-        del prompt, model_name, think
+        del model_name, think
 
-        # Cycle through mock responses
-        response_text = self.mock_responses[
-            self.response_index % len(self.mock_responses)
-        ]
-        self.response_index += 1
+        # Check for a keyed response, otherwise use a cycling fallback
+        if prompt in self.keyed_responses:
+            response_text = self.keyed_responses[prompt]
+        else:
+            response_text = self.fallback_responses[
+                self.response_index % len(self.fallback_responses)
+            ]
+            self.response_index += 1
 
         if stream:
             return self._stream_response(response_text)

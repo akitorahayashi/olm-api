@@ -5,12 +5,12 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
-from src.db.database import get_db
-from src.logs.models import Log
-from src.logs.schemas import LogRead
+from ..db.database import get_db
+from .models import Log
+from .schemas import LogRead
 
 router = APIRouter(prefix="/logs", tags=["logs"])
-templates = Jinja2Templates(directory="src/logs/templates")
+templates = Jinja2Templates(directory="src/olm_api/logs/templates")
 
 
 @router.get("/data", response_model=List[LogRead], tags=["logs"])

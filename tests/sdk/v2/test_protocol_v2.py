@@ -1,11 +1,10 @@
 from typing import get_type_hints
 
 import pytest
-
-from sdk.olm_api_client.v2.client import OlmApiClientV2
-from sdk.olm_api_client.v2.local_client import OlmLocalClientV2
-from sdk.olm_api_client.v2.mock_client import MockOlmClientV2
-from sdk.olm_api_client.v2.protocol import OlmClientV2Protocol
+from olm_api_sdk.v2.client import OlmApiClientV2
+from olm_api_sdk.v2.local_client import OlmLocalClientV2
+from olm_api_sdk.v2.mock_client import MockOlmClientV2
+from olm_api_sdk.v2.protocol import OlmClientV2Protocol
 
 
 class TestOlmClientV2Protocol:

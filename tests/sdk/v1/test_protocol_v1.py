@@ -2,10 +2,9 @@ from typing import get_type_hints
 from unittest.mock import AsyncMock
 
 import pytest
-
-from sdk.olm_api_client.v1.client import OlmApiClientV1
-from sdk.olm_api_client.v1.mock_client import MockOlmClientV1
-from sdk.olm_api_client.v1.protocol import OlmClientV1Protocol
+from olm_api_sdk.v1.client import OlmApiClientV1
+from olm_api_sdk.v1.mock_client import MockOlmClientV1
+from olm_api_sdk.v1.protocol import OlmClientV1Protocol
 
 
 class TestOlmClientV1Protocol:

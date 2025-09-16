@@ -1,6 +1,6 @@
 """Tests for thinking parser utilities."""
 
-from src.utils.thinking_parser import (
+from sdk.olm_api_sdk.utils.thinking_parser import (
     ThinkingParser,
     create_enhanced_response,
     parse_thinking_response,

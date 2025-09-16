@@ -2,9 +2,8 @@ import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
-from sdk.olm_api_client.v2.local_client import OlmLocalClientV2
-from sdk.olm_api_client.v2.protocol import OlmClientV2Protocol
+from olm_api_sdk.v2.local_client import OlmLocalClientV2
+from olm_api_sdk.v2.protocol import OlmClientV2Protocol
 
 
 class TestOlmLocalClientV2:
@@ -19,7 +18,7 @@ class TestOlmLocalClientV2:
     async def test_generate_non_streaming(self):
         """Test non-streaming chat completion"""
         with patch(
-            "sdk.olm_api_client.v2.local_client.ollama.AsyncClient"
+            "olm_api_sdk.v2.local_client.ollama.AsyncClient"
         ) as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
@@ -51,7 +50,7 @@ class TestOlmLocalClientV2:
     async def test_generate_streaming(self):
         """Test streaming chat completion returns JSON chunks"""
         with patch(
-            "sdk.olm_api_client.v2.local_client.ollama.AsyncClient"
+            "olm_api_sdk.v2.local_client.ollama.AsyncClient"
         ) as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client
@@ -116,7 +115,7 @@ class TestOlmLocalClientV2:
     async def test_generate_with_tools(self):
         """Test chat completion with tools"""
         with patch(
-            "sdk.olm_api_client.v2.local_client.ollama.AsyncClient"
+            "olm_api_sdk.v2.local_client.ollama.AsyncClient"
         ) as mock_client_class:
             mock_client = AsyncMock()
             mock_client_class.return_value = mock_client

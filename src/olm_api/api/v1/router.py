@@ -3,8 +3,8 @@ from typing import Union
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
-from src.api.v1.ollama_service_v1 import OllamaServiceV1
-from src.api.v1.schemas import GenerateRequest, GenerateResponse
+from .ollama_service_v1 import OllamaServiceV1
+from .schemas import GenerateRequest, GenerateResponse
 
 router = APIRouter(
     prefix="/api/v1",
