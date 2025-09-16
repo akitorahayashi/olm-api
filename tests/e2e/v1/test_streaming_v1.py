@@ -53,8 +53,8 @@ class TestStreaming:
                         chunks.append(chunk)
 
                         # Collect content for full response reconstruction
-                        if "response" in chunk and chunk["response"]:
-                            full_content.append(chunk["response"])
+                        if "content" in chunk and chunk["content"]:
+                            full_content.append(chunk["content"])
                     except json.JSONDecodeError:
                         continue
 
@@ -64,11 +64,15 @@ class TestStreaming:
         # Verify chunk structure
         for chunk in chunks:
             assert (
-                "response" in chunk
-            ), f"Each chunk should have 'response' field, got: {chunk}"
-            assert isinstance(
-                chunk["response"], str
-            ), "Response content should be string"
+                "think" in chunk
+            ), f"Each chunk should have 'think' field, got: {chunk}"
+            assert (
+                "content" in chunk
+            ), f"Each chunk should have 'content' field, got: {chunk}"
+            assert (
+                "full_response" in chunk
+            ), f"Each chunk should have 'full_response' field, got: {chunk}"
+            assert isinstance(chunk["content"], str), "Content should be string"
 
         # Verify we got some actual content
         full_response = "".join(full_content)
