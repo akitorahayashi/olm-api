@@ -2,6 +2,17 @@
 
 Python SDK for simple text generation.
 
+## Import Methods
+
+```python
+from olm_api_sdk.v1 import (
+    OlmApiClientV1,
+    OlmLocalClientV1,
+    MockOlmClientV1,
+    OlmClientV1Protocol
+)
+```
+
 ## Basic Usage
 
 ```python

@@ -2,6 +2,17 @@
 
 Python SDK supporting chat, vision, and tool calling.
 
+## Import Methods
+
+```python
+from olm_api_sdk.v2 import (
+    OlmApiClientV2,
+    OlmLocalClientV2,
+    MockOlmClientV2,
+    OlmClientV2Protocol
+)
+```
+
 ## Basic Usage
 
 ```python

@@ -10,8 +10,8 @@ from unittest.mock import AsyncMock, MagicMock
 import pytest
 from dotenv import load_dotenv
 from httpx import ASGITransport, AsyncClient
-
 from olm_api_sdk.v1.mock_client import MockOlmClientV1
+
 from src.olm_api.api.v1.ollama_service_v1 import OllamaServiceV1
 from src.olm_api.api.v2.ollama_service_v2 import OllamaServiceV2
 from src.olm_api.main import app
