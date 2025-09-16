@@ -38,3 +38,23 @@ class OlmClientV1Protocol(Protocol):
             Each response contains 'think', 'content', and 'response' fields.
         """
         ...
+
+    def generate_sync(
+        self,
+        prompt: str,
+        model_name: str,
+        think: Optional[bool] = None,
+    ) -> Dict[str, Any]:
+        """
+        Generate text using the model (v1 API) - Synchronous version.
+
+        Args:
+            prompt: The prompt to send to the model.
+            model_name: The name of the model to use for generation.
+            think: Whether to enable thinking mode.
+
+        Returns:
+            Complete JSON response. Streaming is not supported in sync version.
+            Response contains 'think', 'content', and 'response' fields.
+        """
+        ...

@@ -48,6 +48,13 @@ class TestOlmClientV1Protocol:
                         "full_response": "batch response",
                     }
 
+            def generate_sync(self, prompt: str, model_name: str, think=None):
+                return {
+                    "think": "",
+                    "content": "sync response",
+                    "full_response": "sync response",
+                }
+
             async def _async_gen(self):
                 yield {"think": "", "content": "chunk1", "full_response": "chunk1"}
                 yield {
@@ -74,6 +81,13 @@ class TestOlmClientV1Protocol:
                         "content": "complete response",
                         "full_response": "complete response",
                     }
+
+            def generate_sync(self, prompt: str, model_name: str, think=None):
+                return {
+                    "think": "",
+                    "content": "sync response",
+                    "full_response": "sync response",
+                }
 
             async def _async_gen(self):
                 yield {"think": "", "content": "chunk", "full_response": "chunk"}
@@ -145,6 +159,13 @@ class TestProtocolUsage:
                     "think": "",
                     "content": "batch response",
                     "response": "batch response",
+                }
+
+            def generate_sync(self, prompt: str, model_name: str, think=None):
+                return {
+                    "think": "",
+                    "content": "sync response",
+                    "response": "sync response",
                 }
 
             def additional_method(self):

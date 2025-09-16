@@ -102,6 +102,9 @@ class TestOlmClientV2Protocol:
             ):
                 return {"choices": [{"message": {"content": "test"}}]}
 
+            def generate_sync(self, messages, model_name, tools=None, **kwargs):
+                return {"choices": [{"message": {"content": "sync test"}}]}
+
         # Invalid implementation
         class InvalidClient:
             def wrong_method(self):
@@ -121,6 +124,9 @@ class TestOlmClientV2Protocol:
                 self, messages, model_name, tools=None, stream=False, **kwargs
             ):
                 return {"choices": [{"message": {"content": "test"}}]}
+
+            def generate_sync(self, messages, model_name, tools=None, **kwargs):
+                return {"choices": [{"message": {"content": "sync test"}}]}
 
             def additional_method(self):
                 return "extra functionality"
@@ -312,6 +318,9 @@ class TestProtocolErrorScenarios:
 
                     return generator()
                 return {"choices": [{"message": {"content": "test"}}]}
+
+            def generate_sync(self, messages, model_name, tools=None, **kwargs):
+                return {"choices": [{"message": {"content": "sync test"}}]}
 
         client = MinimalClient()
         assert isinstance(client, OlmClientV2Protocol)

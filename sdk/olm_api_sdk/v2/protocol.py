@@ -41,3 +41,24 @@ class OlmClientV2Protocol(Protocol):
             Complete response dict (if stream=False) or AsyncGenerator (if stream=True).
         """
         ...
+
+    def generate_sync(
+        self,
+        messages: List[Dict[str, Any]],
+        model_name: str,
+        tools: Optional[List[Dict[str, Any]]] = None,
+        **kwargs,
+    ) -> Dict[str, Any]:
+        """
+        Generate chat completion using the v2 API (Synchronous version).
+
+        Args:
+            messages: List of message dictionaries with role and content.
+            model_name: The name of the model to use for generation.
+            tools: Optional list of tool definitions for function calling.
+            **kwargs: Additional generation parameters (temperature, top_p, etc.).
+
+        Returns:
+            Complete response dict. Streaming is not supported in sync version.
+        """
+        ...
