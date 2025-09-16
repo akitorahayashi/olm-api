@@ -2,10 +2,8 @@ from typing import get_type_hints
 from unittest.mock import AsyncMock
 
 import pytest
-
-from sdk.olm_api_client.v1.client import OlmApiClientV1
-from sdk.olm_api_client.v1.mock_client import MockOlmClientV1
-from sdk.olm_api_client.v1.protocol import OlmClientV1Protocol
+from olm_api_sdk.v1.client import OlmApiClientV1
+from olm_api_sdk.v1.protocol import OlmClientV1Protocol
 
 
 class TestOlmClientV1Protocol:
@@ -29,10 +27,9 @@ class TestOlmClientV1Protocol:
         client = OlmApiClientV1(api_url="http://localhost:11434")
         assert isinstance(client, OlmClientV1Protocol)
 
-    def test_mock_client_implements_protocol(self):
+    def test_mock_client_implements_protocol(self, fast_mock_client_v1):
         """Test that MockOlmClientV1 implements the protocol"""
-        client = MockOlmClientV1()
-        assert isinstance(client, OlmClientV1Protocol)
+        assert isinstance(fast_mock_client_v1, OlmClientV1Protocol)
 
     def test_protocol_compatibility_with_streaming(self):
         """Test protocol compatibility with streaming calls"""
@@ -85,24 +82,23 @@ class TestProtocolUsage:
     """Test using the protocol in practice"""
 
     @pytest.mark.asyncio
-    async def test_can_use_protocol_for_type_checking(self):
+    async def test_can_use_protocol_for_type_checking(self, fast_mock_client_v1):
         """Test that protocol can be used for type checking"""
 
         def process_client(client: OlmClientV1Protocol) -> bool:
             return hasattr(client, "generate")
 
         real_client = OlmApiClientV1(api_url="http://localhost:11434")
-        mock_client = MockOlmClientV1()
 
         assert process_client(real_client) is True
-        assert process_client(mock_client) is True
+        assert process_client(fast_mock_client_v1) is True
 
     @pytest.mark.asyncio
-    async def test_protocol_allows_polymorphic_usage(self):
+    async def test_protocol_allows_polymorphic_usage(self, fast_mock_client_v1):
         """Test polymorphic usage of different client implementations"""
         clients = [
             OlmApiClientV1(api_url="http://localhost:11434"),
-            MockOlmClientV1(token_delay=0),
+            fast_mock_client_v1,
         ]
 
         for client in clients:
@@ -155,10 +151,9 @@ class TestProtocolUsage:
         assert hasattr(extended, "additional_method")
 
     @pytest.mark.asyncio
-    async def test_protocol_method_signature_compatibility(self):
+    async def test_protocol_method_signature_compatibility(self, fast_mock_client_v1):
         """Test that protocol method signatures are compatible across implementations"""
         real_client = OlmApiClientV1(api_url="http://localhost:11434")
-        mock_client = MockOlmClientV1(token_delay=0)
 
         # Both should accept the same parameters for generate
         test_params = {
@@ -170,7 +165,7 @@ class TestProtocolUsage:
         # Should not raise TypeError for parameter mismatch
         try:
             real_result = await real_client.generate(**test_params)
-            mock_result = await mock_client.generate(**test_params)
+            mock_result = await fast_mock_client_v1.generate(**test_params)
 
             # Both should return async generator when stream=True
             assert hasattr(real_result, "__aiter__")
@@ -180,16 +175,19 @@ class TestProtocolUsage:
             pytest.fail(f"Parameter signature mismatch: {e}")
 
     @pytest.mark.asyncio
-    async def test_protocol_return_type_compatibility(self):
+    async def test_protocol_return_type_compatibility(self, fast_mock_client_v1):
         """Test return type compatibility between implementations"""
-        mock_client = MockOlmClientV1(token_delay=0)
 
         # Test streaming mode
-        stream_result = await mock_client.generate("test", "test-model", stream=True)
+        stream_result = await fast_mock_client_v1.generate(
+            "test", "test-model", stream=True
+        )
         assert hasattr(stream_result, "__aiter__")  # Should be async generator
 
         # Test batch mode
-        batch_result = await mock_client.generate("test", "test-model", stream=False)
+        batch_result = await fast_mock_client_v1.generate(
+            "test", "test-model", stream=False
+        )
         assert isinstance(batch_result, dict)  # Should be dict
         assert "think" in batch_result
         assert "content" in batch_result

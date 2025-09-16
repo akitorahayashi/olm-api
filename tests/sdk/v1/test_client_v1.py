@@ -2,9 +2,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
-
-from sdk.olm_api_client.v1.client import OlmApiClientV1
-from sdk.olm_api_client.v1.protocol import OlmClientV1Protocol
+from olm_api_sdk.v1.client import OlmApiClientV1
+from olm_api_sdk.v1.protocol import OlmClientV1Protocol
 
 
 class TestOlmApiClientV1:

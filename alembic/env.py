@@ -6,10 +6,10 @@ from pydantic import ValidationError
 from sqlalchemy import create_engine, pool
 
 from alembic import context
-from src.config.settings import Settings
-from src.db.database import Base
+from src.olm_api.config.settings import Settings
+from src.olm_api.db.database import Base
 
-importlib.import_module("src.logs.models")
+importlib.import_module("src.olm_api.logs.models")
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

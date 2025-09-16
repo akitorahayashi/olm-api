@@ -95,10 +95,10 @@ down-prod: ## Stop and remove all production-like containers
 	$(DOCKER_CMD) compose -f docker-compose.yml --project-name $(PROD_PROJECT_NAME) down --remove-orphans
 
 .PHONY: rebuild
-rebuild: ## Rebuild and restart development containers
-	@echo "Rebuilding and restarting development services..."
+rebuild: ## Rebuild and restart API container only
+	@echo "Rebuilding and restarting API service..."
 	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) down --remove-orphans
-	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) build --no-cache
+	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) build --no-cache api
 	$(DOCKER_CMD) compose -f docker-compose.yml -f docker-compose.dev.override.yml --project-name $(DEV_PROJECT_NAME) up -d
 
 # ==============================================================================

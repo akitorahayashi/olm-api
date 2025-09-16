@@ -3,9 +3,9 @@ from typing import Union
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 
-from src.api.v2.ollama_service_v2 import OllamaServiceV2
-from src.api.v2.schemas.request import ChatRequest
-from src.api.v2.schemas.response import ChatResponse
+from .ollama_service_v2 import OllamaServiceV2
+from .schemas.request import ChatRequest
+from .schemas.response import ChatResponse
 
 router = APIRouter(
     prefix="/api/v2",
