@@ -50,7 +50,11 @@ class TestOlmClientV1Protocol:
 
             async def _async_gen(self):
                 yield {"think": "", "content": "chunk1", "full_response": "chunk1"}
-                yield {"think": "", "content": "chunk2", "full_response": "chunk1chunk2"}
+                yield {
+                    "think": "",
+                    "content": "chunk2",
+                    "full_response": "chunk1chunk2",
+                }
 
         mock = ProtocolCompliantMock()
         assert isinstance(mock, OlmClientV1Protocol)
