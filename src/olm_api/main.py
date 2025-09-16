@@ -27,7 +27,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="PVT-LLM-API",
+    title="Olm API",
     version="0.1.0",
     description="A private LLM API server using FastAPI and Ollama, with dynamic model management.",
     lifespan=lifespan,
