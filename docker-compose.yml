@@ -67,8 +67,10 @@ services:
 
 volumes:
   postgres-db:
+    driver: local
     name: ${PROJECT_NAME}-postgres-db-prod
-    external: true
+    external: false
   ollama-data:
+    driver: local
     name: ${PROJECT_NAME}-ollama-data
-    external: true
+    external: false
