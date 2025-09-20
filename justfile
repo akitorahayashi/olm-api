@@ -26,7 +26,7 @@ default: help
 # ==============================================================================
 
 # Initialize project: install dependencies, create .env file and pull required Docker images
-@setup:
+setup:
     @echo "Installing python dependencies with uv..."
     @uv sync
     @echo "Creating environment file..."
@@ -50,27 +50,27 @@ default: help
 # ==============================================================================
 
 # Start all development containers in detached mode
-@up:
+up:
     @echo "Starting up development services..."
     @{{DEV_COMPOSE}} up -d
 
 # Stop and remove all development containers
-@down:
+down:
     @echo "Shutting down development services..."
     @{{DEV_COMPOSE}} down --remove-orphans
 
 # Start all production-like containers
-@up-prod:
+up-prod:
     @echo "Starting up production-like services..."
     @{{PROD_COMPOSE}} up -d --build --pull always --remove-orphans
 
 # Stop and remove all production-like containers
-@down-prod:
+down-prod:
     @echo "Shutting down production-like services..."
     @{{PROD_COMPOSE}} down --remove-orphans
 
 # Rebuild and restart API container only
-@rebuild:
+rebuild:
     @echo "Rebuilding and restarting API service..."
     @{{DEV_COMPOSE}} down --remove-orphans
     @{{DEV_COMPOSE}} build --no-cache api
@@ -81,13 +81,13 @@ default: help
 # ==============================================================================
 
 # Format code with black and ruff --fix
-@format:
+format:
     @echo "Formatting code with black and ruff..."
     @uv run black .
     @uv run ruff check . --fix
 
 # Lint code with black check and ruff
-@lint:
+lint:
     @echo "Linting code with black check and ruff..."
     @uv run black --check .
     @uv run ruff check .
@@ -97,45 +97,45 @@ default: help
 # ==============================================================================
 
 # Run the full test suite
-@test: unit-test sdk-test build-test db-test e2e-test
+test: unit-test sdk-test build-test db-test e2e-test
 
 # Run the unit tests locally
-@unit-test:
+unit-test:
     @echo "Running unit tests..."
     @uv run pytest tests/unit -s
 
 # Run SDK tests locally
-@sdk-test:
+sdk-test:
     @echo "Running SDK tests..."
     @uv run pytest tests/sdk -s
 
 # Run database tests locally
-@db-test:
+db-test:
     @echo "Running database tests..."
     @uv run pytest tests/db -s
 
 # Run end-to-end tests against a live application stack
-@e2e-test:
+e2e-test:
     @echo "Running end-to-end tests..."
     @uv run pytest tests/e2e -s
 
 # Run all performance tests (both parallel and sequential)
-@perf-test:
+perf-test:
     @echo "Running all performance tests..."
     @uv run pytest tests/perf -s
 
 # Run only the batch parallel performance test
-@perf-test-parallel:
+perf-test-parallel:
     @echo "Running batch parallel performance test..."
     @uv run pytest tests/perf/test_batch_parallel.py -s
 
 # Run only the batch sequential performance test
-@perf-test-sequential:
+perf-test-sequential:
     @echo "Running batch sequential performance test..."
     @uv run pytest tests/perf/test_batch_sequential.py -s
 
 # Build Docker image for testing without leaving artifacts
-@build-test:
+build-test:
     @echo "Building Docker image for testing (clean build)..."
     @TEMP_IMAGE_TAG=$(date +%s)-build-test; \
     docker build --target production --tag temp-build-test:$TEMP_IMAGE_TAG . && \
@@ -147,7 +147,7 @@ default: help
 # ==============================================================================
 
 # Remove __pycache__ and .venv to make project lightweight
-@clean:
+clean:
     @echo "🧹 Cleaning up project..."
     @find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
     @rm -rf .venv
