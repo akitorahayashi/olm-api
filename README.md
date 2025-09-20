@@ -8,7 +8,7 @@ A FastAPI server for enabling API access to a live Ollama model.
 - Two API versions:
   - **v1**: Simple prompt-to-text  
   - **v2**: Advanced chat (history, system prompts, tool calling, image recognition)  
-- Makefile for environment setup, builds, and workflows  
+- justfile for environment setup, builds, and workflows  
 - Built-in testing, linting, and formatting
 
 ## API References
